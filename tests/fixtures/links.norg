@@ -1,0 +1,22 @@
+@document.meta
+title: "Link Test"
+author: "Test"
+@end
+
+* Link Types
+
+** URL Links
+{https://example.com}
+{https://github.com/nvim-neorg}[Neorg GitHub]
+
+** File Links
+{:docs/readme.norg:}
+{:path/to/file.norg:}[File Description]
+
+** Heading Links
+{* Main Heading}
+{** Sub Heading}
+{* Introduction}[Custom link text]
+
+** Mixed Content
+This paragraph has a {https://rust-lang.org}[Rust website] and {:tutorial.norg:}[tutorial file].

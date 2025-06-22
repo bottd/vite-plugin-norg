@@ -1,0 +1,15 @@
+# Build outputs
+dist/
+wasm/
+rust-parser/target/
+rust-parser/pkg/
+
+# Dependencies
+node_modules/
+
+# Package files
+*.tgz
+package-lock.json
+
+# Auto-generated files
+*.d.ts

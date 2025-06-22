@@ -1,0 +1,9 @@
+* Images
+
+  Here are some images:
+
+  {https://example.com/image1.png}[Image Alt Text]
+
+  {/local/path/image.jpg}[Local Image]
+
+  {./relative/image.png}[]

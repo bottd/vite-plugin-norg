@@ -1,0 +1,20 @@
+@document.meta
+title: "Code Test"
+@end
+
+* Code Blocks
+
+** JavaScript
+@code javascript
+function hello() { return "world"; }
+@end
+
+** Python  
+@code python
+def add(a, b): return a + b
+@end
+
+** Plain
+@code
+plain text
+@end

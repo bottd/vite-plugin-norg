@@ -1,0 +1,22 @@
+# Source files
+src/
+rust-parser/src/
+rust-parser/target/
+rust-parser/Cargo.toml
+rust-parser/Cargo.lock
+
+# Development files
+tsconfig.json
+.gitignore
+node_modules/
+
+# Build artifacts we don't need
+rust-parser/pkg/
+*.tgz
+
+# Keep only what's needed
+!dist/
+!wasm/
+!README.md
+!package.json
+!LICENSE

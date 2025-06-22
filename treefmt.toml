@@ -1,0 +1,14 @@
+[formatter.prettier]
+command = "prettier"
+includes = ["*.js", "*.ts", "*.json", "*.md", "*.yaml", "*.yml"]
+options = ["--write"]
+
+[formatter.rustfmt]
+command = "rustfmt"
+includes = ["*.rs"]
+options = ["--edition", "2021"]
+
+[formatter.nixpkgs-fmt]
+command = "nixpkgs-fmt"
+includes = ["*.nix"]
+

@@ -1,0 +1,21 @@
+@document.meta
+title: "Basic Norg"
+author: "Test"
+tags: ["test", "basic"]
+@end
+
+* Main Title
+
+Text with /bold/, _italic_, `code`, and -strikethrough-.
+
+** Lists
+
+- Item 1
+- Item 2  
+
+~ Number 1
+~ Number 2
+
+** Link
+
+{https://example.com}[link text]
