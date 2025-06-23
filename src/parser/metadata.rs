@@ -1,9 +1,8 @@
 use rust_norg::metadata::{parse_metadata as norg_parse_metadata, NorgMeta};
+use rust_norg::NorgAST::VerbatimRangedTag;
 use serde_json::{json, Map, Value};
 
 pub fn extract_metadata(ast: &[rust_norg::NorgAST]) -> Value {
-    use rust_norg::NorgAST::VerbatimRangedTag;
-
     ast.iter()
         .find_map(|node| match node {
             VerbatimRangedTag { name, content, .. } if is_document_meta(name) => Some(content),
@@ -35,5 +34,6 @@ fn norg_meta_to_json(meta: &NorgMeta) -> Value {
 /// Check if the tag is a document meta tag
 #[inline]
 fn is_document_meta(name: &[String]) -> bool {
+    println!("ranged tag name: {}", name.join(","));
     matches!(name, [doc, meta] if doc == "document" && meta == "meta")
 }

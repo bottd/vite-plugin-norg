@@ -19,13 +19,13 @@ fn test_extract_metadata_basic() {
 
     let ast = vec![VerbatimRangedTag {
         name: vec!["document".to_string(), "meta".to_string()],
-        content: "title: Test Document\nauthor: John Doe".to_string(),
+        content: "title: Test Document\nauthor: Drake Bott".to_string(),
         parameters: Default::default(),
     }];
 
     let metadata = extract_metadata(&ast);
     assert_json_contains(&metadata, "title", "Test Document");
-    assert_json_contains(&metadata, "author", "John Doe");
+    assert_json_contains(&metadata, "author", "Drake Bott");
 }
 
 #[test]

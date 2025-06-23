@@ -5,14 +5,14 @@ describe('React Generator', () => {
   it('should generate React component with metadata', () => {
     const result = generateReactOutput({
       html: '<h1>Test</h1>',
-      metadata: { title: 'Test Title', author: 'Test Author' },
+      metadata: { title: 'Test Title', author: 'Drake Bott' },
       ast: null,
       toc: [],
     });
 
     expect(result).toBe(
       'import React from "react";\n' +
-        'export const metadata = {"title":"Test Title","author":"Test Author"};\n' +
+        'export const metadata = {"title":"Test Title","author":"Drake Bott"};\n' +
         'const htmlContent = "<h1>Test</h1>";\n' +
         'export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });\n' +
         'export default Component;'

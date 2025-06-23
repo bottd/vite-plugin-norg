@@ -18,8 +18,8 @@ mod wasm_tests {
     #[test]
     fn test_parse_norg_with_metadata() {
         let content = r#"@document.meta
-title: "Test Document"
-author: "John Doe"
+title: Test Document
+author: Drake Bott
 @end
 
 * Main Title
