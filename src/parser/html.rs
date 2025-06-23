@@ -20,21 +20,6 @@ const HTML_TAGS: &[(char, &str, &str)] = &[
     ('=', "<mark>", "</mark>"),
 ];
 
-fn get_todo_status_html(status: &TodoStatus) -> (&'static str, &'static str) {
-    match status {
-        TodoStatus::Undone => ("<input type=\"checkbox\" disabled />", "todo-undone"),
-        TodoStatus::Done => ("<input type=\"checkbox\" checked disabled />", "todo-done"),
-        TodoStatus::NeedsClarification => {
-            ("<span class=\"todo-status\">?</span>", "todo-clarification")
-        }
-        TodoStatus::Paused => ("<span class=\"todo-status\">=</span>", "todo-paused"),
-        TodoStatus::Urgent => ("<span class=\"todo-status\">!</span>", "todo-urgent"),
-        TodoStatus::Pending => ("<span class=\"todo-status\">-</span>", "todo-pending"),
-        TodoStatus::Canceled => ("<span class=\"todo-status\">_</span>", "todo-canceled"),
-        TodoStatus::Recurring(_) => ("", "todo-recurring"), // Special case handled separately
-    }
-}
-
 #[derive(Debug, PartialEq)]
 enum VerbatimTag {
     Code,
@@ -254,9 +239,23 @@ fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> 
                     ));
                     classes.push("todo-recurring".to_string());
                 } else {
-                    let (status_html, class_name) = get_todo_status_html(status);
-                    prefix_parts.push(status_html.to_string());
-                    classes.push(class_name.to_string());
+                    let status_html = match status {
+                        TodoStatus::Undone => String::from("<input type=\"checkbox\" class=\"todo-status todo-undone\" disabled />"),
+                        TodoStatus::Done => String::from("<input type=\"checkbox\" class=\"todo-status todo-done\" checked disabled />"),
+                        TodoStatus::NeedsClarification => String::from("<span class=\"todo-status todo-clarification\">?</span>"),
+                        TodoStatus::Paused => String::from("<span class=\"todo-status todo-paused\">=</span>"),
+                        TodoStatus::Urgent => String::from("<span class=\"todo-status todo-urgent\">!</span>"),
+                        TodoStatus::Pending => String::from("<span class=\"todo-status todo-pending\">-</span>"),
+                        TodoStatus::Canceled => String::from("<span class=\"todo-status todo-canceled\">_</span>"),
+                        TodoStatus::Recurring(date) => match date {
+                            Some(date) => format!(
+                                "<span class=\"todo-status todo-recurring\">+ {}</span>",
+                                encode_minimal(date)
+                            ),
+                            None => String::from("<span class=\"todo-status todo-recurring\">_</span>")
+                        },
+                    };
+                    prefix_parts.push(status_html);
                 }
             }
             DetachedModifierExtension::Priority(p) => {
