@@ -5,7 +5,11 @@ use serde_json::{json, Map, Value};
 pub fn extract_metadata(ast: &[rust_norg::NorgAST]) -> Value {
     ast.iter()
         .find_map(|node| match node {
-            VerbatimRangedTag { name, content, .. } if is_document_meta(name) => Some(content),
+            VerbatimRangedTag { name, content, .. }
+                if name[0] == "document" && name[1] == "meta" =>
+            {
+                Some(content)
+            }
             _ => None,
         })
         .and_then(|content| norg_parse_metadata(content).ok())
@@ -22,18 +26,11 @@ fn norg_meta_to_json(meta: &NorgMeta) -> Value {
         NorgMeta::Num(n) => json!(n),
         NorgMeta::Array(arr) => Value::Array(arr.iter().map(norg_meta_to_json).collect()),
         NorgMeta::Object(map) => {
-            let mut json_map = Map::new();
-            for (k, v) in map {
-                json_map.insert(k.clone(), norg_meta_to_json(v));
-            }
+            let json_map = map
+                .into_iter()
+                .map(|(key, value)| (key.clone(), norg_meta_to_json(value)))
+                .collect::<Map<_, _>>();
             Value::Object(json_map)
         }
     }
-}
-
-/// Check if the tag is a document meta tag
-#[inline]
-fn is_document_meta(name: &[String]) -> bool {
-    println!("ranged tag name: {}", name.join(","));
-    matches!(name, [doc, meta] if doc == "document" && meta == "meta")
 }
