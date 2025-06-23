@@ -1,12 +1,12 @@
-use vite_plugin_norg_parser::utils::into_slug;
+use vite_plugin_norg_parser::into_slug;
 
 #[test]
 fn test_into_slug() {
     assert_eq!(into_slug("Hello World"), "hello-world");
-    assert_eq!(into_slug("Multiple   Spaces"), "multiple---spaces");
+    assert_eq!(into_slug("Multiple   Spaces"), "multiple-spaces");
     assert_eq!(
         into_slug("Special!@#$%Characters"),
-        "special-----characters"
+        "special-characters"
     );
     assert_eq!(into_slug(""), "");
     assert_eq!(into_slug("---"), "");

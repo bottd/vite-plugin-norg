@@ -6,6 +6,7 @@ mod utils;
 pub use html::{convert_ast_to_html, convert_ast_to_html_with_toc};
 pub use metadata::extract_metadata;
 pub use types::{ParsedNorg, TocEntry};
+pub use utils::into_slug;
 
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
