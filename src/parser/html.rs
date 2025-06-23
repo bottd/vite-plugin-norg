@@ -7,14 +7,13 @@ use rust_norg::{
 };
 use textwrap::dedent;
 
+// Why encode special here?
 fn encode_for_code(text: &str) -> String {
     text.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
 }
-
-const NO_CONTENT_MESSAGE: &str = "<p>No renderable content found</p>";
 
 const HTML_TAGS: &[(char, &str, &str)] = &[
     ('*', "<strong>", "</strong>"),
@@ -71,25 +70,7 @@ const fn delimiter_html(delimiter: &DelimitingModifier) -> &'static str {
     }
 }
 
-pub fn convert_ast_to_html(ast: &[NorgAST]) -> String {
-    let (html, _) = convert_ast_to_html_with_toc(ast);
-    html
-}
-
-pub fn convert_ast_to_html_with_toc(ast: &[NorgAST]) -> (String, Vec<TocEntry>) {
-    let mut toc = Vec::new();
-    let html = convert_ast_nodes(ast, &mut toc);
-
-    let final_html = if html.trim().is_empty() {
-        NO_CONTENT_MESSAGE.into()
-    } else {
-        html
-    };
-
-    (final_html, toc)
-}
-
-fn convert_ast_nodes(ast: &[NorgAST], toc: &mut Vec<TocEntry>) -> String {
+pub fn convert_nodes(ast: &[NorgAST], toc: &mut Vec<TocEntry>) -> String {
     let mut result = Vec::new();
     let mut i = 0;
 
@@ -165,7 +146,7 @@ fn convert_single_node(node: &NorgAST, toc: &mut Vec<TocEntry>) -> Option<String
                 title: title_text,
                 id: heading_id,
             });
-            let content_html = convert_ast_nodes(content, toc);
+            let content_html = convert_nodes(content, toc);
 
             if content_html.trim().is_empty() {
                 heading

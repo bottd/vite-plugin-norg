@@ -3,7 +3,7 @@ mod metadata;
 mod types;
 mod utils;
 
-pub use html::{convert_ast_to_html, convert_ast_to_html_with_toc};
+pub use html::convert_nodes;
 pub use metadata::extract_metadata;
 pub use types::{ParsedNorg, TocEntry};
 pub use utils::into_slug;
@@ -17,7 +17,8 @@ pub fn parse_norg(content: &str) -> Result<JsValue, JsValue> {
 
     let metadata = extract_metadata(&ast);
 
-    let (html, toc) = convert_ast_to_html_with_toc(&ast);
+    let mut toc = Vec::new();
+    let html = convert_nodes(&ast, &mut toc);
     let ast_value = serde_json::to_value(&ast)
         .unwrap_or_else(|_| Value::String(format!("AST with {} nodes", ast.len())));
 
