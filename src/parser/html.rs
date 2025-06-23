@@ -1,5 +1,5 @@
 use crate::types::TocEntry;
-use crate::utils::slug_from_text;
+use crate::utils::into_slug;
 use htmlescape::encode_minimal;
 use rust_norg::{
     DelimitingModifier, DetachedModifierExtension, LinkTarget, NestableDetachedModifier, NorgAST,
@@ -157,7 +157,7 @@ fn convert_single_node(node: &NorgAST, toc: &mut Vec<TocEntry>) -> Option<String
             ..
         } => {
             let title_text = convert_paragraph_segments(title);
-            let heading_id = slug_from_text(&title_text);
+            let heading_id = into_slug(&title_text);
             let heading = format!("<h{level} id=\"{heading_id}\">{title_text}</h{level}>");
 
             toc.push(TocEntry {
@@ -197,7 +197,7 @@ fn convert_single_node(node: &NorgAST, toc: &mut Vec<TocEntry>) -> Option<String
                     )
                 }
                 RangeableDetachedModifier::Footnote => {
-                    let id = slug_from_text(&title_html);
+                    let id = into_slug(&title_html);
                     format!(
                         "<aside id=\"footnote-{}\" class=\"footnote\"><strong>{}</strong><p>{}</p></aside>",
                         encode_minimal(&id), encode_minimal(&title_html), content_html
@@ -288,7 +288,7 @@ fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> 
                 }
             }
             DetachedModifierExtension::Priority(p) => {
-                classes.push(format!("priority-{}", slug_from_text(p)));
+                classes.push(format!("priority-{}", into_slug(p)));
                 attributes.push(format!("data-priority=\"{}\"", encode_minimal(p)));
             }
             DetachedModifierExtension::Timestamp(ts) => {
@@ -438,7 +438,7 @@ fn convert_link(target: &LinkTarget, custom_text: Option<&str>) -> String {
                         acc.push_str(&format!("{seg:?}"));
                         acc
                     });
-            let slug = slug_from_text(&title_text);
+            let slug = into_slug(&title_text);
             format!(
                 "<a href=\"#{}\">{}</a>",
                 encode_minimal(&slug),

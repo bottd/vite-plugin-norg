@@ -557,7 +557,6 @@ dependencies = [
  "console_error_panic_hook",
  "htmlescape",
  "insta",
- "itertools",
  "js-sys",
  "proptest",
  "rust-norg",

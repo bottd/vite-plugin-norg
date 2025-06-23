@@ -1,4 +1,4 @@
-pub fn slug_from_text(text: &str) -> String {
+pub fn into_slug(text: &str) -> String {
     text.to_lowercase()
         .chars()
         .map(|c| if c.is_alphanumeric() { c } else { '-' })
