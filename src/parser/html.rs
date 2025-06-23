@@ -362,11 +362,10 @@ fn convert_paragraph_segments(segments: &[ParagraphSegment]) -> String {
             ParagraphSegment::Anchor { content, .. } => convert_paragraph_segments(content),
 
             ParagraphSegment::InlineVerbatim(tokens) => {
-                let estimated_size = tokens.len() * 8; // Conservative estimate
                 let content =
                     tokens
                         .iter()
-                        .fold(String::with_capacity(estimated_size), |mut acc, token| {
+                        .fold(String::new(), |mut acc, token| {
                             acc.push_str(&token.to_string());
                             acc
                         });
@@ -401,11 +400,10 @@ fn convert_link(target: &LinkTarget, custom_text: Option<&str>) -> String {
             }
         }
         LinkTarget::Heading { title, .. } => {
-            let estimated_size = title.len() * 16; // Conservative estimate for debug format
             let title_text =
                 title
                     .iter()
-                    .fold(String::with_capacity(estimated_size), |mut acc, seg| {
+                    .fold(String::new(), |mut acc, seg| {
                         acc.push_str(&format!("{seg:?}"));
                         acc
                     });
