@@ -11,10 +11,9 @@ fn test_convert_nodes() {
         extensions: Default::default(),
     };
 
-    let mut toc = Vec::new();
     let ast = vec![node];
-    let result = convert_nodes(&ast, &mut toc);
-    assert!(result.starts_with("<h1 id=\"\">"));
-    assert!(result.ends_with("</h1>"));
+    let (html, toc) = convert_nodes(&ast);
+    assert!(html.starts_with("<h1 id=\"\">"));
+    assert!(html.ends_with("</h1>"));
     assert_eq!(toc.len(), 1);
 }

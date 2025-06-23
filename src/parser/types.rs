@@ -10,7 +10,6 @@ pub struct TocEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ParsedNorg {
-    pub ast: Value,
     pub metadata: Value,
     pub html: String,
     pub toc: Vec<TocEntry>,

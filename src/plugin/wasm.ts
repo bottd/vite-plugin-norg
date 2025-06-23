@@ -12,7 +12,6 @@ export interface TocEntry {
 }
 
 export interface NorgParseResult {
-  ast: unknown;
   metadata: NorgMetadata | null;
   html: string;
   toc: TocEntry[];

@@ -70,13 +70,13 @@ const fn delimiter_html(delimiter: &DelimitingModifier) -> &'static str {
     }
 }
 
-pub fn convert_nodes(ast: &[NorgAST], toc: &mut Vec<TocEntry>) -> String {
+pub fn convert_nodes(ast: &[NorgAST]) -> (String, Vec<TocEntry>) {
+    let mut toc = Vec::new();
     let mut result = Vec::new();
     let mut i = 0;
 
     while i < ast.len() {
         match &ast[i] {
-            // Group consecutive list/quote items
             NorgAST::NestableDetachedModifier { modifier_type, .. } => {
                 let (html, consumed) = convert_grouped_modifiers(&ast[i..], modifier_type);
                 if !html.trim().is_empty() {
@@ -84,9 +84,8 @@ pub fn convert_nodes(ast: &[NorgAST], toc: &mut Vec<TocEntry>) -> String {
                 }
                 i += consumed;
             }
-            // Handle all other nodes directly
             node => {
-                if let Some(html) = convert_single_node(node, toc) {
+                if let Some(html) = convert_single_node(node, &mut toc) {
                     result.push(html);
                 }
                 i += 1;
@@ -94,7 +93,7 @@ pub fn convert_nodes(ast: &[NorgAST], toc: &mut Vec<TocEntry>) -> String {
         }
     }
 
-    result.join("\n")
+    (result.join("\n"), toc)
 }
 
 fn convert_single_node(node: &NorgAST, toc: &mut Vec<TocEntry>) -> Option<String> {
@@ -146,7 +145,7 @@ fn convert_single_node(node: &NorgAST, toc: &mut Vec<TocEntry>) -> Option<String
                 title: title_text,
                 id: heading_id,
             });
-            let content_html = convert_nodes(content, toc);
+            let (content_html, _) = convert_nodes(content);
 
             if content_html.trim().is_empty() {
                 heading
