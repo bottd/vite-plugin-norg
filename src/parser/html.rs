@@ -7,14 +7,6 @@ use rust_norg::{
 };
 use textwrap::dedent;
 
-// Why encode special here?
-fn encode_for_code(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
 const HTML_TAGS: &[(char, &str, &str)] = &[
     ('*', "<strong>", "</strong>"),
     ('_', "<em>", "</em>"),
@@ -107,7 +99,7 @@ fn convert_single_node(node: &NorgAST, toc: &mut Vec<TocEntry>) -> Option<String
             VerbatimTag::DocumentMeta => return None,
             VerbatimTag::Code => {
                 let dedented = dedent(content);
-                let encoded = encode_for_code(&dedented);
+                let encoded = encode_minimal(&dedented);
                 match parameters.first().filter(|l| !l.is_empty()) {
                     Some(lang) => format!("<pre class=\"language-{lang}\"><code class=\"language-{lang}\">{encoded}</code></pre>"),
                     None => format!("<pre><code>{encoded}</code></pre>"),
@@ -319,7 +311,7 @@ fn convert_paragraph_segments_with_code_escaping(segments: &[ParagraphSegment]) 
     segments
         .iter()
         .filter_map(|segment| match segment {
-            ParagraphSegment::Token(token) => Some(process_token(token, encode_for_code)),
+            ParagraphSegment::Token(token) => Some(process_token(token, encode_minimal)),
             _ => None,
         })
         .collect()
@@ -379,7 +371,7 @@ fn convert_paragraph_segments(segments: &[ParagraphSegment]) -> String {
                             acc.push_str(&token.to_string());
                             acc
                         });
-                format!("<code>{}</code>", encode_for_code(&content))
+                format!("<code>{}</code>", encode_minimal(&content))
             }
 
             _ => String::new(),
