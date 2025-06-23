@@ -43,7 +43,7 @@ const fn delimiter_html(delimiter: &DelimitingModifier) -> &'static str {
     match delimiter {
         DelimitingModifier::Weak => "<hr class=\"weak\" />",
         DelimitingModifier::Strong => "<hr class=\"strong\" />",
-        DelimitingModifier::HorizontalRule => "<hr />",
+        DelimitingModifier::HorizontalRule => "<hr class=\"normal\" />",
     }
 }
 
@@ -362,13 +362,10 @@ fn convert_paragraph_segments(segments: &[ParagraphSegment]) -> String {
             ParagraphSegment::Anchor { content, .. } => convert_paragraph_segments(content),
 
             ParagraphSegment::InlineVerbatim(tokens) => {
-                let content =
-                    tokens
-                        .iter()
-                        .fold(String::new(), |mut acc, token| {
-                            acc.push_str(&token.to_string());
-                            acc
-                        });
+                let content = tokens.iter().fold(String::new(), |mut acc, token| {
+                    acc.push_str(&token.to_string());
+                    acc
+                });
                 format!("<code>{}</code>", encode_minimal(&content))
             }
 
@@ -400,13 +397,10 @@ fn convert_link(target: &LinkTarget, custom_text: Option<&str>) -> String {
             }
         }
         LinkTarget::Heading { title, .. } => {
-            let title_text =
-                title
-                    .iter()
-                    .fold(String::new(), |mut acc, seg| {
-                        acc.push_str(&format!("{seg:?}"));
-                        acc
-                    });
+            let title_text = title.iter().fold(String::new(), |mut acc, seg| {
+                acc.push_str(&format!("{seg:?}"));
+                acc
+            });
             let slug = into_slug(&title_text);
             format!(
                 "<a href=\"#{}\">{}</a>",
