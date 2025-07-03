@@ -77,26 +77,28 @@ const fn delimiter_html(delimiter: &DelimitingModifier) -> &'static str {
 
 pub fn convert_nodes(ast: &[NorgAST]) -> (String, Vec<TocEntry>) {
     let mut toc = Vec::new();
-    let mut result = Vec::new();
-    let mut i = 0;
+    let mut html_parts = Vec::with_capacity(ast.len());
+    let mut index = 0;
 
-    while i < ast.len() {
-        match &ast[i] {
+    while index < ast.len() {
+        match &ast[index] {
             NorgAST::NestableDetachedModifier { modifier_type, .. } => {
-                let (html, consumed) = convert_grouped_modifiers(&ast[i..], modifier_type);
+                let (html, consumed_nodes) = convert_grouped_modifiers(&ast[index..], modifier_type);
                 if !html.is_empty() {
-                    result.push(html);
+                    html_parts.push(html);
                 }
-                i += consumed;
+                index += consumed_nodes;
             }
             node => {
-                convert_single_node(node, &mut toc).map(|html| result.push(html));
-                i += 1;
+                if let Some(html) = convert_single_node(node, &mut toc) {
+                    html_parts.push(html);
+                }
+                index += 1;
             }
         }
     }
 
-    (result.join("\n"), toc)
+    (html_parts.join("\n"), toc)
 }
 
 fn convert_single_node(node: &NorgAST, toc: &mut Vec<TocEntry>) -> Option<String> {
