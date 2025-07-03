@@ -20,30 +20,58 @@ const HTML_TAGS: &[(char, &str, &str)] = &[
     ('=', "<mark>", "</mark>"),
 ];
 
-#[derive(Debug, PartialEq)]
-enum VerbatimTag {
-    Code,
-    Image,
-    DocumentMeta,
-    Unknown,
+fn todo_status_html(status: &TodoStatus) -> String {
+    match status {
+        TodoStatus::Undone => r#"<input type="checkbox" class="todo-status todo-undone" disabled />"#.into(),
+        TodoStatus::Done => r#"<input type="checkbox" class="todo-status todo-done" checked disabled />"#.into(),
+        TodoStatus::NeedsClarification => r#"<span class="todo-status todo-clarification">?</span>"#.into(),
+        TodoStatus::Paused => r#"<span class="todo-status todo-paused">=</span>"#.into(),
+        TodoStatus::Urgent => r#"<span class="todo-status todo-urgent">!</span>"#.into(),
+        TodoStatus::Pending => r#"<span class="todo-status todo-pending">-</span>"#.into(),
+        TodoStatus::Canceled => r#"<span class="todo-status todo-canceled">_</span>"#.into(),
+        TodoStatus::Recurring(date) => format!(
+            r#"<span class="todo-status todo-recurring">+ {}</span>"#,
+            encode_minimal(date.as_deref().unwrap_or(""))
+        ),
+    }
 }
 
-impl VerbatimTag {
-    fn from_slice(slice: &[String]) -> Self {
-        match slice {
-            [tag] if tag == "code" => Self::Code,
-            [tag] if tag == "image" => Self::Image,
-            [doc, meta] if doc == "document" && meta == "meta" => Self::DocumentMeta,
-            _ => Self::Unknown,
-        }
+fn convert_verbatim_tag(name: &[String], parameters: &[String], content: &str) -> Option<String> {
+    match name {
+        [tag] if tag == "code" => Some(convert_code_block(parameters, content)),
+        [tag] if tag == "image" => convert_image_tag(parameters, content),
+        [doc, meta] if doc == "document" && meta == "meta" => None,
+        _ => Some(format!("<div class=\"verbatim\">{}</div>", encode_minimal(content))),
     }
+}
+
+fn convert_code_block(parameters: &[String], content: &str) -> String {
+    let encoded = encode_minimal(&dedent(content));
+    match parameters.first().filter(|l| !l.is_empty()) {
+        Some(lang) => format!(r#"<pre class="language-{lang}"><code class="language-{lang}">{encoded}</code></pre>"#),
+        None => format!("<pre><code>{encoded}</code></pre>"),
+    }
+}
+
+fn convert_image_tag(parameters: &[String], content: &str) -> Option<String> {
+    let path = parameters.first().filter(|p| !p.is_empty())?;
+    let src = if path.starts_with('/') || path.starts_with("http") {
+        path.clone()
+    } else {
+        format!("./{path}")
+    };
+    Some(format!(
+        r#"<img src="{}" alt="{}" />"#,
+        encode_minimal(&src),
+        encode_minimal(content.trim())
+    ))
 }
 
 const fn delimiter_html(delimiter: &DelimitingModifier) -> &'static str {
     match delimiter {
         DelimitingModifier::Weak => "<hr class=\"weak\" />",
         DelimitingModifier::Strong => "<hr class=\"strong\" />",
-        DelimitingModifier::HorizontalRule => "<hr class=\"normal\" />",
+        DelimitingModifier::HorizontalRule => "<hr />",
     }
 }
 
@@ -56,15 +84,13 @@ pub fn convert_nodes(ast: &[NorgAST]) -> (String, Vec<TocEntry>) {
         match &ast[i] {
             NorgAST::NestableDetachedModifier { modifier_type, .. } => {
                 let (html, consumed) = convert_grouped_modifiers(&ast[i..], modifier_type);
-                if !html.trim().is_empty() {
+                if !html.is_empty() {
                     result.push(html);
                 }
                 i += consumed;
             }
             node => {
-                if let Some(html) = convert_single_node(node, &mut toc) {
-                    result.push(html);
-                }
+                convert_single_node(node, &mut toc).map(|html| result.push(html));
                 i += 1;
             }
         }
@@ -80,39 +106,9 @@ fn convert_single_node(node: &NorgAST, toc: &mut Vec<TocEntry>) -> Option<String
             parameters,
             content,
             ..
-        } => match VerbatimTag::from_slice(name) {
-            VerbatimTag::DocumentMeta => return None,
-            VerbatimTag::Code => {
-                let dedented = dedent(content);
-                let encoded = encode_minimal(&dedented);
-                match parameters.first().filter(|l| !l.is_empty()) {
-                    Some(lang) => format!("<pre class=\"language-{lang}\"><code class=\"language-{lang}\">{encoded}</code></pre>"),
-                    None => format!("<pre><code>{encoded}</code></pre>"),
-                }
-            }
-            VerbatimTag::Image => parameters.first().filter(|p| !p.is_empty()).map(|path| {
-                let src = if path.starts_with('/') || path.starts_with("http") {
-                    path.clone()
-                } else {
-                    format!("./{path}")
-                };
-                format!(
-                    r#"<img src="{}" alt="{}" />"#,
-                    encode_minimal(&src),
-                    encode_minimal(content.trim())
-                )
-            })?,
-            VerbatimTag::Unknown => {
-                format!("<div class=\"verbatim\">{}</div>", encode_minimal(content))
-            }
-        },
+        } => convert_verbatim_tag(name, parameters, content)?,
 
-        NorgAST::Heading {
-            level,
-            title,
-            content,
-            ..
-        } => {
+        NorgAST::Heading { level, title, content, .. } => {
             let title_text = convert_paragraph_segments(title);
             let heading_id = into_slug(&title_text);
             let heading = format!("<h{level} id=\"{heading_id}\">{title_text}</h{level}>");
@@ -124,10 +120,9 @@ fn convert_single_node(node: &NorgAST, toc: &mut Vec<TocEntry>) -> Option<String
             });
             let (content_html, _) = convert_nodes(content);
 
-            if content_html.trim().is_empty() {
-                heading
-            } else {
-                format!("{heading}\n{content_html}")
+            match content_html.trim().is_empty() {
+                true => heading,
+                false => format!("{heading}\n{content_html}"),
             }
         }
 
@@ -195,35 +190,37 @@ fn convert_grouped_modifiers(
         .filter_map(|node| match node {
             NorgAST::NestableDetachedModifier {
                 text, extensions, ..
-            } => {
-                if let NorgASTFlat::Paragraph(segments) = text.as_ref() {
+            } => match text.as_ref() {
+                NorgASTFlat::Paragraph(segments) => {
                     let content = convert_paragraph_segments(segments);
                     (!content.trim().is_empty()).then(|| format_list_item(&content, extensions))
-                } else {
-                    None
                 }
-            }
+                _ => None,
+            },
             _ => None,
         })
         .collect();
 
-    let consumed = matching_nodes.len();
     let html = if items.is_empty() {
-        String::new()
+        (String::new(), matching_nodes.len())
     } else {
-        let joined = items.join("\n");
         let tag_name = match modifier_type {
             NestableDetachedModifier::UnorderedList => "ul",
             NestableDetachedModifier::OrderedList => "ol",
             NestableDetachedModifier::Quote => "blockquote",
         };
-        format!("<{tag_name}>\n{joined}\n</{tag_name}>")
+        (
+            format!("<{tag_name}>\n{}\n</{tag_name}>", items.join("\n")),
+            matching_nodes.len(),
+        )
     };
 
-    (html, consumed)
+    html
 }
 
 fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> String {
+    use std::fmt::Write;
+
     let mut classes = Vec::new();
     let mut attributes = Vec::new();
     let mut prefix_parts = Vec::new();
@@ -231,77 +228,53 @@ fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> 
     for ext in extensions {
         match ext {
             DetachedModifierExtension::Todo(status) => {
-                if let TodoStatus::Recurring(date) = status {
-                    let date_text = date.as_deref().unwrap_or("");
-                    prefix_parts.push(format!(
-                        "<span class=\"todo-status\">+ {}</span>",
-                        encode_minimal(date_text)
-                    ));
+                if let TodoStatus::Recurring(_) = status {
                     classes.push("todo-recurring".to_string());
-                } else {
-                    let status_html = match status {
-                        TodoStatus::Undone => String::from("<input type=\"checkbox\" class=\"todo-status todo-undone\" disabled />"),
-                        TodoStatus::Done => String::from("<input type=\"checkbox\" class=\"todo-status todo-done\" checked disabled />"),
-                        TodoStatus::NeedsClarification => String::from("<span class=\"todo-status todo-clarification\">?</span>"),
-                        TodoStatus::Paused => String::from("<span class=\"todo-status todo-paused\">=</span>"),
-                        TodoStatus::Urgent => String::from("<span class=\"todo-status todo-urgent\">!</span>"),
-                        TodoStatus::Pending => String::from("<span class=\"todo-status todo-pending\">-</span>"),
-                        TodoStatus::Canceled => String::from("<span class=\"todo-status todo-canceled\">_</span>"),
-                        TodoStatus::Recurring(date) => match date {
-                            Some(date) => format!(
-                                "<span class=\"todo-status todo-recurring\">+ {}</span>",
-                                encode_minimal(date)
-                            ),
-                            None => String::from("<span class=\"todo-status todo-recurring\">_</span>")
-                        },
-                    };
-                    prefix_parts.push(status_html);
                 }
+                prefix_parts.push(todo_status_html(status));
             }
             DetachedModifierExtension::Priority(p) => {
                 classes.push(format!("priority-{}", into_slug(p)));
-                attributes.push(format!("data-priority=\"{}\"", encode_minimal(p)));
+                attributes.push(format!(r#"data-priority="{}""#, encode_minimal(p)));
             }
             DetachedModifierExtension::Timestamp(ts) => {
-                attributes.push(format!("data-timestamp=\"{}\"", encode_minimal(ts)))
+                attributes.push(format!(r#"data-timestamp="{}""#, encode_minimal(ts)));
             }
             DetachedModifierExtension::DueDate(date) => {
-                attributes.push(format!("data-due=\"{}\"", encode_minimal(date)))
+                attributes.push(format!(r#"data-due="{}""#, encode_minimal(date)));
             }
             DetachedModifierExtension::StartDate(date) => {
-                attributes.push(format!("data-start=\"{}\"", encode_minimal(date)))
+                attributes.push(format!(r#"data-start="{}""#, encode_minimal(date)));
             }
         }
     }
 
-    let mut li_tag = vec!["<li".to_string()];
+    let mut result = String::new();
+    write!(&mut result, "<li").unwrap();
 
     if !classes.is_empty() {
-        li_tag.push(format!("class=\"{}\"", classes.join(" ")));
-    }
-    if !attributes.is_empty() {
-        li_tag.push(attributes.join(" "));
+        write!(&mut result, r#" class="{}""#, classes.join(" ")).unwrap();
     }
 
-    li_tag.push(">".to_string());
+    for attr in &attributes {
+        write!(&mut result, " {}", attr).unwrap();
+    }
+
+    write!(&mut result, ">").unwrap();
+
     if !prefix_parts.is_empty() {
-        li_tag.push(prefix_parts.join(" "));
-        li_tag.push(" ".to_string());
+        write!(&mut result, "{} ", prefix_parts.join(" ")).unwrap();
     }
-    li_tag.push(content.to_string());
-    li_tag.push("</li>".to_string());
 
-    li_tag.join("")
+    write!(&mut result, "{}</li>", content).unwrap();
+    result
 }
 
-fn process_token<F>(token: &ParagraphSegmentToken, encode_fn: F) -> String
-where
-    F: Fn(&str) -> String,
-{
+fn process_token(token: &ParagraphSegmentToken, encode: impl Fn(&str) -> String) -> String {
     match token {
         ParagraphSegmentToken::Whitespace => " ".into(),
-        ParagraphSegmentToken::Text(text) => encode_fn(text),
-        ParagraphSegmentToken::Special(ch) => encode_fn(&ch.to_string()),
+        ParagraphSegmentToken::Text(text) => encode(text),
+        ParagraphSegmentToken::Special(ch) => encode(&ch.to_string()),
         ParagraphSegmentToken::Escape(ch) => ch.to_string(),
     }
 }
@@ -322,51 +295,27 @@ fn convert_paragraph_segments(segments: &[ParagraphSegment]) -> String {
         .map(|segment| match segment {
             ParagraphSegment::Token(token) => process_token(token, encode_minimal),
 
-            ParagraphSegment::AttachedModifier {
-                modifier_type,
-                content,
-            } => match *modifier_type {
-                '`' => {
-                    let code_inner = convert_paragraph_segments_with_code_escaping(content);
-                    format!("<code>{code_inner}</code>")
-                }
-                _ => {
-                    let inner = convert_paragraph_segments(content);
-                    if let Some((_, open, close)) =
-                        HTML_TAGS.iter().find(|(ch, _, _)| ch == modifier_type)
-                    {
-                        format!("{open}{inner}{close}")
-                    } else {
-                        inner
-                    }
-                }
+            ParagraphSegment::AttachedModifier { modifier_type, content } => match *modifier_type {
+                '`' => format!("<code>{}</code>", convert_paragraph_segments_with_code_escaping(content)),
+                ch => HTML_TAGS.iter()
+                    .find_map(|(tag_ch, open, close)| {
+                        (*tag_ch == ch).then(|| format!("{open}{}{close}", convert_paragraph_segments(content)))
+                    })
+                    .unwrap_or_else(|| convert_paragraph_segments(content)),
             },
 
-            ParagraphSegment::Link {
-                targets,
-                description,
-                ..
-            } => targets
+            ParagraphSegment::Link { targets, description, .. } => targets
                 .first()
-                .map(|target| {
-                    convert_link(
-                        target,
-                        description
-                            .as_ref()
-                            .map(|d| convert_paragraph_segments(d))
-                            .as_deref(),
-                    )
-                })
+                .map(|target| convert_link(
+                    target,
+                    description.as_ref().map(|d| convert_paragraph_segments(d)).as_deref(),
+                ))
                 .unwrap_or_default(),
 
             ParagraphSegment::Anchor { content, .. } => convert_paragraph_segments(content),
 
             ParagraphSegment::InlineVerbatim(tokens) => {
-                let content = tokens.iter().fold(String::new(), |mut acc, token| {
-                    acc.push_str(&token.to_string());
-                    acc
-                });
-                format!("<code>{}</code>", encode_minimal(&content))
+                format!("<code>{}</code>", encode_minimal(&tokens.iter().map(ToString::to_string).collect::<String>()))
             }
 
             _ => String::new(),
@@ -378,35 +327,19 @@ fn convert_link(target: &LinkTarget, custom_text: Option<&str>) -> String {
     match target {
         LinkTarget::Url(url) => {
             let display = custom_text.unwrap_or(url);
-
             if url.starts_with("http") {
-                format!(
-                    r#"<a href="{}" target="_blank">{}</a>"#,
-                    encode_minimal(url),
-                    encode_minimal(display)
-                )
+                format!(r#"<a href="{}" target="_blank">{}</a>"#, encode_minimal(url), encode_minimal(display))
             } else {
-                let href = url
-                    .strip_suffix(".norg")
-                    .map_or_else(|| url.clone(), |base| format!("{base}.html"));
-                format!(
-                    r#"<a href="{}">{}</a>"#,
-                    encode_minimal(&href),
-                    encode_minimal(display)
-                )
+                let href = url.strip_suffix(".norg")
+                    .map(|base| format!("{base}.html"))
+                    .unwrap_or_else(|| url.clone());
+                format!(r#"<a href="{}">{}</a>"#, encode_minimal(&href), encode_minimal(display))
             }
         }
         LinkTarget::Heading { title, .. } => {
-            let title_text = title.iter().fold(String::new(), |mut acc, seg| {
-                acc.push_str(&format!("{seg:?}"));
-                acc
-            });
+            let title_text: String = title.iter().map(|seg| format!("{seg:?}")).collect();
             let slug = into_slug(&title_text);
-            format!(
-                "<a href=\"#{}\">{}</a>",
-                encode_minimal(&slug),
-                encode_minimal(custom_text.unwrap_or(&title_text))
-            )
+            format!("<a href=\"#{}\">{}</a>", encode_minimal(&slug), encode_minimal(custom_text.unwrap_or(&title_text)))
         }
         _ => format!("{:?}", target),
     }

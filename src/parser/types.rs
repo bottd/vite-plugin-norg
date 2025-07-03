@@ -17,9 +17,7 @@ pub struct ParsedNorg {
 
 impl ParsedNorg {
     pub fn has_metadata(&self) -> bool {
-        self.metadata
-            .as_object()
-            .is_some_and(|metadata| !metadata.is_empty())
+        self.metadata.as_object().is_some_and(|m| !m.is_empty())
     }
 
     pub fn has_toc(&self) -> bool {

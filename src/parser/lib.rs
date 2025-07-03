@@ -12,7 +12,8 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn parse_norg(content: &str) -> Result<JsValue, JsValue> {
-    let ast = rust_norg::parse_tree(content).map_err(|e| format!("Parse error: {:?}", e))?;
+    let ast = rust_norg::parse_tree(content)
+        .map_err(|e| JsValue::from_str(&format!("Parse error: {:?}", e)))?;
 
     let (html, toc) = convert_nodes(&ast);
     let parsed = ParsedNorg {
@@ -21,6 +22,6 @@ pub fn parse_norg(content: &str) -> Result<JsValue, JsValue> {
         toc,
     };
 
-    js_sys::JSON::parse(&serde_json::to_string(&parsed).unwrap())
-        .map_err(|e| JsValue::from_str(&format!("JSON parse error: {:?}", e)))
+    serde_wasm_bindgen::to_value(&parsed)
+        .map_err(|e| JsValue::from_str(&format!("Serialization error: {:?}", e)))
 }
