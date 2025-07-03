@@ -1,12 +1,17 @@
 use rust_norg::metadata::{parse_metadata, NorgMeta};
-use rust_norg::NorgAST::VerbatimRangedTag;
+use rust_norg::NorgAST::{self, VerbatimRangedTag};
 use serde_json::{json, Map, Value};
+use wasm_bindgen::prelude::*;
 
-pub fn extract_metadata(ast: &[rust_norg::NorgAST]) -> Value {
+/// Extracts metadata from a Norg AST as JSON.
+/// Returns `Value::Null` if no metadata is found.
+pub fn extract_metadata(ast: &[NorgAST]) -> Value {
     ast.iter()
         .find_map(|node| match node {
             VerbatimRangedTag { name, content, .. }
-                if matches!(name.as_slice(), [doc, meta] if doc == "document" && meta == "meta") => Some(content),
+                if matches!(name.as_slice(), [doc, meta] if doc == "document" && meta == "meta") => {
+                Some(content.as_str())
+            }
             _ => None,
         })
         .and_then(|content| parse_metadata(content).ok())
@@ -14,16 +19,32 @@ pub fn extract_metadata(ast: &[rust_norg::NorgAST]) -> Value {
         .unwrap_or(Value::Null)
 }
 
+pub fn extract_metadata_for_js(ast: &[NorgAST]) -> Result<JsValue, String> {
+    let metadata = extract_metadata(ast);
+    let serializable_metadata = if metadata.is_null() {
+        json!({})
+    } else {
+        metadata
+    };
+
+    let json_string = serde_json::to_string(&serializable_metadata)
+        .map_err(|e| format!("Metadata serialization failed: {e}"))?;
+
+    js_sys::JSON::parse(&json_string)
+        .map_err(|_| "Failed to parse metadata JSON in JavaScript".to_string())
+}
+
 fn norg_meta_to_json(meta: &NorgMeta) -> Value {
+    use NorgMeta::*;
     match meta {
-        NorgMeta::Invalid | NorgMeta::Nil | NorgMeta::EmptyKey(_) => Value::Null,
-        NorgMeta::Bool(b) => json!(b),
-        NorgMeta::Str(s) => json!(s),
-        NorgMeta::Num(n) => json!(n),
-        NorgMeta::Array(arr) => json!(arr.iter().map(norg_meta_to_json).collect::<Vec<Value>>()),
-        NorgMeta::Object(map) => json!(map
+        Invalid | Nil | EmptyKey(_) => Value::Null,
+        Bool(b) => json!(b),
+        Str(s) => json!(s),
+        Num(n) => json!(n),
+        Array(arr) => json!(arr.iter().map(norg_meta_to_json).collect::<Vec<_>>()),
+        Object(map) => json!(map
             .iter()
-            .map(|(k, v)| (k.clone(), norg_meta_to_json(v)))
+            .map(|(key, value)| (key.clone(), norg_meta_to_json(value)))
             .collect::<Map<_, _>>()),
     }
 }
