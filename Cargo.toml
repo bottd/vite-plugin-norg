@@ -22,7 +22,6 @@ serde_json = "1.0"
 htmlescape = "0.3"
 rust-norg = { git = "https://github.com/nvim-neorg/rust-norg" }
 textwrap = "0.16.1"
-js-sys = "0.3"
 
 [dependencies.web-sys]
 version = "0.3"
