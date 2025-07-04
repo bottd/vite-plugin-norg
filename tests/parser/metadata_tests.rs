@@ -19,7 +19,6 @@ fn test_extract_metadata_basic() {
     }];
 
     let metadata = extract_metadata(&ast);
-    println!("Metadata result: {:?}", metadata);
 
     let expected = json!({
         "title": "Test Document",
@@ -29,18 +28,11 @@ fn test_extract_metadata_basic() {
 }
 
 #[test]
-fn test_extract_metadata_from_actual_file() {
-    // Parse the actual basic.norg file
+fn test_extract_metadata_from_file() {
     let content = fs::read_to_string("tests/fixtures/basic.norg").unwrap();
-    println!("File content:\n{}", content);
-
     let ast = rust_norg::parse_tree(&content).unwrap();
-    println!("AST: {:?}", ast);
-
     let metadata = extract_metadata(&ast);
-    println!("Extracted metadata: {:?}", metadata);
 
-    // This should match what we expect from the test
     let expected = json!({
         "title": "Basic Norg",
         "author": "Drake Bott"
@@ -50,19 +42,10 @@ fn test_extract_metadata_from_actual_file() {
 
 #[test]
 fn test_parse_norg_internal() {
-    // Test the internal parsing logic
     let content = fs::read_to_string("tests/fixtures/basic.norg").unwrap();
-    println!("File content:\n{}", content);
-
     let ast = rust_norg::parse_tree(&content).unwrap();
-    let (html, toc) = convert_nodes(&ast);
     let metadata = extract_metadata(&ast);
 
-    println!("Metadata: {:?}", metadata);
-    println!("HTML length: {}", html.len());
-    println!("TOC entries: {}", toc.len());
-
-    // Check that metadata is properly extracted
     assert!(!metadata.is_null());
     let expected = json!({
         "title": "Basic Norg",
