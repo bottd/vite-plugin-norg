@@ -21,8 +21,7 @@ pub fn extract_meta_js(ast: &[NorgAST]) -> Result<JsValue, String> {
     let data = extract_metadata(ast);
     let data = if data.is_null() { json!({}) } else { data };
 
-    let data = serde_json::to_string(&data)
-        .map_err(|e| format!("Meta serialize failed: {e}"))?;
+    let data = serde_json::to_string(&data).map_err(|e| format!("Meta serialize failed: {e}"))?;
 
     js_sys::JSON::parse(&data).map_err(|_| "Parse meta JSON failed".to_string())
 }

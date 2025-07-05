@@ -26,10 +26,9 @@ pub fn parse_norg(content: &str) -> Result<JsValue, JsValue> {
         .map_err(|_| "Set metadata failed".to_string())?;
     js_sys::Reflect::set(&result, &"html".into(), &html.into())
         .map_err(|_| "Set html failed".to_string())?;
-    let toc = serde_wasm_bindgen::to_value(&toc)
-        .map_err(|e| format!("Serialize toc failed: {e}"))?;
-    js_sys::Reflect::set(&result, &"toc".into(), &toc)
-        .map_err(|_| "Set toc failed".to_string())?;
+    let toc =
+        serde_wasm_bindgen::to_value(&toc).map_err(|e| format!("Serialize toc failed: {e}"))?;
+    js_sys::Reflect::set(&result, &"toc".into(), &toc).map_err(|_| "Set toc failed".to_string())?;
 
     Ok(result.into())
 }
