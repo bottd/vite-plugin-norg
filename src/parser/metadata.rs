@@ -1,4 +1,3 @@
-use crate::error::{NorgError, NorgResult};
 use rust_norg::metadata::{parse_metadata, NorgMeta};
 use rust_norg::NorgAST::{self, VerbatimRangedTag};
 use serde_json::{json, Map, Value};
@@ -18,14 +17,14 @@ pub fn extract_metadata(ast: &[NorgAST]) -> Value {
         .unwrap_or(Value::Null)
 }
 
-pub fn extract_meta_js(ast: &[NorgAST]) -> NorgResult<JsValue> {
+pub fn extract_meta_js(ast: &[NorgAST]) -> Result<JsValue, String> {
     let data = extract_metadata(ast);
     let data = if data.is_null() { json!({}) } else { data };
 
     let data = serde_json::to_string(&data)
-        .map_err(|e| NorgError::Serial(format!("Meta serialize failed: {e}")))?;
+        .map_err(|e| format!("Meta serialize failed: {e}"))?;
 
-    js_sys::JSON::parse(&data).map_err(|_| NorgError::Js("Parse meta JSON failed".to_string()))
+    js_sys::JSON::parse(&data).map_err(|_| "Parse meta JSON failed".to_string())
 }
 
 fn meta_to_json(meta: &NorgMeta) -> Value {
