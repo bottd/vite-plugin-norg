@@ -1,4 +1,4 @@
-use vite_plugin_norg_parser::convert_nodes;
+use vite_plugin_norg_parser::{extract_toc, transform};
 
 #[test]
 fn test_convert_nodes() {
@@ -12,7 +12,8 @@ fn test_convert_nodes() {
     };
 
     let ast = vec![node];
-    let (html, toc) = convert_nodes(&ast);
+    let html = transform(&ast);
+    let toc = extract_toc(&ast);
     assert!(html.starts_with("<h1 id=\"\">"));
     assert!(html.ends_with("</h1>"));
     assert_eq!(toc.len(), 1);

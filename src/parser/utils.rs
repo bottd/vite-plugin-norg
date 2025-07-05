@@ -1,4 +1,3 @@
-/// Converts text into a URL-safe slug.
 pub fn into_slug(text: &str) -> String {
     text.to_lowercase()
         .chars()

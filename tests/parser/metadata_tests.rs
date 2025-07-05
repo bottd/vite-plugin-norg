@@ -1,7 +1,7 @@
 use rust_norg::NorgAST::VerbatimRangedTag;
 use serde_json::{json, Value};
 use std::fs;
-use vite_plugin_norg_parser::{convert_nodes, extract_metadata};
+use vite_plugin_norg_parser::extract_metadata;
 
 #[test]
 fn test_extract_metadata_empty() {
@@ -29,27 +29,31 @@ fn test_extract_metadata_basic() {
 
 #[test]
 fn test_extract_metadata_from_file() {
-    let content = fs::read_to_string("tests/fixtures/basic.norg").unwrap();
-    let ast = rust_norg::parse_tree(&content).unwrap();
+    let content =
+        fs::read_to_string("tests/fixtures/basic.norg").expect("Failed to read basic.norg fixture");
+    let ast = rust_norg::parse_tree(&content).expect("Failed to parse basic.norg content");
     let metadata = extract_metadata(&ast);
 
     let expected = json!({
         "title": "Basic Norg",
-        "author": "Drake Bott"
+        "author": "Drake Bott",
+        "tags": ["\"test\", \"basic\""]
     });
     assert_eq!(metadata, expected);
 }
 
 #[test]
 fn test_parse_norg_internal() {
-    let content = fs::read_to_string("tests/fixtures/basic.norg").unwrap();
-    let ast = rust_norg::parse_tree(&content).unwrap();
+    let content =
+        fs::read_to_string("tests/fixtures/basic.norg").expect("Failed to read basic.norg fixture");
+    let ast = rust_norg::parse_tree(&content).expect("Failed to parse basic.norg content");
     let metadata = extract_metadata(&ast);
 
     assert!(!metadata.is_null());
     let expected = json!({
         "title": "Basic Norg",
-        "author": "Drake Bott"
+        "author": "Drake Bott",
+        "tags": ["\"test\", \"basic\""]
     });
     assert_eq!(metadata, expected);
 }
