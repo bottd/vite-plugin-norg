@@ -248,7 +248,7 @@ fn conv_code(segments: &[ParagraphSegment]) -> String {
         .collect()
 }
 
-fn conv_segs(segments: &[ParagraphSegment]) -> String {
+pub fn conv_segs(segments: &[ParagraphSegment]) -> String {
     segments
         .iter()
         .map(|segment| match segment {

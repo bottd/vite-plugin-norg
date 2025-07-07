@@ -1,3 +1,4 @@
+use crate::html::conv_segs;
 use crate::types::TocEntry;
 use crate::utils::into_slug;
 use rust_norg::NorgAST;
@@ -33,29 +34,3 @@ fn extract_toc_recursive(ast: &[NorgAST], toc: &mut Vec<TocEntry>) {
     }
 }
 
-use htmlescape::encode_minimal;
-use rust_norg::{ParagraphSegment, ParagraphSegmentToken};
-
-fn conv_segs(segments: &[ParagraphSegment]) -> String {
-    segments
-        .iter()
-        .map(|segment| match segment {
-            ParagraphSegment::Token(token) => match token {
-                ParagraphSegmentToken::Whitespace => " ".to_string(),
-                ParagraphSegmentToken::Text(text) => encode_minimal(text),
-                ParagraphSegmentToken::Special(ch) => encode_minimal(&ch.to_string()),
-                ParagraphSegmentToken::Escape(ch) => ch.to_string(),
-            },
-            ParagraphSegment::AttachedModifier { content, .. } => conv_segs(content),
-            ParagraphSegment::Link { description, .. } => description
-                .as_ref()
-                .map(|d| conv_segs(d))
-                .unwrap_or_default(),
-            ParagraphSegment::Anchor { content, .. } => conv_segs(content),
-            ParagraphSegment::InlineVerbatim(tokens) => {
-                encode_minimal(&tokens.iter().map(ToString::to_string).collect::<String>())
-            }
-            _ => String::new(),
-        })
-        .collect()
-}
