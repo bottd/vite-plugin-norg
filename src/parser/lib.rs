@@ -1,5 +1,7 @@
+mod ast_handlers;
 mod html;
 mod metadata;
+mod segments;
 mod toc;
 mod types;
 mod utils;

@@ -1,4 +1,4 @@
-use crate::html::conv_segs;
+use crate::segments::convert_segments;
 use crate::types::TocEntry;
 use crate::utils::into_slug;
 use rust_norg::NorgAST;
@@ -18,7 +18,7 @@ fn extract_toc_recursive(ast: &[NorgAST], toc: &mut Vec<TocEntry>) {
                 content,
                 ..
             } => {
-                let text = conv_segs(title);
+                let text = convert_segments(title);
                 let id = into_slug(&text);
 
                 toc.push(TocEntry {
@@ -33,4 +33,3 @@ fn extract_toc_recursive(ast: &[NorgAST], toc: &mut Vec<TocEntry>) {
         }
     }
 }
-
