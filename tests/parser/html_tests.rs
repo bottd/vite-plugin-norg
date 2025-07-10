@@ -11,9 +11,9 @@ use vite_plugin_norg_parser::{extract_metadata, extract_toc, transform};
 #[case::links("tests/fixtures/links.norg")]
 fn test_norg_fixture_files(#[case] fixture_path: &str) {
     let content = fs::read_to_string(fixture_path)
-        .unwrap_or_else(|_| panic!("Failed to read {}", fixture_path));
+        .unwrap_or_else(|_| panic!("Failed to read {fixture_path}"));
     let ast = rust_norg::parse_tree(&content)
-        .unwrap_or_else(|_| panic!("Failed to parse {}", fixture_path));
+        .unwrap_or_else(|_| panic!("Failed to parse {fixture_path}"));
 
     let html = transform(&ast);
     let toc = extract_toc(&ast);

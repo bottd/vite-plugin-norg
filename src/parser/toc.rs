@@ -11,25 +11,23 @@ pub fn extract_toc(ast: &[NorgAST]) -> Vec<TocEntry> {
 
 fn extract_toc_recursive(ast: &[NorgAST], toc: &mut Vec<TocEntry>) {
     for node in ast {
-        match node {
-            NorgAST::Heading {
-                level,
-                title,
-                content,
-                ..
-            } => {
-                let text = convert_segments(title);
-                let id = into_slug(&text);
+        if let NorgAST::Heading {
+            level,
+            title,
+            content,
+            ..
+        } = node
+        {
+            let text = convert_segments(title);
+            let id = into_slug(&text);
 
-                toc.push(TocEntry {
-                    level: *level as usize,
-                    title: text,
-                    id,
-                });
+            toc.push(TocEntry {
+                level: *level as usize,
+                title: text,
+                id,
+            });
 
-                extract_toc_recursive(content, toc);
-            }
-            _ => {}
+            extract_toc_recursive(content, toc);
         }
     }
 }

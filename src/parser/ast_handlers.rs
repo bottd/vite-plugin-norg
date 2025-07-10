@@ -42,7 +42,7 @@ pub fn handle_verbatim_tag(
     parameters: &[String],
     content: &str,
 ) -> Option<String> {
-    match &name[..] {
+    match name {
         [tag] if tag == "code" => {
             let text = encode_minimal(&dedent(content));
             if let Some(lang) = parameters.first().filter(|l| !l.is_empty()) {
@@ -215,7 +215,7 @@ fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> 
     }
 
     for attr in &attrs {
-        write!(&mut result, " {}", attr).unwrap();
+        write!(&mut result, " {attr}").unwrap();
     }
 
     write!(&mut result, ">").unwrap();
@@ -224,6 +224,6 @@ fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> 
         write!(&mut result, "{} ", prefix.join(" ")).unwrap();
     }
 
-    write!(&mut result, "{}</li>", content).unwrap();
+    write!(&mut result, "{content}</li>").unwrap();
     result
 }

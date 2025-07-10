@@ -114,13 +114,13 @@ fn convert_link(
             if url.starts_with("http") && filepath.is_none() {
                 format!(
                     r#"<a href="{}" target="_blank">{}</a>"#,
-                    encode_minimal(&href),
+                    encode_minimal(href),
                     encode_minimal(display_text)
                 )
             } else {
                 format!(
                     r#"<a href="{}">{}</a>"#,
-                    encode_minimal(&href),
+                    encode_minimal(href),
                     encode_minimal(display_text)
                 )
             }
@@ -139,11 +139,11 @@ fn convert_link(
             )
         }
         Some(LinkTarget::Footnote(name)) => {
-            eprintln!("Warning: Footnote links not yet implemented: {:?}", name);
+            eprintln!("Warning: Footnote links not yet implemented: {name:?}");
             String::new()
         }
         Some(LinkTarget::Definition(name)) => {
-            eprintln!("Warning: Definition links not yet implemented: {:?}", name);
+            eprintln!("Warning: Definition links not yet implemented: {name:?}");
             String::new()
         }
         Some(LinkTarget::Path(_)) => {
