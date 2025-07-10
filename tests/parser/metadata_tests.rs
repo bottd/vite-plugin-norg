@@ -57,7 +57,7 @@ fn test_extract_metadata_values() {
 fn test_extract_metadata_empty_lines() {
     let ast = vec![VerbatimRangedTag {
         name: vec!["document".to_string(), "meta".to_string()],
-        content: "title: Test\nauthor: Author".to_string(),
+        content: "title: Test\nauthor: Drake Bott".to_string(),
         parameters: Default::default(),
     }];
 
@@ -69,7 +69,7 @@ fn test_extract_metadata_empty_lines() {
 fn test_extract_metadata_all_valid() {
     let ast = vec![VerbatimRangedTag {
         name: vec!["document".to_string(), "meta".to_string()],
-        content: "title: Valid\nauthor: Test Author".to_string(),
+        content: "title: Valid\nauthor: Drake Bott".to_string(),
         parameters: Default::default(),
     }];
 
@@ -113,7 +113,7 @@ fn test_extract_metadata_with_types() {
 fn test_extract_metadata_nested_keys() {
     let ast = vec![VerbatimRangedTag {
         name: vec!["document".to_string(), "meta".to_string()],
-        content: "author: {\n  name: John Doe\n  email: john@example.com\n}".to_string(),
+        content: "author: {\n  name: Drake Bott\n  email: drake@example.com\n}".to_string(),
         parameters: Default::default(),
     }];
 

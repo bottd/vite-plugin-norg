@@ -2,5 +2,5 @@
 source: tests/parser/metadata_tests.rs
 expression: metadata
 ---
-author: Author
+author: Drake Bott
 title: Test
