@@ -1,0 +1,7 @@
+---
+source: tests/parser/metadata_tests.rs
+expression: metadata
+---
+author:
+  email: john@example.com
+  name: John Doe

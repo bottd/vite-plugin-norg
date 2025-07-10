@@ -1,5 +1,5 @@
+use insta::assert_yaml_snapshot;
 use rust_norg::NorgAST::VerbatimRangedTag;
-use serde_json::{json, Value};
 use std::fs;
 use vite_plugin_norg_parser::extract_metadata;
 
@@ -7,7 +7,7 @@ use vite_plugin_norg_parser::extract_metadata;
 fn test_extract_metadata_empty() {
     let ast = vec![];
     let result = extract_metadata(&ast);
-    assert_eq!(result, Value::Null);
+    assert_yaml_snapshot!(result);
 }
 
 #[test]
@@ -19,12 +19,7 @@ fn test_extract_metadata_basic() {
     }];
 
     let metadata = extract_metadata(&ast);
-
-    let expected = json!({
-        "title": "Test Document",
-        "author": "Drake Bott"
-    });
-    assert_eq!(metadata, expected);
+    assert_yaml_snapshot!(metadata);
 }
 
 #[test]
@@ -33,13 +28,7 @@ fn test_extract_metadata_from_file() {
         fs::read_to_string("tests/fixtures/basic.norg").expect("Failed to read basic.norg fixture");
     let ast = rust_norg::parse_tree(&content).expect("Failed to parse basic.norg content");
     let metadata = extract_metadata(&ast);
-
-    let expected = json!({
-        "title": "Basic Norg",
-        "author": "Drake Bott",
-        "tags": ["\"test\", \"basic\""]
-    });
-    assert_eq!(metadata, expected);
+    assert_yaml_snapshot!(metadata);
 }
 
 #[test]
@@ -49,13 +38,7 @@ fn test_parse_norg_internal() {
     let ast = rust_norg::parse_tree(&content).expect("Failed to parse basic.norg content");
     let metadata = extract_metadata(&ast);
 
-    assert!(!metadata.is_null());
-    let expected = json!({
-        "title": "Basic Norg",
-        "author": "Drake Bott",
-        "tags": ["\"test\", \"basic\""]
-    });
-    assert_eq!(metadata, expected);
+    assert_yaml_snapshot!(metadata);
 }
 
 #[test]
@@ -67,11 +50,7 @@ fn test_extract_metadata_values() {
     }];
 
     let metadata = extract_metadata(&ast);
-    let expected = json!({
-        "title": "Test Title",
-        "description": "A description with: colon"
-    });
-    assert_eq!(metadata, expected);
+    assert_yaml_snapshot!(metadata);
 }
 
 #[test]
@@ -83,11 +62,7 @@ fn test_extract_metadata_empty_lines() {
     }];
 
     let metadata = extract_metadata(&ast);
-    let expected = json!({
-        "title": "Test",
-        "author": "Author"
-    });
-    assert_eq!(metadata, expected);
+    assert_yaml_snapshot!(metadata);
 }
 
 #[test]
@@ -99,11 +74,7 @@ fn test_extract_metadata_all_valid() {
     }];
 
     let metadata = extract_metadata(&ast);
-    let expected = json!({
-        "title": "Valid",
-        "author": "Test Author"
-    });
-    assert_eq!(metadata, expected);
+    assert_yaml_snapshot!(metadata);
 }
 
 #[test]
@@ -122,7 +93,7 @@ fn test_extract_metadata_non_document_meta() {
     ];
 
     let result = extract_metadata(&ast);
-    assert_eq!(result, Value::Null);
+    assert_yaml_snapshot!(result);
 }
 
 #[test]
@@ -135,13 +106,7 @@ fn test_extract_metadata_with_types() {
     }];
 
     let metadata = extract_metadata(&ast);
-    let expected = json!({
-        "title": "Test Document",
-        "version": 42.0,
-        "published": true,
-        "tags": ["rust", "norg"]
-    });
-    assert_eq!(metadata, expected);
+    assert_yaml_snapshot!(metadata);
 }
 
 #[test]
@@ -153,11 +118,5 @@ fn test_extract_metadata_nested_keys() {
     }];
 
     let metadata = extract_metadata(&ast);
-    let expected = json!({
-        "author": {
-            "name": "John Doe",
-            "email": "john@example.com"
-        }
-    });
-    assert_eq!(metadata, expected);
+    assert_yaml_snapshot!(metadata);
 }

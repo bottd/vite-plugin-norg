@@ -1,0 +1,18 @@
+---
+source: tests/parser/html_tests.rs
+expression: "(html, toc, metadata)"
+---
+- "<h1 id=\"code-blocks\">Code Blocks</h1>\n<h2 id=\"javascript\">JavaScript</h2>\n<pre class=\"language-javascript\"><code class=\"language-javascript\">function hello() { return &quot;world&quot;; }\n</code></pre><h2 id=\"python\">Python </h2>\n<pre class=\"language-python\"><code class=\"language-python\">def add(a, b): return a + b\n</code></pre><h2 id=\"plain\">Plain</h2>\n<pre><code>plain text\n</code></pre>"
+- - level: 1
+    title: Code Blocks
+    id: code-blocks
+  - level: 2
+    title: JavaScript
+    id: javascript
+  - level: 2
+    title: "Python "
+    id: python
+  - level: 2
+    title: Plain
+    id: plain
+- title: "\"Code Test\""

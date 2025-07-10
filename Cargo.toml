@@ -39,6 +39,7 @@ optional = true
 [dev-dependencies]
 insta = { version = "1.39.0", features = ["yaml"] }
 proptest = "1.4.0"
+rstest = "0.18.2"
 
 [profile.release]
 opt-level = "s"

@@ -77,7 +77,6 @@ describe('vite-plugin-norg', () => {
       const result = await sveltePlugin.load(fixturePath);
       expect(result).toMatchSnapshot();
     });
-
   });
 
   describe('React Mode', () => {
@@ -100,6 +99,5 @@ describe('vite-plugin-norg', () => {
       const result = await reactPlugin.load(fixturePath);
       expect(result).toMatchSnapshot();
     });
-
   });
 });
