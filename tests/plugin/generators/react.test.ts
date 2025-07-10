@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { generateReactOutput } from '../../../src/plugin/generators/react.js';
 
 describe('React Generator', () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { vi } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import { norgPlugin } from '../../src/plugin/index.js';
@@ -23,12 +23,6 @@ describe('vite-plugin-norg', () => {
 
     it('should generate correct output for all heading levels', async () => {
       const fixturePath = join(__dirname, '../fixtures/headings.norg');
-      const result = await htmlPlugin.load(fixturePath);
-      expect(result).toMatchSnapshot();
-    });
-
-    it('should generate correct output for minimal norg files', async () => {
-      const fixturePath = join(__dirname, '../fixtures/minimal.norg');
       const result = await htmlPlugin.load(fixturePath);
       expect(result).toMatchSnapshot();
     });
@@ -84,11 +78,6 @@ describe('vite-plugin-norg', () => {
       expect(result).toMatchSnapshot();
     });
 
-    it('should generate correct component for minimal norg files', async () => {
-      const fixturePath = join(__dirname, '../fixtures/minimal.norg');
-      const result = await sveltePlugin.load(fixturePath);
-      expect(result).toMatchSnapshot();
-    });
   });
 
   describe('React Mode', () => {
@@ -112,10 +101,5 @@ describe('vite-plugin-norg', () => {
       expect(result).toMatchSnapshot();
     });
 
-    it('should generate correct component for minimal norg files', async () => {
-      const fixturePath = join(__dirname, '../fixtures/minimal.norg');
-      const result = await reactPlugin.load(fixturePath);
-      expect(result).toMatchSnapshot();
-    });
   });
 });

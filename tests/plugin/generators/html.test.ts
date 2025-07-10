@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { generateHtmlOutput } from '../../../src/plugin/generators/html.js';
 
 describe('HTML Generator', () => {

@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { generateSvelteOutput } from '../../../src/plugin/generators/svelte.js';
 
 describe('Svelte Generator', () => {
