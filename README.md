@@ -94,13 +94,13 @@ graph TD
     A[.norg files] --> B[Rust Parser]
     B --> C[WASM Module]
     C --> D[Vite Plugin]
-    D --> E[HTML | React | Svelte Generator]
+    D --> E[HTML / React / Svelte Generator]
     E --> F[Generated TypeScript Module]
 ```
 
 Built with:
 
-- **[rust-norg](https://github.com/nvim-neorg/rust-norg) parser** compiled to WASM for robust parsing
+- **[rust-norg](https://github.com/nvim-neorg/rust-norg)** compiled to WASM for robust parsing
 - **[vite-plugin-wasm](https://github.com/Menci/vite-plugin-wasm)** to load Rust HTML transformer
 - **TypeScript** for the sanity of all involved
 - **Vite integration** with HMR support
