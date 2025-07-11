@@ -99,6 +99,8 @@ graph LR
     E ==> G(⚛️ React)
     E ==> H(🔥 Svelte)
     F ==> I(💎 TypeScript Module)
+    G ==> I
+    H ==> I
 
     linkStyle default stroke-width:3px
 ```
