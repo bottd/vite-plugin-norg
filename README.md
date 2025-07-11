@@ -90,12 +90,17 @@ export default defineConfig({
 ## Architecture
 
 ```mermaid
-graph TD
-    A[.norg files] --> B[Rust Parser]
-    B --> C[WASM Module]
-    C --> D[Vite Plugin]
-    D --> E[HTML / React / Svelte Generator]
-    E --> F[Generated TypeScript Module]
+graph LR
+    A(📝 .norg files) ==> B(⚡ Rust Parser)
+    B ==> C(🔧 WASM Module)
+    C ==> D(🚀 Vite Plugin)
+    D ==> E{🎨 Generator}
+    E ==> F(📄 HTML)
+    E ==> G(⚛️ React)
+    E ==> H(🔥 Svelte)
+    F ==> I(💎 TypeScript Module)
+
+    linkStyle default stroke-width:3px
 ```
 
 Built with:
