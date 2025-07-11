@@ -1,12 +1,15 @@
-name: PR Pipeline
+name: Publish to NPM
 
 on:
-  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  ci:
-    name: CI Pipeline
+  publish:
     runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,3 +43,8 @@ jobs:
 
       - name: Run JavaScript tests
         run: npm test
+
+      - name: Publish to NPM
+        uses: JS-DevTools/npm-publish@v3
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
