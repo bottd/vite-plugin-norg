@@ -27,5 +27,4 @@ npm-debug.log*
 *.sw?
 
 # Package files
-*.tgz
-package-lock.json
+  *.tgz

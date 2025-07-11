@@ -1,0 +1,6 @@
+---
+source: tests/parser/metadata_tests.rs
+expression: metadata
+---
+description: "A description with: colon"
+title: Test Title

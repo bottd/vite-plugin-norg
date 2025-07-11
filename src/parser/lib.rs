@@ -1,37 +1,36 @@
+mod ast_handlers;
 mod html;
 mod metadata;
+mod segments;
+mod toc;
 mod types;
 mod utils;
 
-pub use html::{convert_ast_to_html, convert_ast_to_html_with_toc};
-pub use metadata::extract_metadata;
+pub use html::transform;
+pub use metadata::{extract_meta_js, extract_metadata};
+pub use toc::extract_toc;
 pub use types::{ParsedNorg, TocEntry};
-pub use utils::slug_from_text;
+pub use utils::into_slug;
 
-use serde_json::Value;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn parse_norg(content: &str) -> Result<JsValue, JsValue> {
-    let ast = rust_norg::parse_tree(content).map_err(|e| format!("Parse error: {:?}", e))?;
+    let ast = rust_norg::parse_tree(content).map_err(|e| format!("Parse error: {e:?}"))?;
 
-    let metadata = extract_metadata(&ast);
+    let html = transform(&ast);
+    let toc = extract_toc(&ast);
+    let meta = extract_meta_js(&ast)?;
 
-    let (html, toc) = convert_ast_to_html_with_toc(&ast);
-    let ast_value = serde_json::to_value(&ast)
-        .unwrap_or_else(|_| Value::String(format!("AST with {} nodes", ast.len())));
+    let result = js_sys::Object::new();
 
-    let parsed = ParsedNorg {
-        ast: ast_value,
-        metadata,
-        html,
-        toc,
-    };
+    js_sys::Reflect::set(&result, &"metadata".into(), &meta)
+        .map_err(|_| "Set metadata failed".to_string())?;
+    js_sys::Reflect::set(&result, &"html".into(), &html.into())
+        .map_err(|_| "Set html failed".to_string())?;
+    let toc =
+        serde_wasm_bindgen::to_value(&toc).map_err(|e| format!("Serialize toc failed: {e}"))?;
+    js_sys::Reflect::set(&result, &"toc".into(), &toc).map_err(|_| "Set toc failed".to_string())?;
 
-    // Use JSON serialization to ensure metadata is a plain object, not a Map
-    let json_str =
-        serde_json::to_string(&parsed).map_err(|e| format!("JSON serialization error: {}", e))?;
-
-    js_sys::JSON::parse(&json_str)
-        .map_err(|e| JsValue::from_str(&format!("JSON parse error: {:?}", e)))
+    Ok(result.into())
 }

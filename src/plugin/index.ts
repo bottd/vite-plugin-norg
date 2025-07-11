@@ -6,6 +6,8 @@ export default norgPlugin;
 
 // Module types for different generators
 import type { NorgMetadata } from './wasm';
+import type { SvelteComponent } from 'svelte';
+import type { FC } from 'react';
 
 /**
  * Module type for .norg files processed by the HTML generator
@@ -20,7 +22,7 @@ export interface HtmlModule {
  */
 export interface ReactModule {
   metadata: NorgMetadata;
-  Component: () => unknown;
+  Component: FC;
 }
 
 /**
@@ -28,8 +30,5 @@ export interface ReactModule {
  */
 export interface SvelteModule {
   metadata: NorgMetadata;
-  default: new (options: { target: unknown; props?: Record<string, unknown> }) => {
-    $destroy(): void;
-    $set(props: Record<string, unknown>): void;
-  };
+  default: typeof SvelteComponent;
 }
