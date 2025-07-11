@@ -29,14 +29,14 @@ jobs:
       - name: Run Nix flake checks
         run: nix flake check
 
-      - name: Run check and lint
-        run: npm run check && npm run lint
+      - name: Build plugin
+        run: npm run build
 
       - name: Run cargo checks
         run: cargo check && cargo clippy
 
-      - name: Build plugin
-        run: npm run build
+      - name: Run check and lint
+        run: npm run check && npm run lint
 
       - name: Run JavaScript tests
         run: npm test
