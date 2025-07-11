@@ -29,8 +29,8 @@ jobs:
       - name: Run Nix flake checks
         run: nix flake check
 
-      - name: Run type check and lint
-        run: npm run type-check && npm run lint
+      - name: Run check and lint
+        run: npm run check && npm run lint
 
       - name: Run cargo checks
         run: cargo check && cargo clippy
