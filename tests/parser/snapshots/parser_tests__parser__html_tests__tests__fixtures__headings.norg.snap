@@ -1,0 +1,24 @@
+---
+source: tests/parser/html_tests.rs
+expression: "(html, toc, metadata)"
+---
+- "<h1 id=\"h1\">H1</h1>\n<p>Content 1</p><h2 id=\"h2\">H2</h2>\n<p>Content 2</p><h3 id=\"h3\">H3</h3>\n<p>Content 3</p><h4 id=\"h4\">H4</h4>\n<p>Content 4</p><h5 id=\"h5\">H5</h5>\n<p>Content 5</p><h6 id=\"h6\">H6</h6>\n<p>Content 6</p>"
+- - level: 1
+    title: H1
+    id: h1
+  - level: 2
+    title: H2
+    id: h2
+  - level: 3
+    title: H3
+    id: h3
+  - level: 4
+    title: H4
+    id: h4
+  - level: 5
+    title: H5
+    id: h5
+  - level: 6
+    title: H6
+    id: h6
+- title: "\"Headings\""

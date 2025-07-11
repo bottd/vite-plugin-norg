@@ -1,0 +1,8 @@
+---
+source: tests/parser/metadata_tests.rs
+expression: metadata
+---
+author: Drake Bott
+tags:
+  - "\"test\", \"basic\""
+title: Basic Norg

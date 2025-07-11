@@ -102,12 +102,11 @@
             echo "  npm run build:wasm - Build WASM parser"  
             echo "  npm run build:js   - Build TypeScript"
             echo "  npm test           - Run tests"
-            echo "  npm run lint       - Run linter"
-            echo "  npm run type-check - Run TypeScript type check"
+            echo "  npm run lint       - TypeScript linter"
+            echo "  npm run check      - Check TypeScript code"
             echo "  cargo check        - Check Rust code"
+            echo "  cargo clippy       - Rust Linter"
             echo "  nix fmt            - Format all code with treefmt"
-            echo "  nix flake check    - Run all checks via pre-commit"
-            echo "  pre-commit run -a  - Run all hooks manually"
             echo ""
           '';
         };

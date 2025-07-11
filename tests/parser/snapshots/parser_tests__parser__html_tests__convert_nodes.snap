@@ -1,0 +1,8 @@
+---
+source: tests/parser/html_tests.rs
+expression: "(html, toc)"
+---
+- "<h1 id=\"\"></h1>"
+- - level: 1
+    title: ""
+    id: ""
