@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  check:
-    name: Check
+  ci:
+    name: CI Pipeline
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -29,80 +29,17 @@ jobs:
       - name: Run Nix flake checks
         run: nix flake check
 
-      - name: Run npm type check and lint
+      - name: Run type check and lint
         run: npm run type-check && npm run lint
 
-  test-js:
-    name: JavaScript Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Run cargo checks
+        run: cargo check && cargo clippy
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+      - name: Build plugin
+        run: npm run build
 
-      - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
-      - name: Setup Nix dev environment
-        uses: nicknovitski/nix-develop@v1
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run Vitest tests
+      - name: Run JavaScript tests
         run: npm test
-
-  test-rs:
-    name: Rust Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
-      - name: Setup Nix dev environment
-        uses: nicknovitski/nix-develop@v1
 
       - name: Run Rust tests
         run: cargo test
-
-  build:
-    name: Build Plugin
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
-      - name: Setup Nix dev environment
-        uses: nicknovitski/nix-develop@v1
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build WASM parser
-        run: npm run build:wasm
-
-      - name: Build TypeScript plugin
-        run: npm run build:js
-
-      - name: Copy WASM files
-        run: npm run copy:wasm
-
-      - name: Verify build artifacts
-        run: |
-          ls -la dist/
-          ls -la wasm/
-          echo "Build completed successfully"
