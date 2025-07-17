@@ -65,30 +65,32 @@ export function norgPlugin(options: NorgPluginOptions) {
 
   const highlightCodeBlocks = async (html: string): Promise<string> => {
     const codeBlockRegex =
-      /<pre class="lang-(\w+)"><code class="lang-\w+">([\s\S]*?)<\/code><\/pre>/g;
+      /<pre(?:\s+class="lang-(\w+)")?><code(?:\s+class="lang-\w+")?>([^]*?)<\/code><\/pre>/g;
 
     const matches = html.matchAll(codeBlockRegex);
 
     let result = html;
     for (const [fullMatch, lang, code] of matches) {
       const decodedCode = decodeHtmlEntities(code);
+      const language = lang ? lang.toLowerCase() : 'text';
 
       try {
         const highlighted = await codeToHtml(decodedCode, {
           ...highlightOptions,
-          lang: lang.toLowerCase(),
+          lang: language,
         });
         result = result.replace(fullMatch, highlighted);
-      } catch {
-        // Fallback to plaintext if language is not supported
+      } catch (error) {
+        // Fallback to text if language is not supported
         try {
           const highlighted = await codeToHtml(decodedCode, {
             ...highlightOptions,
-            lang: 'plaintext',
+            lang: 'text',
           });
           result = result.replace(fullMatch, highlighted);
-        } catch {
-          // If plaintext fails leave original HTML unchanged
+        } catch (fallbackError) {
+          console.warn(`Failed to highlight code block with language "${language}":`, error);
+          console.warn(`Fallback to 'text' also failed:`, fallbackError);
         }
       }
     }
