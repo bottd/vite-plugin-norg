@@ -81,11 +81,15 @@ export function norgPlugin(options: NorgPluginOptions) {
         result = result.replace(fullMatch, highlighted);
       } catch {
         // Fallback to plaintext if language is not supported
-        const highlighted = await codeToHtml(decodedCode, {
-          ...highlightOptions,
-          lang: 'plaintext',
-        });
-        result = result.replace(fullMatch, highlighted);
+        try {
+          const highlighted = await codeToHtml(decodedCode, {
+            ...highlightOptions,
+            lang: 'plaintext',
+          });
+          result = result.replace(fullMatch, highlighted);
+        } catch {
+          // If plaintext fails leave original HTML unchanged
+        }
       }
     }
 
