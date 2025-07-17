@@ -144,7 +144,7 @@ norgPlugin({
 });
 ```
 
-Review the [Shiki documentation](https://shiki.style/guide) for themes and configuration options.
+Review the [Shiki documentation](https://shiki.style/guide) for theme and configuration options.
 
 **Requirements:**
 
