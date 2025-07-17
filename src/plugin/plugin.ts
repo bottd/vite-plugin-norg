@@ -4,17 +4,20 @@ import { getWasmParser, NorgParser, NorgParseResult } from './wasm';
 import { generateHtmlOutput } from './generators/html';
 import { generateSvelteOutput } from './generators/svelte';
 import { generateReactOutput } from './generators/react';
+import { codeToHtml, BundledHighlighterOptions, BundledLanguage, BundledTheme } from 'shiki';
 
 const NorgPluginOptionsSchema = z.object({
   mode: z.enum(['html', 'svelte', 'react']),
   include: z.any().optional(),
   exclude: z.any().optional(),
+  shikiOptions: z.any().optional(),
 });
 
 export interface NorgPluginOptions {
   mode: 'html' | 'svelte' | 'react';
   include?: FilterPattern;
   exclude?: FilterPattern;
+  shikiOptions?: BundledHighlighterOptions<BundledLanguage, BundledTheme>;
 }
 
 export type NorgGenerator = (result: NorgParseResult) => string;
@@ -26,8 +29,13 @@ const generators = {
 
 export function norgPlugin(options: NorgPluginOptions) {
   const validatedOptions = NorgPluginOptionsSchema.parse(options);
-  const { include, exclude, mode } = validatedOptions;
+  const { include, exclude, mode, shikiOptions } = validatedOptions;
   const filter = createFilter(include, exclude);
+
+  const highlightOptions = {
+    themes: { light: 'github-light', dark: 'github-dark' },
+    ...shikiOptions,
+  };
 
   let parser: NorgParser | null = null;
 
@@ -40,6 +48,54 @@ export function norgPlugin(options: NorgPluginOptions) {
       }
     }
     return parser;
+  };
+
+  const decodeHtmlEntities = (html: string): string =>
+    html
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&#x2F;/g, '/')
+      .replace(/&#x60;/g, '`')
+      .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+      .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
+
+  const highlightCodeBlocks = async (html: string): Promise<string> => {
+    const codeBlockRegex =
+      /<pre(?:\s+class="lang-(\w+)")?><code(?:\s+class="lang-\w+")?>([^]*?)<\/code><\/pre>/g;
+
+    const matches = html.matchAll(codeBlockRegex);
+
+    let result = html;
+    for (const [fullMatch, lang, code] of matches) {
+      const decodedCode = decodeHtmlEntities(code);
+      const language = lang ? lang.toLowerCase() : 'text';
+
+      try {
+        const highlighted = await codeToHtml(decodedCode, {
+          ...highlightOptions,
+          lang: language,
+        });
+        result = result.replace(fullMatch, highlighted);
+      } catch (error) {
+        // Fallback to text if language is not supported
+        try {
+          const highlighted = await codeToHtml(decodedCode, {
+            ...highlightOptions,
+            lang: 'text',
+          });
+          result = result.replace(fullMatch, highlighted);
+        } catch (fallbackError) {
+          console.warn(`Failed to highlight code block with language "${language}":`, error);
+          console.warn(`Fallback to 'text' also failed:`, fallbackError);
+        }
+      }
+    }
+
+    return result;
   };
 
   return {
@@ -62,11 +118,14 @@ export function norgPlugin(options: NorgPluginOptions) {
 
       try {
         const { readFile } = await import('node:fs/promises');
-        const currentParser = await getParser();
+        const parser = await getParser();
 
         const content = await readFile(id, 'utf-8');
-        const result = currentParser(content);
-        return generators[mode](result);
+        const result = parser(content);
+
+        // highlightCodeBlocks adds syntax highlighting to code embedded in documents
+        const processedHtml = decodeHtmlEntities(await highlightCodeBlocks(result.html));
+        return generators[mode]({ ...result, html: processedHtml });
       } catch (error) {
         this.error(new Error(`Failed to parse norg file ${id}: ${error}`));
       }
@@ -79,8 +138,12 @@ export function norgPlugin(options: NorgPluginOptions) {
       ctx.read = async function () {
         try {
           const content = await defaultRead();
-          const currentParser = await getParser();
-          return generators[mode](currentParser(content));
+          const parser = await getParser();
+          const result = parser(content);
+
+          // highlightCodeBlocks adds syntax highlighting to code embedded in documents
+          const processedHtml = decodeHtmlEntities(await highlightCodeBlocks(result.html));
+          return generators[mode]({ ...result, html: processedHtml });
         } catch (error) {
           throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`);
         }
