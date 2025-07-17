@@ -115,13 +115,36 @@ Built with:
 
 ```typescript
 import type { FilterPattern } from 'vite';
+import type { BundledHighlighterOptions, BundledLanguage, BundledTheme } from 'shiki';
 
 interface NorgPluginOptions {
   mode: 'html' | 'react' | 'svelte';
   include?: FilterPattern;
   exclude?: FilterPattern;
+  shikiOptions?: BundledHighlighterOptions<BundledLanguage, BundledTheme>;
 }
 ```
+
+### Syntax Highlighting
+
+The plugin automatically applies syntax highlighting to code blocks using [Shiki](https://shiki.style/). You can customize the highlighting themes and languages:
+
+```javascript
+norgPlugin({
+  mode: 'html',
+  shikiOptions: {
+    themes: {
+      // Optional, github theme applied if none specified
+      light: 'github-light',
+      dark: 'github-dark',
+    },
+    // Optional, all langs enabled by default
+    langs: ['javascript', 'typescript', 'python'],
+  },
+});
+```
+
+Review the [Shiki documentation](https://shiki.style/guide) for theme and configuration options.
 
 **Requirements:**
 
