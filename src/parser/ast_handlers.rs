@@ -47,7 +47,7 @@ pub fn handle_verbatim_tag(
             let text = encode_minimal(&dedent(content));
             if let Some(lang) = parameters.first().filter(|l| !l.is_empty()) {
                 Some(format!(
-                    r#"<pre class="language-{lang}"><code class="language-{lang}">{text}</code></pre>"#
+                    r#"<pre class="lang-{lang}"><code class="lang-{lang}">{text}</code></pre>"#
                 ))
             } else {
                 Some(format!("<pre><code>{text}</code></pre>"))
