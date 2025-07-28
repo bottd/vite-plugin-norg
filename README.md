@@ -19,37 +19,12 @@ npm install -D vite-plugin-norg
 ### HTML Output
 
 ```javascript
-import { norgPlugin } from 'vite-plugin-norg';
-import { defineConfig } from 'vite';
-
-export default defineConfig({
-  plugins: [
-    norgPlugin({
-      mode: 'html',
-      include: ['**/*.norg'],
-    }),
-  ],
-});
-```
-
-```javascript
 import { metadata, html } from './document.norg';
 console.log(metadata.title); // "My Document"
 document.body.innerHTML = html;
 ```
 
 ### React Components
-
-```javascript
-export default defineConfig({
-  plugins: [
-    norgPlugin({
-      mode: 'react',
-      include: ['**/*.norg'],
-    }),
-  ],
-});
-```
 
 ```jsx
 import { metadata, Component } from './document.norg';
@@ -65,17 +40,6 @@ export default function App() {
 ```
 
 ### Svelte Components
-
-```javascript
-export default defineConfig({
-  plugins: [
-    norgPlugin({
-      mode: 'svelte',
-      include: ['**/*.norg'],
-    }),
-  ],
-});
-```
 
 ```svelte
 <script>
