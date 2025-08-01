@@ -16,6 +16,19 @@ npm install -D vite-plugin-norg
 
 ## Quick Setup
 
+```typescript
+import { defineConfig } from 'vite';
+import { norgPlugin } from 'vite-plugin-norg';
+
+export default defineConfig({
+  plugins: [
+    norgPlugin({
+      mode: 'html',
+    }),
+  ],
+});
+```
+
 ### HTML Output
 
 ```javascript
