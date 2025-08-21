@@ -11,4 +11,3 @@ options = ["--edition", "2021"]
 [formatter.nixpkgs-fmt]
 command = "nixpkgs-fmt"
 includes = ["*.nix"]
-
