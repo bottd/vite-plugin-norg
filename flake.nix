@@ -69,7 +69,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             # Node
-            nodejs_22
+            nodejs_24
             nodePackages.eslint
             nodePackages.npm
             nodePackages.prettier
