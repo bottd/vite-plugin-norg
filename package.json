@@ -14,7 +14,10 @@
       "import": "./dist/plugin/index.js"
     }
   },
-  "files": ["dist", "pkg"],
+  "files": [
+    "dist",
+    "pkg"
+  ],
   "scripts": {
     "build": "npm run build:wasm && npm run build:js",
     "build:wasm": "wasm-pack build --target web .",
@@ -25,7 +28,16 @@
     "check": "tsc --noEmit",
     "test": "vitest run"
   },
-  "keywords": ["vite", "plugin", "norg", "neorg", "wasm", "rust", "svelte", "react"],
+  "keywords": [
+    "vite",
+    "plugin",
+    "norg",
+    "neorg",
+    "wasm",
+    "rust",
+    "svelte",
+    "react"
+  ],
   "peerDependencies": {
     "vite": "^7.0.0"
   },
@@ -45,6 +57,7 @@
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "16.4.0",
+    "jiti": "^2.5.1",
     "prettier": "3.6.2",
     "react": "^19.1.1",
     "rimraf": "6.0.1",
