@@ -14,7 +14,7 @@
 npm install -D vite-plugin-norg
 ```
 
-## Quick Setup
+## Setup
 
 ```typescript
 import { defineConfig } from 'vite';
@@ -37,7 +37,7 @@ console.log(metadata.title); // "My Document"
 document.body.innerHTML = html;
 ```
 
-### React Components
+### React Output
 
 ```jsx
 import { metadata, Component } from './document.norg';
@@ -52,7 +52,7 @@ export default function App() {
 }
 ```
 
-### Svelte Components
+### Svelte Output
 
 ```svelte
 <script>
@@ -81,14 +81,7 @@ graph LR
     linkStyle default stroke-width:3px
 ```
 
-Built with:
-
-- **[rust-norg](https://github.com/nvim-neorg/rust-norg)** compiled to WASM for robust parsing
-- **[vite-plugin-wasm](https://github.com/Menci/vite-plugin-wasm)** to load Rust HTML transformer
-- **TypeScript** for the sanity of all involved
-- **Vite integration** with HMR support
-
-## Plugin API Reference
+## Configuration Reference
 
 ```typescript
 import type { FilterPattern } from 'vite';
@@ -126,7 +119,6 @@ Review the [Shiki documentation](https://shiki.style/guide) for theme and config
 **Requirements:**
 
 - Vite 7.0+
-- Node.js 20+
 
 ## Development
 
@@ -135,45 +127,19 @@ This project uses Nix flakes and direnv for reproducible development environment
 ### Setup
 
 ```bash
-# Install direnv (if not already installed)
-curl -sfL https://direnv.net/install.sh | bash
-
-# Enable direnv for this project
+# Enable direnv
 direnv allow
 
-# Build the project
-npm run build
+npm install
 ```
 
-### Development Workflow
+### Development Commands
 
 ```bash
-npm run build
-
 # Run tests
 npm test
+cargo test
 
-# Lint code
-npm run lint
-
-# Format code
+# Lint and format
 nix fmt
 ```
-
-### Nix Flake
-
-The `flake.nix` provides:
-
-- Rust toolchain with [wasm-pack](https://github.com/rustwasm/wasm-pack)
-- Node.js and npm
-- Development tools and dependencies
-
-To enter the development shell if not using direnv:
-
-```bash
-nix develop
-```
-
-## Contributing
-
-PRs and issues welcome! To open a PR please fork and ensure tests and linters pass.
