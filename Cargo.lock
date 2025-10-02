@@ -546,7 +546,7 @@ dependencies = [
 [[package]]
 name = "rust-norg"
 version = "0.1.0"
-source = "git+https://github.com/nvim-neorg/rust-norg#79673015447b62d021d57b92f80be1454fe5cf83"
+source = "git+https://github.com/nvim-neorg/rust-norg?rev=79673015447b62d021d57b92f80be1454fe5cf83#79673015447b62d021d57b92f80be1454fe5cf83"
 dependencies = [
  "chumsky",
  "itertools",
@@ -771,7 +771,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vite-plugin-norg-parser"
-version = "1.1.4"
+version = "1.1.5"
 dependencies = [
  "console_error_panic_hook",
  "htmlescape",
