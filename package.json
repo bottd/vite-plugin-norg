@@ -3,7 +3,7 @@
   "license": "MIT",
   "homepage": "https://github.com/bottd/vite-plugin-norg#README",
   "name": "vite-plugin-norg",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "type": "module",
   "description": "A Vite plugin for rendering Norg files",
   "main": "dist/plugin/index.js",
@@ -14,10 +14,7 @@
       "import": "./dist/plugin/index.js"
     }
   },
-  "files": [
-    "dist",
-    "pkg"
-  ],
+  "files": ["dist", "pkg"],
   "scripts": {
     "build": "npm run build:wasm && npm run build:js",
     "build:wasm": "wasm-pack build --target web .",
@@ -28,16 +25,7 @@
     "check": "tsc --noEmit",
     "test": "vitest run"
   },
-  "keywords": [
-    "vite",
-    "plugin",
-    "norg",
-    "neorg",
-    "wasm",
-    "rust",
-    "svelte",
-    "react"
-  ],
+  "keywords": ["vite", "plugin", "norg", "neorg", "wasm", "rust", "svelte", "react"],
   "peerDependencies": {
     "vite": "^7.0.0"
   },
