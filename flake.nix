@@ -10,9 +10,13 @@
     };
     crane.url = "github:ipetkov/crane";
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, pre-commit-hooks }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, crane, pre-commit-hooks, treefmt-nix }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
@@ -47,9 +51,24 @@
             nixpkgs-fmt.enable = true;
           };
         };
+
+        treefmtEval = treefmt-nix.lib.evalModule pkgs {
+          projectRootFile = "flake.nix";
+          programs = {
+            prettier = {
+              enable = true;
+              includes = [ "*.js" "*.ts" "*.json" "*.md" "*.yaml" "*.yml" ];
+            };
+            rustfmt = {
+              enable = true;
+              package = rustToolchain;
+            };
+            nixpkgs-fmt.enable = true;
+          };
+        };
       in
       {
-        formatter = pkgs.treefmt;
+        formatter = treefmtEval.config.build.wrapper;
 
         checks = {
           pre-commit-check = pre-commit-check;
@@ -64,6 +83,7 @@
             inherit cargoArtifacts;
           });
 
+          formatting = treefmtEval.config.build.check self;
         };
 
         devShells.default = pkgs.mkShell {
@@ -82,8 +102,8 @@
             wasm-bindgen-cli
             binaryen # for wasm-opt
 
-            # Treefmt
-            treefmt
+            # Formatters
+            treefmtEval.config.build.wrapper
             nixpkgs-fmt
 
             git
