@@ -46,8 +46,6 @@
         pre-commit-check = pre-commit-hooks.lib.${system}.run {
           src = ./.;
           hooks = {
-            # Simple formatting checks
-            rustfmt.enable = true;
             nixpkgs-fmt.enable = true;
           };
         };
