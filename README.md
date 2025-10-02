@@ -104,7 +104,7 @@ norgPlugin({
   mode: 'html',
   shikiOptions: {
     themes: {
-      // Optional, github theme applied if none specified
+      // Optional, GitHub theme applied if none specified
       light: 'github-light',
       dark: 'github-dark',
     },
@@ -119,6 +119,9 @@ Review the [Shiki documentation](https://shiki.style/guide) for theme and config
 **Requirements:**
 
 - Vite 7.0+
+- Node.js 24+ (for WASM support)
+- React 19+ (if using `mode: 'react'`)
+- Svelte 5+ (if using `mode: 'svelte'`)
 
 ## Development
 
@@ -143,3 +146,7 @@ cargo test
 # Lint and format
 nix fmt
 ```
+
+## License
+
+MIT © [Drake Bott](https://github.com/bottd)
