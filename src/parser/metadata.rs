@@ -1,6 +1,6 @@
+use rust_norg::metadata::{parse_metadata, NorgMeta};
 use rust_norg::NorgAST::{self, VerbatimRangedTag};
-use rust_norg::metadata::{NorgMeta, parse_metadata};
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 use wasm_bindgen::prelude::*;
 
 pub fn extract_metadata(ast: &[NorgAST]) -> Value {
