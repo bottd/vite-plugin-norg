@@ -34,10 +34,9 @@ fn meta_to_json(meta: &NorgMeta) -> Value {
         Str(s) => json!(s),
         Num(n) => json!(n),
         Array(array) => json!(array.iter().map(meta_to_json).collect::<Vec<_>>()),
-        Object(map) => json!(
-            map.iter()
-                .map(|(key, value)| (key.clone(), meta_to_json(value)))
-                .collect::<Map<_, _>>()
-        ),
+        Object(map) => json!(map
+            .iter()
+            .map(|(key, value)| (key.clone(), meta_to_json(value)))
+            .collect::<Map<_, _>>()),
     }
 }
