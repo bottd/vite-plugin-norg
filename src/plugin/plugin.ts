@@ -1,6 +1,7 @@
 import { createFilter, type Plugin, FilterPattern } from 'vite';
 import { z } from 'zod';
-import { getWasmParser, type NorgParser, type NorgParseResult } from './napi';
+import { getWasmParser, type NorgParser } from './napi';
+import type { NorgParseResult } from '@parser';
 import { generateHtmlOutput } from './generators/html';
 import { generateSvelteOutput } from './generators/svelte';
 import { generateReactOutput } from './generators/react';

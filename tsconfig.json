@@ -12,7 +12,11 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "strictNullChecks": true,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    "baseUrl": ".",
+    "paths": {
+      "@parser": ["./dist/napi"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "parser", "wasm"]

@@ -1,13 +1,15 @@
 import { defineConfig } from 'vitest/config';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
+  plugins: [tsconfigPaths()],
   test: {
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     exclude: ['node_modules/**', '.direnv/**'],
     snapshotFormat: {
-      printBasicPrototype: false, // Cleaner output (Vitest default)
+      printBasicPrototype: false,
       escapeString: false,
       printFunctionName: false,
     },
@@ -18,5 +20,4 @@ export default defineConfig({
       allow: ['.'],
     },
   },
-  assetsInclude: ['**/*.node'],
 });
