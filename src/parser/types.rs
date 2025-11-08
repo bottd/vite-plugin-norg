@@ -1,9 +1,11 @@
+use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[napi(object)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TocEntry {
-    pub level: usize,
+    pub level: u32,
     pub title: String,
     pub id: String,
 }

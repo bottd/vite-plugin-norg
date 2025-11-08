@@ -22,7 +22,7 @@ fn extract_toc_recursive(ast: &[NorgAST], toc: &mut Vec<TocEntry>) {
             let id = into_slug(&text);
 
             toc.push(TocEntry {
-                level: *level as usize,
+                level: *level as u32,
                 title: text,
                 id,
             });

@@ -1,4 +1,4 @@
-import { NorgParseResult } from '../wasm';
+import type { NorgParseResult } from '@parser';
 
 export const generateHtmlOutput = ({ html, metadata }: NorgParseResult) => {
   const metadataJson = JSON.stringify(metadata ?? {});
