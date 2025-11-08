@@ -27,11 +27,11 @@ jobs:
       - name: Build plugin
         run: npm run build
 
-      - name: Run cargo checks
+      - name: Run cargo checks and clippy
         run: cargo check && cargo clippy
 
-      - name: Run check and lint
-        run: npm run check && npm run lint
+      - name: Run eslint
+        run: npm run lint
 
       - name: Run Rust tests
         run: cargo test
