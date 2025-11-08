@@ -14,7 +14,9 @@
       "import": "./dist/plugin/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "npm run build:napi && npm run build:js",
     "build:napi": "napi build --release --platform --output-dir ./dist/napi",
