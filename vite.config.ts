@@ -21,6 +21,11 @@ export default defineConfig({
     },
     rollupOptions: {
       external: ['vite', 'fs', 'path', 'url', 'react', 'node:fs/promises', 'node:path', '@parser'],
+      output: {
+        paths: {
+          '@parser': '../napi/index.js',
+        },
+      },
     },
     copyPublicDir: false,
     outDir: 'dist',
