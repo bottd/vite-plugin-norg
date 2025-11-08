@@ -8,7 +8,7 @@ import type { SvelteComponent } from 'svelte';
 import type { FC } from 'react';
 import type { NorgParseResult } from '@parser';
 
-export type NorgMetadata = NorgParseResult['metadata'];
+type NorgMetadata = NorgParseResult['metadata'];
 
 /**
  * Module type for .norg files processed by the HTML generator
