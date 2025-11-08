@@ -27,8 +27,8 @@ jobs:
       - name: Build plugin
         run: npm run build
 
-      - name: Run cargo checks and clippy
-        run: cargo check && cargo clippy
+      - name: Run clippy
+        run: cargo clippy
 
       - name: Run eslint
         run: npm run lint
