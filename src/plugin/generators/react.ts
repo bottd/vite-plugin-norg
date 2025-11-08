@@ -1,4 +1,4 @@
-import { NorgParseResult } from '../wasm';
+import { NorgParseResult } from '../napi';
 
 export function generateReactOutput({ html, metadata }: NorgParseResult) {
   const metadataJson = JSON.stringify(metadata ?? {});

@@ -1,9 +1,6 @@
 import { defineConfig } from 'vitest/config';
-import wasmPlugin from 'vite-plugin-wasm';
-import topLevelAwait from 'vite-plugin-top-level-await';
 
 export default defineConfig({
-  plugins: [wasmPlugin(), topLevelAwait()],
   test: {
     globals: true,
     environment: 'node',
@@ -16,4 +13,10 @@ export default defineConfig({
     },
     setupFiles: ['./tests/setup.ts'],
   },
+  server: {
+    fs: {
+      allow: ['.'],
+    },
+  },
+  assetsInclude: ['**/*.node'],
 });

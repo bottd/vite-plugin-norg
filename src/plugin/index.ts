@@ -1,11 +1,11 @@
 export { norgPlugin } from './plugin';
-export type { NorgMetadata, NorgParseResult, TocEntry } from './wasm';
+export type { NorgMetadata, NorgParseResult, TocEntry } from './napi';
 
 import { norgPlugin } from './plugin';
 export default norgPlugin;
 
 // Module types for different generators
-import type { NorgMetadata } from './wasm';
+import type { NorgMetadata } from './napi';
 import type { SvelteComponent } from 'svelte';
 import type { FC } from 'react';
 

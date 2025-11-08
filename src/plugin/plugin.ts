@@ -1,6 +1,6 @@
 import { createFilter, type Plugin, FilterPattern } from 'vite';
 import { z } from 'zod';
-import { getWasmParser, NorgParser, NorgParseResult } from './wasm';
+import { getWasmParser, type NorgParser, type NorgParseResult } from './napi';
 import { generateHtmlOutput } from './generators/html';
 import { generateSvelteOutput } from './generators/svelte';
 import { generateReactOutput } from './generators/react';
@@ -37,18 +37,7 @@ export function norgPlugin(options: NorgPluginOptions) {
     ...shikiOptions,
   };
 
-  let parser: NorgParser | null = null;
-
-  const getParser = async () => {
-    if (!parser) {
-      try {
-        parser = await getWasmParser();
-      } catch (error) {
-        throw new Error(`Failed to load norg parser: ${error}`);
-      }
-    }
-    return parser;
-  };
+  const parser = getWasmParser;
 
   const decodeHtmlEntities = (html: string): string =>
     html
@@ -118,7 +107,6 @@ export function norgPlugin(options: NorgPluginOptions) {
 
       try {
         const { readFile } = await import('node:fs/promises');
-        const parser = await getParser();
 
         const content = await readFile(id, 'utf-8');
         const result = parser(content);
@@ -138,7 +126,6 @@ export function norgPlugin(options: NorgPluginOptions) {
       ctx.read = async function () {
         try {
           const content = await defaultRead();
-          const parser = await getParser();
           const result = parser(content);
 
           // highlightCodeBlocks adds syntax highlighting to code embedded in documents

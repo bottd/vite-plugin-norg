@@ -88,11 +88,6 @@
           buildInputs = with pkgs; [
             # Node
             nodejs_24
-            nodePackages.eslint
-            nodePackages.npm
-            nodePackages.prettier
-            nodePackages.typescript
-            nodePackages.typescript-language-server
 
             # Rust
             rustToolchain
@@ -109,6 +104,8 @@
           ] ++ pre-commit-check.enabledPackages;
 
           shellHook = pre-commit-check.shellHook + ''
+            export PATH="$PWD/node_modules/.bin:$PATH"
+
             echo ""
             echo "Vite Plugin Norg Development Environment"
             echo "Node.js: $(node --version)"

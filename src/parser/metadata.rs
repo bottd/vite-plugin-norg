@@ -1,7 +1,6 @@
 use rust_norg::NorgAST::{self, VerbatimRangedTag};
 use rust_norg::metadata::{NorgMeta, parse_metadata};
 use serde_json::{Map, Value, json};
-use wasm_bindgen::prelude::*;
 
 pub fn extract_metadata(ast: &[NorgAST]) -> Value {
     ast.iter()
@@ -15,15 +14,6 @@ pub fn extract_metadata(ast: &[NorgAST]) -> Value {
         .and_then(|content| parse_metadata(content).ok())
         .map(|meta| meta_to_json(&meta))
         .unwrap_or(Value::Null)
-}
-
-pub fn extract_meta_js(ast: &[NorgAST]) -> Result<JsValue, String> {
-    let data = extract_metadata(ast);
-    let data = if data.is_null() { json!({}) } else { data };
-
-    let data = serde_json::to_string(&data).map_err(|e| format!("Meta serialize failed: {e}"))?;
-
-    js_sys::JSON::parse(&data).map_err(|_| "Parse meta JSON failed".to_string())
 }
 
 fn meta_to_json(meta: &NorgMeta) -> Value {
