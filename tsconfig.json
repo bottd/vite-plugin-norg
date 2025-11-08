@@ -15,7 +15,7 @@
     "types": ["vitest/globals"],
     "baseUrl": ".",
     "paths": {
-      "@parser": ["./dist/napi"]
+      "@parser": ["./dist/napi/index"]
     }
   },
   "include": ["src/**/*"],
