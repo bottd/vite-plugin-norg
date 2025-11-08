@@ -14,7 +14,9 @@
       "import": "./dist/plugin/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "npm run build:napi && npm run build:js",
     "build:napi": "napi build --release --output-dir ./dist/napi",
@@ -26,7 +28,17 @@
     "pretest": "npm run build:napi",
     "test": "vitest run"
   },
-  "keywords": ["vite", "plugin", "norg", "neorg", "wasm", "napi", "rust", "svelte", "react"],
+  "keywords": [
+    "vite",
+    "plugin",
+    "norg",
+    "neorg",
+    "wasm",
+    "napi",
+    "rust",
+    "svelte",
+    "react"
+  ],
   "peerDependencies": {
     "vite": "^7.0.0"
   },

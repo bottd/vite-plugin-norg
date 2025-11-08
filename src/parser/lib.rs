@@ -14,10 +14,11 @@ pub use utils::into_slug;
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
+use serde_json::Map;
 
 #[napi(object)]
 pub struct NorgParseResult {
-    pub metadata: serde_json::Value,
+    pub metadata: Map<String, serde_json::Value>,
     pub html: String,
     pub toc: Vec<TocEntry>,
 }

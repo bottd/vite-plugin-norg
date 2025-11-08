@@ -2,7 +2,7 @@ use rust_norg::NorgAST::{self, VerbatimRangedTag};
 use rust_norg::metadata::{NorgMeta, parse_metadata};
 use serde_json::{Map, Value, json};
 
-pub fn extract_metadata(ast: &[NorgAST]) -> Value {
+pub fn extract_metadata(ast: &[NorgAST]) -> Map<String, Value> {
     ast.iter()
         .find_map(|node| match node {
             VerbatimRangedTag { name, content, .. }
@@ -12,8 +12,11 @@ pub fn extract_metadata(ast: &[NorgAST]) -> Value {
             _ => None,
         })
         .and_then(|content| parse_metadata(content).ok())
-        .map(|meta| meta_to_json(&meta))
-        .unwrap_or(Value::Null)
+        .and_then(|meta| match meta_to_json(&meta) {
+            Value::Object(map) => Some(map),
+            _ => None,
+        })
+        .unwrap_or_default()
 }
 
 fn meta_to_json(meta: &NorgMeta) -> Value {

@@ -1,13 +1,14 @@
 export { norgPlugin } from './plugin';
-export type { NorgMetadata } from './napi';
 export type { NorgParseResult, TocEntry } from '@parser';
 
 import { norgPlugin } from './plugin';
 export default norgPlugin;
 
-import type { NorgMetadata } from './napi';
 import type { SvelteComponent } from 'svelte';
 import type { FC } from 'react';
+import type { NorgParseResult } from '@parser';
+
+export type NorgMetadata = NorgParseResult['metadata'];
 
 /**
  * Module type for .norg files processed by the HTML generator
