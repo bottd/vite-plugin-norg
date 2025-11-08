@@ -12,11 +12,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Cachix
-        uses: cachix/cachix-action@v15
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
 
       - name: Setup Nix dev environment
         uses: nicknovitski/nix-develop@v1
