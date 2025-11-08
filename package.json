@@ -3,7 +3,7 @@
   "license": "MIT",
   "homepage": "https://github.com/bottd/vite-plugin-norg#README",
   "name": "vite-plugin-norg",
-  "version": "1.1.6",
+  "version": "1.2.0",
   "type": "module",
   "description": "A Vite plugin for rendering Norg files",
   "main": "dist/plugin/index.js",
@@ -14,18 +14,31 @@
       "import": "./dist/plugin/index.js"
     }
   },
-  "files": ["dist", "pkg"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "npm run build:wasm && npm run build:js",
-    "build:wasm": "wasm-pack build --target web .",
+    "build": "npm run build:napi && npm run build:js",
+    "build:napi": "napi build --release --output-dir ./dist/napi",
     "build:js": "vite build",
-    "clean": "rimraf dist wasm pkg target/wasm32-unknown-unknown",
+    "clean": "rimraf dist target",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check": "tsc --noEmit",
+    "pretest": "npm run build:napi",
     "test": "vitest run"
   },
-  "keywords": ["vite", "plugin", "norg", "neorg", "wasm", "rust", "svelte", "react"],
+  "keywords": [
+    "vite",
+    "plugin",
+    "norg",
+    "neorg",
+    "wasm",
+    "napi",
+    "rust",
+    "svelte",
+    "react"
+  ],
   "peerDependencies": {
     "vite": "^7.0.0"
   },
@@ -39,23 +52,23 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.1",
+    "@napi-rs/cli": "3.4.1",
     "@rollup/plugin-typescript": "12.3.0",
     "@types/node": "24.10.0",
     "@types/react": "19.2.2",
-    "eslint": "^9.39.1",
+    "eslint": "9.39.1",
     "eslint-config-prettier": "10.1.8",
     "globals": "16.5.0",
-    "jiti": "2.5.1",
+    "jiti": "2.6.1",
     "prettier": "3.6.2",
-    "react": "19.1.1",
+    "react": "19.2.0",
     "rimraf": "6.1.0",
     "svelte": "5.43.5",
-    "typescript": "5.9.2",
+    "typescript": "5.9.3",
     "typescript-eslint": "8.46.3",
     "vite": "7.2.2",
     "vite-plugin-dts": "4.5.4",
-    "vite-plugin-top-level-await": "1.6.0",
-    "vite-plugin-wasm": "3.5.0",
+    "vite-tsconfig-paths": "5.1.4",
     "vitest": "4.0.8"
   },
   "repository": {
@@ -66,7 +79,7 @@
     "node": ">=24.0.0"
   },
   "dependencies": {
-    "shiki": "^3.12.2",
-    "zod": "^4.1.5"
+    "shiki": "^3.12.0",
+    "zod": "^4.1.0"
   }
 }

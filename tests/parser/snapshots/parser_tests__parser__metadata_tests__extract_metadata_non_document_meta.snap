@@ -2,4 +2,4 @@
 source: tests/parser/metadata_tests.rs
 expression: result
 ---
-~
+{}

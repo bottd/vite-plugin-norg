@@ -1,0 +1,19 @@
+name: Setup Nix
+description: Install Nix and configure Cachix for caching
+
+inputs:
+  cachix-name:
+    description: Name of the Cachix cache to use
+    required: false
+    default: nix-community
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Setup Cachix
+      uses: cachix/cachix-action@v15
+      with:
+        name: ${{ inputs.cachix-name }}

@@ -1,13 +1,14 @@
 export { norgPlugin } from './plugin';
-export type { NorgMetadata, NorgParseResult, TocEntry } from './wasm';
+export type { NorgParseResult, TocEntry } from '@parser';
 
 import { norgPlugin } from './plugin';
 export default norgPlugin;
 
-// Module types for different generators
-import type { NorgMetadata } from './wasm';
 import type { SvelteComponent } from 'svelte';
 import type { FC } from 'react';
+import type { NorgParseResult } from '@parser';
+
+export type NorgMetadata = NorgParseResult['metadata'];
 
 /**
  * Module type for .norg files processed by the HTML generator

@@ -9,16 +9,15 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
 
       - name: Setup Nix dev environment
         uses: nicknovitski/nix-develop@v1
@@ -43,6 +42,14 @@ jobs:
 
       - name: Run JavaScript tests
         run: npm test
+
+      - name: Create and push git tag
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
 
       - name: Publish to NPM
         uses: JS-DevTools/npm-publish@v3

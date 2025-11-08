@@ -1,19 +1,23 @@
 import { defineConfig } from 'vitest/config';
-import wasmPlugin from 'vite-plugin-wasm';
-import topLevelAwait from 'vite-plugin-top-level-await';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-  plugins: [wasmPlugin(), topLevelAwait()],
+  plugins: [tsconfigPaths()],
   test: {
     globals: true,
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     exclude: ['node_modules/**', '.direnv/**'],
     snapshotFormat: {
-      printBasicPrototype: false, // Cleaner output (Vitest default)
+      printBasicPrototype: false,
       escapeString: false,
       printFunctionName: false,
     },
     setupFiles: ['./tests/setup.ts'],
+  },
+  server: {
+    fs: {
+      allow: ['.'],
+    },
   },
 });

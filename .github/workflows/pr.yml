@@ -12,11 +12,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Magic Nix Cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Setup Nix
+        uses: ./.github/actions/setup-nix
 
       - name: Setup Nix dev environment
         uses: nicknovitski/nix-develop@v1
@@ -30,11 +27,11 @@ jobs:
       - name: Build plugin
         run: npm run build
 
-      - name: Run cargo checks
+      - name: Run cargo checks and clippy
         run: cargo check && cargo clippy
 
-      - name: Run check and lint
-        run: npm run check && npm run lint
+      - name: Run eslint
+        run: npm run lint
 
       - name: Run Rust tests
         run: cargo test

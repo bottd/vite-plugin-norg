@@ -68,7 +68,7 @@ export default function App() {
 ```mermaid
 graph LR
     A(📝 .norg files) ==> B(⚡ Rust Parser)
-    B ==> C(🔧 WASM Module)
+    B ==> C(🔧 NAPI Module)
     C ==> D(🚀 Vite Plugin)
     D ==> E{🎨 Generator}
     E ==> F(📄 HTML)
@@ -119,7 +119,6 @@ Review the [Shiki documentation](https://shiki.style/guide) for theme and config
 **Requirements:**
 
 - Vite 7.0+
-- Node.js 24+ (for WASM support)
 - React 19+ (if using `mode: 'react'`)
 - Svelte 5+ (if using `mode: 'svelte'`)
 
