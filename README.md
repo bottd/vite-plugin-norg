@@ -108,7 +108,7 @@ interface NorgPluginOptions {
   mode: 'html' | 'react' | 'svelte';
   include?: FilterPattern;
   exclude?: FilterPattern;
-  shikiOptions?: BundledHighlighterOptions<BundledLanguage, BundledTheme>;
+  shikiOptions?: Omit<CodeToHastOptions<BundledLanguage, BundledTheme>, 'lang'>;
 }
 ```
 
