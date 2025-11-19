@@ -5,7 +5,7 @@ import type { NorgParseResult } from '@parser';
 import { generateHtmlOutput } from './generators/html';
 import { generateSvelteOutput } from './generators/svelte';
 import { generateReactOutput } from './generators/react';
-import { codeToHtml, BundledHighlighterOptions, BundledLanguage, BundledTheme } from 'shiki';
+import { codeToHtml, type CodeToHastOptions, type BundledLanguage, type BundledTheme } from 'shiki';
 
 const NorgPluginOptionsSchema = z.object({
   mode: z.enum(['html', 'svelte', 'react']),
@@ -18,7 +18,7 @@ export interface NorgPluginOptions {
   mode: 'html' | 'svelte' | 'react';
   include?: FilterPattern;
   exclude?: FilterPattern;
-  shikiOptions?: BundledHighlighterOptions<BundledLanguage, BundledTheme>;
+  shikiOptions?: CodeToHastOptions<BundledLanguage, BundledTheme>;
 }
 
 export type NorgGenerator = (result: NorgParseResult) => string;

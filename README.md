@@ -29,6 +29,23 @@ export default defineConfig({
 });
 ```
 
+### TypeScript
+
+Add a type reference to `app.d.ts` based on your output target:
+
+```typescript
+// For Svelte
+/// <reference types="vite-plugin-norg/svelte" />
+
+// For React
+/// <reference types="vite-plugin-norg/react" />
+
+// For HTML
+/// <reference types="vite-plugin-norg/html" />
+```
+
+This provides type checking for `.norg` modules
+
 ### HTML Output
 
 ```javascript

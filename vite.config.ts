@@ -10,6 +10,7 @@ export default defineConfig({
       include: ['src/**/*'],
       exclude: ['src/parser/**/*'],
       outDir: 'dist',
+      copyDtsFiles: true,
     }),
   ],
   build: {
