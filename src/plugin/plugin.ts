@@ -18,7 +18,7 @@ export interface NorgPluginOptions {
   mode: 'html' | 'svelte' | 'react';
   include?: FilterPattern;
   exclude?: FilterPattern;
-  shikiOptions?: CodeToHastOptions<BundledLanguage, BundledTheme>;
+  shikiOptions?: Exclude<CodeToHastOptions<BundledLanguage, BundledTheme>, 'lang'>;
 }
 
 export type NorgGenerator = (result: NorgParseResult) => string;
