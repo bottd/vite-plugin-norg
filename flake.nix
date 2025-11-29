@@ -88,6 +88,7 @@
           buildInputs = with pkgs; [
             # Node
             nodejs_24
+            pnpm
 
             # Rust
             rustToolchain
@@ -113,12 +114,12 @@
             echo "wasm-pack: $(wasm-pack --version)"
             echo ""
             echo "Available commands:"
-            echo "  npm run build      - Build everything"
-            echo "  npm run build:wasm - Build WASM parser"  
-            echo "  npm run build:js   - Build TypeScript"
-            echo "  npm test           - Run tests"
-            echo "  npm run lint       - TypeScript linter"
-            echo "  npm run check      - Check TypeScript code"
+            echo "  pnpm build         - Build everything"
+            echo "  pnpm build:wasm    - Build WASM parser"
+            echo "  pnpm build:js      - Build TypeScript"
+            echo "  pnpm test          - Run tests"
+            echo "  pnpm lint          - TypeScript linter"
+            echo "  pnpm check         - Check TypeScript code"
             echo "  cargo check        - Check Rust code"
             echo "  cargo clippy       - Rust Linter"
             echo "  nix fmt            - Format all code with treefmt"
