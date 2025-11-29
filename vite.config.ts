@@ -30,5 +30,7 @@ export default defineConfig({
     },
     copyPublicDir: false,
     outDir: 'dist',
+    // needed to preserve build:napi output
+    emptyOutDir: false,
   },
 });
