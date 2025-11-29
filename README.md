@@ -80,24 +80,6 @@ export default function App() {
 <Document />
 ```
 
-## Architecture
-
-```mermaid
-graph LR
-    A(📝 .norg files) ==> B(⚡ Rust Parser)
-    B ==> C(🔧 NAPI Module)
-    C ==> D(🚀 Vite Plugin)
-    D ==> E{🎨 Generator}
-    E ==> F(📄 HTML)
-    E ==> G(⚛️ React)
-    E ==> H(🔥 Svelte)
-    F ==> I(💎 TypeScript Module)
-    G ==> I
-    H ==> I
-
-    linkStyle default stroke-width:3px
-```
-
 ## Configuration Reference
 
 ```typescript
