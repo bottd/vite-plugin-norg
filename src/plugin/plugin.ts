@@ -111,7 +111,7 @@ export function norgPlugin(options: NorgPluginOptions) {
         const result = parseNorg(content);
 
         // highlightCodeBlocks adds syntax highlighting to code embedded in documents
-        const processedHtml = decodeHtmlEntities(await highlightCodeBlocks(result.html));
+        const processedHtml = await highlightCodeBlocks(result.html);
         return generators[mode]({ ...result, html: processedHtml });
       } catch (error) {
         this.error(new Error(`Failed to parse norg file ${id}: ${error}`));
@@ -128,7 +128,7 @@ export function norgPlugin(options: NorgPluginOptions) {
           const result = parseNorg(content);
 
           // highlightCodeBlocks adds syntax highlighting to code embedded in documents
-          const processedHtml = decodeHtmlEntities(await highlightCodeBlocks(result.html));
+          const processedHtml = await highlightCodeBlocks(result.html);
           return generators[mode]({ ...result, html: processedHtml });
         } catch (error) {
           throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`);
