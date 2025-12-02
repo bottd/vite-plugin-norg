@@ -1,14 +1,13 @@
 import type { NorgParseResult } from '@parser';
 
-export function generateSvelteOutput({ html, metadata }: NorgParseResult) {
-  const metadataJson = JSON.stringify(metadata ?? {});
-
+export function generateSvelteOutput({ html, metadata, toc }: NorgParseResult) {
   return [
-    '<script>',
-    `  const htmlContent = ${JSON.stringify(html)};`,
+    '<script lang="ts" module>',
+    `  export const metadata = ${JSON.stringify(metadata ?? {})};`,
+    `  export const toc = ${JSON.stringify(toc ?? [])};`,
     '</script>',
-    '<script context="module">',
-    `  export const metadata = ${metadataJson};`,
+    '<script lang="ts">',
+    `  const htmlContent = ${JSON.stringify(html)};`,
     '</script>',
     '{@html htmlContent}',
   ].join('\n');

@@ -55,32 +55,41 @@ export function norgPlugin(options: NorgPluginOptions) {
     const codeBlockRegex =
       /<pre(?:\s+class="lang-(\w+)")?><code(?:\s+class="lang-\w+")?>([^]*?)<\/code><\/pre>/g;
 
-    const matches = html.matchAll(codeBlockRegex);
+    const replacements = await Promise.all(
+      Array.from(html.matchAll(codeBlockRegex), async ([fullMatch, lang, code]) => {
+        const decodedCode = decodeHtmlEntities(code);
+        const language = lang ? lang.toLowerCase() : 'text';
+
+        try {
+          return {
+            original: fullMatch,
+            replacement: await codeToHtml(decodedCode, {
+              ...highlightOptions,
+              lang: language,
+            }),
+          };
+        } catch (error) {
+          // Fallback to text if language is not supported
+          try {
+            return {
+              original: fullMatch,
+              replacement: await codeToHtml(decodedCode, {
+                ...highlightOptions,
+                lang: 'text',
+              }),
+            };
+          } catch (fallbackError) {
+            console.warn(`Failed to highlight code block with language "${language}":`, error);
+            console.warn(`Fallback to 'text' also failed:`, fallbackError);
+            return { original: fullMatch, replacement: fullMatch };
+          }
+        }
+      })
+    );
 
     let result = html;
-    for (const [fullMatch, lang, code] of matches) {
-      const decodedCode = decodeHtmlEntities(code);
-      const language = lang ? lang.toLowerCase() : 'text';
-
-      try {
-        const highlighted = await codeToHtml(decodedCode, {
-          ...highlightOptions,
-          lang: language,
-        });
-        result = result.replace(fullMatch, highlighted);
-      } catch (error) {
-        // Fallback to text if language is not supported
-        try {
-          const highlighted = await codeToHtml(decodedCode, {
-            ...highlightOptions,
-            lang: 'text',
-          });
-          result = result.replace(fullMatch, highlighted);
-        } catch (fallbackError) {
-          console.warn(`Failed to highlight code block with language "${language}":`, error);
-          console.warn(`Fallback to 'text' also failed:`, fallbackError);
-        }
-      }
+    for (const { original, replacement } of replacements) {
+      result = result.replace(original, () => replacement);
     }
 
     return result;

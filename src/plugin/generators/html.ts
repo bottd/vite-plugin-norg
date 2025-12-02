@@ -1,12 +1,10 @@
 import type { NorgParseResult } from '@parser';
 
-export const generateHtmlOutput = ({ html, metadata }: NorgParseResult) => {
-  const metadataJson = JSON.stringify(metadata ?? {});
-  const htmlJson = JSON.stringify(html);
-
+export const generateHtmlOutput = ({ html, metadata, toc }: NorgParseResult) => {
   return [
-    `export const metadata = ${metadataJson};`,
-    `export const html = ${htmlJson};`,
-    `export default { metadata, html };`,
+    `export const metadata = ${JSON.stringify(metadata ?? {})};`,
+    `export const html = ${JSON.stringify(html)};`,
+    `export const toc = ${JSON.stringify(toc ?? [])};`,
+    `export default { metadata, html, toc };`,
   ].join('\n');
 };
