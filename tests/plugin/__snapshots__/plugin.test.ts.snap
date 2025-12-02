@@ -3,23 +3,55 @@
 exports[`vite-plugin-norg > HTML > 'should generate correct output for al…' 1`] = `
 "export const metadata = {"title":"\\"Headings\\""};
 export const html = "<h1 id=\\"h1\\">H1</h1>\\n<p>Content 1</p><h2 id=\\"h2\\">H2</h2>\\n<p>Content 2</p><h3 id=\\"h3\\">H3</h3>\\n<p>Content 3</p><h4 id=\\"h4\\">H4</h4>\\n<p>Content 4</p><h5 id=\\"h5\\">H5</h5>\\n<p>Content 5</p><h6 id=\\"h6\\">H6</h6>\\n<p>Content 6</p>";
-export default { metadata, html };"
+export const toc = [{"level":1,"title":"H1","id":"h1"},{"level":2,"title":"H2","id":"h2"},{"level":3,"title":"H3","id":"h3"},{"level":4,"title":"H4","id":"h4"},{"level":5,"title":"H5","id":"h5"},{"level":6,"title":"H6","id":"h6"}];
+export default { metadata, html, toc };"
 `;
 
 exports[`vite-plugin-norg > HTML > 'should generate correct output for ba…' 1`] = `
 "export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
 export const html = "<h1 id=\\"main-title\\">Main Title</h1>\\n<p>Text with <i>bold</i>, <em>italic</em>, <code>code</code>, and <s>strikethrough</s>.</p><h2 id=\\"lists\\">Lists</h2>\\n<ul><li>Item 1</li></ul><ul><li>Item 2</li></ul><ol><li>Number 1</li></ol><ol><li>Number 2</li></ol><h2 id=\\"link\\">Link</h2>\\n<p><a href=\\"https://example.com\\" target=\\"_blank\\">link text</a></p>";
-export default { metadata, html };"
+export const toc = [{"level":1,"title":"Main Title","id":"main-title"},{"level":2,"title":"Lists","id":"lists"},{"level":2,"title":"Link","id":"link"}];
+export default { metadata, html, toc };"
 `;
 
 exports[`vite-plugin-norg > HTML > 'should generate correct output for co…' 1`] = `
 "export const metadata = {"title":"\\"Code Test\\""};
 export const html = "<h1 id=\\"code-blocks\\">Code Blocks</h1>\\n<h2 id=\\"javascript\\">JavaScript</h2>\\n<pre class=\\"shiki shiki-themes github-light github-dark\\" style=\\"background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8\\" tabindex=\\"0\\"><code><span class=\\"line\\"><span style=\\"color:#D73A49;--shiki-dark:#F97583\\">function</span><span style=\\"color:#6F42C1;--shiki-dark:#B392F0\\"> hello</span><span style=\\"color:#24292E;--shiki-dark:#E1E4E8\\">() { </span><span style=\\"color:#D73A49;--shiki-dark:#F97583\\">return</span><span style=\\"color:#032F62;--shiki-dark:#9ECBFF\\"> \\"world\\"</span><span style=\\"color:#24292E;--shiki-dark:#E1E4E8\\">; }</span></span>\\n<span class=\\"line\\"></span></code></pre><h2 id=\\"python\\">Python </h2>\\n<pre class=\\"shiki shiki-themes github-light github-dark\\" style=\\"background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8\\" tabindex=\\"0\\"><code><span class=\\"line\\"><span style=\\"color:#D73A49;--shiki-dark:#F97583\\">def</span><span style=\\"color:#6F42C1;--shiki-dark:#B392F0\\"> add</span><span style=\\"color:#24292E;--shiki-dark:#E1E4E8\\">(a, b): </span><span style=\\"color:#D73A49;--shiki-dark:#F97583\\">return</span><span style=\\"color:#24292E;--shiki-dark:#E1E4E8\\"> a </span><span style=\\"color:#D73A49;--shiki-dark:#F97583\\">+</span><span style=\\"color:#24292E;--shiki-dark:#E1E4E8\\"> b</span></span>\\n<span class=\\"line\\"></span></code></pre><h2 id=\\"plain\\">Plain</h2>\\n<pre class=\\"shiki shiki-themes github-light github-dark\\" style=\\"background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8\\" tabindex=\\"0\\"><code><span class=\\"line\\"><span>plain text</span></span>\\n<span class=\\"line\\"><span></span></span></code></pre>";
-export default { metadata, html };"
+export const toc = [{"level":1,"title":"Code Blocks","id":"code-blocks"},{"level":2,"title":"JavaScript","id":"javascript"},{"level":2,"title":"Python ","id":"python"},{"level":2,"title":"Plain","id":"plain"}];
+export default { metadata, html, toc };"
 `;
 
 exports[`vite-plugin-norg > HTML > 'should generate correct output for im…' 1`] = `
 "export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
 export const html = "<h1 id=\\"images\\">Images</h1>\\n<p>Image test</p><img src=\\"./relative/image.png\\" alt=\\"with alt text\\" />";
-export default { metadata, html };"
+export const toc = [{"level":1,"title":"Images","id":"images"}];
+export default { metadata, html, toc };"
+`;
+
+exports[`vite-plugin-norg HTML should generate correct output for all heading levels 1`] = `
+"export const metadata = {"title":"\\"Headings\\""};
+export const html = "<h1 id=\\"h1\\">H1</h1>\\n<p>Content 1</p><h2 id=\\"h2\\">H2</h2>\\n<p>Content 2</p><h3 id=\\"h3\\">H3</h3>\\n<p>Content 3</p><h4 id=\\"h4\\">H4</h4>\\n<p>Content 4</p><h5 id=\\"h5\\">H5</h5>\\n<p>Content 5</p><h6 id=\\"h6\\">H6</h6>\\n<p>Content 6</p>";
+export const toc = [{"level":1,"title":"H1","id":"h1"},{"level":2,"title":"H2","id":"h2"},{"level":3,"title":"H3","id":"h3"},{"level":4,"title":"H4","id":"h4"},{"level":5,"title":"H5","id":"h5"},{"level":6,"title":"H6","id":"h6"}];
+export default { metadata, html, toc };"
+`;
+
+exports[`vite-plugin-norg HTML should generate correct output for basic norg file 1`] = `
+"export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
+export const html = "<h1 id=\\"main-title\\">Main Title</h1>\\n<p>Text with <i>bold</i>, <em>italic</em>, <code>code</code>, and <s>strikethrough</s>.</p><h2 id=\\"lists\\">Lists</h2>\\n<ul><li>Item 1</li></ul><ul><li>Item 2</li></ul><ol><li>Number 1</li></ol><ol><li>Number 2</li></ol><h2 id=\\"link\\">Link</h2>\\n<p><a href=\\"https://example.com\\" target=\\"_blank\\">link text</a></p>";
+export const toc = [{"level":1,"title":"Main Title","id":"main-title"},{"level":2,"title":"Lists","id":"lists"},{"level":2,"title":"Link","id":"link"}];
+export default { metadata, html, toc };"
+`;
+
+exports[`vite-plugin-norg HTML should generate correct output for code blocks 1`] = `
+"export const metadata = {"title":"\\"Code Test\\""};
+export const html = "<h1 id=\\"code-blocks\\">Code Blocks</h1>\\n<h2 id=\\"javascript\\">JavaScript</h2>\\n<pre class=\\"shiki shiki-themes github-light github-dark\\" style=\\"background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8\\" tabindex=\\"0\\"><code><span class=\\"line\\"><span style=\\"color:#D73A49;--shiki-dark:#F97583\\">function</span><span style=\\"color:#6F42C1;--shiki-dark:#B392F0\\"> hello</span><span style=\\"color:#24292E;--shiki-dark:#E1E4E8\\">() { </span><span style=\\"color:#D73A49;--shiki-dark:#F97583\\">return</span><span style=\\"color:#032F62;--shiki-dark:#9ECBFF\\"> \\"world\\"</span><span style=\\"color:#24292E;--shiki-dark:#E1E4E8\\">; }</span></span>\\n<span class=\\"line\\"></span></code></pre><h2 id=\\"python\\">Python </h2>\\n<pre class=\\"shiki shiki-themes github-light github-dark\\" style=\\"background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8\\" tabindex=\\"0\\"><code><span class=\\"line\\"><span style=\\"color:#D73A49;--shiki-dark:#F97583\\">def</span><span style=\\"color:#6F42C1;--shiki-dark:#B392F0\\"> add</span><span style=\\"color:#24292E;--shiki-dark:#E1E4E8\\">(a, b): </span><span style=\\"color:#D73A49;--shiki-dark:#F97583\\">return</span><span style=\\"color:#24292E;--shiki-dark:#E1E4E8\\"> a </span><span style=\\"color:#D73A49;--shiki-dark:#F97583\\">+</span><span style=\\"color:#24292E;--shiki-dark:#E1E4E8\\"> b</span></span>\\n<span class=\\"line\\"></span></code></pre><h2 id=\\"plain\\">Plain</h2>\\n<pre class=\\"shiki shiki-themes github-light github-dark\\" style=\\"background-color:#fff;--shiki-dark-bg:#24292e;color:#24292e;--shiki-dark:#e1e4e8\\" tabindex=\\"0\\"><code><span class=\\"line\\"><span>plain text</span></span>\\n<span class=\\"line\\"><span></span></span></code></pre>";
+export const toc = [{"level":1,"title":"Code Blocks","id":"code-blocks"},{"level":2,"title":"JavaScript","id":"javascript"},{"level":2,"title":"Python ","id":"python"},{"level":2,"title":"Plain","id":"plain"}];
+export default { metadata, html, toc };"
+`;
+
+exports[`vite-plugin-norg HTML should generate correct output for image syntax 1`] = `
+"export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
+export const html = "<h1 id=\\"images\\">Images</h1>\\n<p>Image test</p><img src=\\"./relative/image.png\\" alt=\\"with alt text\\" />";
+export const toc = [{"level":1,"title":"Images","id":"images"}];
+export default { metadata, html, toc };"
 `;
