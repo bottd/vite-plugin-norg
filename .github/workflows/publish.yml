@@ -41,7 +41,7 @@ jobs:
         run: cargo test
 
       - name: Run JavaScript tests
-        run: bun run test
+        run: bun test
 
       - name: Create and push git tag
         run: |

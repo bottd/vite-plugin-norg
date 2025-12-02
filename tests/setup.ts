@@ -1,11 +1,12 @@
-import { vi } from 'vitest';
+/// <reference types="bun-types" />
+import { mock } from 'bun:test';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 // Setup WASM module for tests
-vi.mock('../pkg/vite_plugin_norg_parser.js', async () => {
-  const actualModule = (await vi.importActual('../pkg/vite_plugin_norg_parser.js')) as Record<
+mock.module('../pkg/vite_plugin_norg_parser.js', async () => {
+  const actualModule = (await import('../pkg/vite_plugin_norg_parser.js')) as Record<
     string,
     unknown
   >;
@@ -17,7 +18,7 @@ vi.mock('../pkg/vite_plugin_norg_parser.js', async () => {
   const wasmBuffer = readFileSync(wasmPath);
 
   if (actualModule.initSync) {
-    actualModule.initSync({ module: wasmBuffer });
+    (actualModule.initSync as (opts: { module: Buffer }) => void)({ module: wasmBuffer });
   }
 
   return actualModule;
