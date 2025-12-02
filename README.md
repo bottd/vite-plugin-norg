@@ -17,13 +17,13 @@ npm install -D vite-plugin-norg
 ## Setup
 
 ```typescript
-import { defineConfig } from "vite";
-import { norgPlugin } from "vite-plugin-norg";
+import { defineConfig } from 'vite';
+import { norgPlugin } from 'vite-plugin-norg';
 
 export default defineConfig({
   plugins: [
     norgPlugin({
-      mode: "html",
+      mode: 'html',
     }),
   ],
 });
@@ -49,7 +49,7 @@ This provides type checking for `.norg` modules
 ### HTML Output
 
 ```javascript
-import { metadata, html } from "./document.norg";
+import { metadata, html } from './document.norg';
 console.log(metadata.title); // "My Document"
 document.body.innerHTML = html;
 ```
@@ -57,7 +57,7 @@ document.body.innerHTML = html;
 ### React Output
 
 ```jsx
-import { metadata, Component } from "./document.norg";
+import { metadata, Component } from './document.norg';
 
 export default function App() {
   return (
@@ -83,10 +83,10 @@ export default function App() {
 ## Configuration Reference
 
 ```typescript
-import type { FilterPattern } from "vite";
+import type { FilterPattern } from 'vite';
 
 interface NorgPluginOptions {
-  mode: "html" | "react" | "svelte";
+  mode: 'html' | 'react' | 'svelte';
   include?: FilterPattern;
   exclude?: FilterPattern;
   // See https://shiki.style/guide for all options
