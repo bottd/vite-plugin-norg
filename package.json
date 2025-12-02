@@ -34,8 +34,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check": "tsc --noEmit",
-    "pretest": "npm run build:napi",
-    "test": "vitest run"
+    "test": "bun test"
   },
   "keywords": [
     "vite",
@@ -79,8 +78,7 @@
     "typescript-eslint": "8.48.1",
     "vite": "7.2.6",
     "vite-plugin-dts": "4.5.4",
-    "vite-tsconfig-paths": "5.1.4",
-    "vitest": "4.0.15"
+    "vite-tsconfig-paths": "5.1.4"
   },
   "repository": {
     "type": "git",
