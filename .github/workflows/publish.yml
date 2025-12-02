@@ -23,25 +23,25 @@ jobs:
         uses: nicknovitski/nix-develop@v1
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Run Nix flake checks
         run: nix flake check
 
       - name: Build plugin
-        run: pnpm build
+        run: bun run build
 
       - name: Run clippy
         run: cargo clippy
 
       - name: Run eslint
-        run: pnpm lint
+        run: bun run lint
 
       - name: Run Rust tests
         run: cargo test
 
       - name: Run JavaScript tests
-        run: pnpm test
+        run: bun run test
 
       - name: Create and push git tag
         run: |
