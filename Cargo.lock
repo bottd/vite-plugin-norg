@@ -334,6 +334,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -644,7 +653,7 @@ version = "0.1.0"
 source = "git+https://github.com/nvim-neorg/rust-norg?rev=79673015447b62d021d57b92f80be1454fe5cf83#79673015447b62d021d57b92f80be1454fe5cf83"
 dependencies = [
  "chumsky",
- "itertools",
+ "itertools 0.13.0",
  "serde",
  "textwrap",
  "unicode_categories",
@@ -861,10 +870,11 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vite-plugin-norg-parser"
-version = "1.2.10"
+version = "1.2.11"
 dependencies = [
  "htmlescape",
  "insta",
+ "itertools 0.14.0",
  "napi",
  "napi-derive",
  "proptest",
