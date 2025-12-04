@@ -2,75 +2,50 @@ use crate::segments::convert_segments;
 use crate::utils::into_slug;
 use htmlescape::encode_minimal;
 use rust_norg::{
-    DelimitingModifier, DetachedModifierExtension, NestableDetachedModifier, NorgAST, NorgASTFlat,
-    RangeableDetachedModifier, TodoStatus,
+    DelimitingModifier, DetachedModifierExtension, NorgAST, NorgASTFlat, RangeableDetachedModifier,
+    TodoStatus,
 };
-use std::fmt::Write;
 use textwrap::dedent;
 
-pub fn handle_nestable_modifier(
-    modifier_type: &NestableDetachedModifier,
+pub fn nestable_modifier(
     text: &NorgASTFlat,
     extensions: &[DetachedModifierExtension],
 ) -> Option<String> {
     match text {
         NorgASTFlat::Paragraph(segments) => {
             let content = convert_segments(segments);
-            if !content.trim().is_empty() {
-                let tag = match modifier_type {
-                    NestableDetachedModifier::UnorderedList => "ul",
-                    NestableDetachedModifier::OrderedList => "ol",
-                    NestableDetachedModifier::Quote => "blockquote",
-                };
-                Some(format!(
-                    "<{tag}>{}</{tag}>",
-                    format_list_item(&content, extensions)
-                ))
-            } else {
-                None
-            }
+            (!content.trim().is_empty()).then(|| format_nestable(&content, extensions))
         }
-        _ => {
-            eprintln!("Warning: Unsupported nestable modifier text type");
-            None
-        }
+        _ => None,
     }
 }
 
-pub fn handle_verbatim_tag(
-    name: &[String],
-    parameters: &[String],
-    content: &str,
-) -> Option<String> {
+pub fn verbatim_tag(name: &[String], parameters: &[String], content: &str) -> Option<String> {
     match name {
         [tag] if tag == "code" => {
             let text = encode_minimal(&dedent(content));
-            if let Some(lang) = parameters.first().filter(|l| !l.is_empty()) {
-                Some(format!(
+            Some(match parameters.first().filter(|lang| !lang.is_empty()) {
+                Some(lang) => format!(
                     r#"<pre class="lang-{lang}"><code class="lang-{lang}">{text}</code></pre>"#
-                ))
-            } else {
-                Some(format!("<pre><code>{text}</code></pre>"))
-            }
+                ),
+                None => format!("<pre><code>{text}</code></pre>"),
+            })
         }
-        [tag] if tag == "image" => {
-            let path = parameters.first().filter(|p| !p.is_empty());
-            match path {
-                Some(path) => {
-                    let src = if path.starts_with('/') || path.starts_with("http") {
-                        path.clone()
-                    } else {
-                        format!("./{path}")
-                    };
-                    Some(format!(
-                        r#"<img src="{}" alt="{}" />"#,
-                        encode_minimal(&src),
-                        encode_minimal(content.trim())
-                    ))
-                }
-                None => None,
-            }
-        }
+        [tag] if tag == "image" => parameters
+            .first()
+            .filter(|path| !path.is_empty())
+            .map(|path| {
+                let src = if path.starts_with('/') || path.starts_with("http") {
+                    path.clone()
+                } else {
+                    format!("./{path}")
+                };
+                format!(
+                    r#"<img src="{}" alt="{}" />"#,
+                    encode_minimal(&src),
+                    encode_minimal(content.trim())
+                )
+            }),
         [doc, meta] if doc == "document" && meta == "meta" => None,
         _ => Some(format!(
             r#"<div class="verbatim">{}</div>"#,
@@ -79,117 +54,89 @@ pub fn handle_verbatim_tag(
     }
 }
 
-pub fn handle_heading(
-    level: u16,
-    title: &[rust_norg::ParagraphSegment],
-    content: &[NorgAST],
-) -> String {
+pub fn heading(level: u16, title: &[rust_norg::ParagraphSegment], content: &[NorgAST]) -> String {
     let text = convert_segments(title);
     let id = into_slug(&text);
     let heading = format!("<h{level} id=\"{id}\">{text}</h{level}>");
+    let body = crate::transform(content);
 
-    let html = crate::transform(content);
-
-    if html.trim().is_empty() {
+    if body.trim().is_empty() {
         heading
     } else {
-        format!("{heading}\n{html}")
+        format!("{heading}\n{body}")
     }
 }
 
-pub fn handle_paragraph(segments: &[rust_norg::ParagraphSegment]) -> Option<String> {
+pub fn paragraph(segments: &[rust_norg::ParagraphSegment]) -> Option<String> {
     let content = convert_segments(segments);
-    if content.trim().is_empty() {
-        None
-    } else {
-        Some(format!("<p>{content}</p>"))
-    }
+    (!content.trim().is_empty()).then(|| format!("<p>{content}</p>"))
 }
 
-pub fn handle_rangeable_modifier(
+pub fn rangeable_modifier(
     modifier_type: &RangeableDetachedModifier,
     title: &[rust_norg::ParagraphSegment],
     content: &[NorgASTFlat],
 ) -> String {
     let title = convert_segments(title);
-    let mut content_html = String::with_capacity(content.len() * 64);
-    for node in content {
-        if let NorgASTFlat::Paragraph(segments) = node {
-            let html = convert_segments(segments);
-            if !html.trim().is_empty() {
-                content_html.push_str("<p>");
-                content_html.push_str(&html);
-                content_html.push_str("</p>");
+    let body: String = content
+        .iter()
+        .filter_map(|node| match node {
+            NorgASTFlat::Paragraph(segments) => {
+                let html = convert_segments(segments);
+                (!html.trim().is_empty()).then(|| format!("<p>{html}</p>"))
             }
-        }
-    }
-    let content = content_html;
+            _ => None,
+        })
+        .collect();
 
     match modifier_type {
-        RangeableDetachedModifier::Definition => format!(
-            "<dl><dt>{}</dt><dd>{}</dd></dl>",
-            encode_minimal(&title),
-            content
-        ),
+        RangeableDetachedModifier::Definition => {
+            format!(
+                "<dl><dt>{}</dt><dd>{}</dd></dl>",
+                encode_minimal(&title),
+                body
+            )
+        }
         RangeableDetachedModifier::Footnote => {
             let id = into_slug(&title);
             format!(
                 "<aside id=\"footnote-{}\" class=\"footnote\"><strong>{}</strong><p>{}</p></aside>",
                 encode_minimal(&id),
                 encode_minimal(&title),
-                content
+                body
             )
         }
-        RangeableDetachedModifier::Table => format!(
-            "<table><caption>{}</caption><tbody>{}</tbody></table>",
-            encode_minimal(&title),
-            content
-        ),
+        RangeableDetachedModifier::Table => {
+            format!(
+                "<table><caption>{}</caption><tbody>{}</tbody></table>",
+                encode_minimal(&title),
+                body
+            )
+        }
     }
 }
 
-pub fn handle_delimiter(delimiter: &DelimitingModifier) -> String {
-    match delimiter {
-        DelimitingModifier::Weak => "<hr class=\"weak\" />".to_string(),
-        DelimitingModifier::Strong => "<hr class=\"strong\" />".to_string(),
-        DelimitingModifier::HorizontalRule => "<hr />".to_string(),
+pub fn delimiter(delim: &DelimitingModifier) -> String {
+    match delim {
+        DelimitingModifier::Weak => "<hr class=\"weak\" />",
+        DelimitingModifier::Strong => "<hr class=\"strong\" />",
+        DelimitingModifier::HorizontalRule => "<hr />",
     }
+    .into()
 }
 
-fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> String {
-    let mut classes = Vec::new();
-    let mut attrs = Vec::new();
-    let mut prefix = Vec::new();
+fn format_nestable(content: &str, extensions: &[DetachedModifierExtension]) -> String {
+    let mut classes: Vec<String> = Vec::new();
+    let mut attrs: Vec<String> = Vec::new();
+    let mut prefix: Vec<&str> = Vec::new();
 
     for extension in extensions {
         match extension {
             DetachedModifierExtension::Todo(status) => {
-                if let TodoStatus::Recurring(_) = status {
-                    classes.push("todo-recurring".to_string());
+                if matches!(status, TodoStatus::Recurring(_)) {
+                    classes.push("todo-recurring".into());
                 }
-                let html = match status {
-                    TodoStatus::Undone => {
-                        r#"<input type="checkbox" class="todo-status todo-undone" disabled />"#
-                    }
-                    TodoStatus::Done => {
-                        r#"<input type="checkbox" class="todo-status todo-done" checked disabled />"#
-                    }
-                    TodoStatus::NeedsClarification => {
-                        r#"<span class="todo-status todo-clarification">?</span>"#
-                    }
-                    TodoStatus::Paused => r#"<span class="todo-status todo-paused">=</span>"#,
-                    TodoStatus::Urgent => r#"<span class="todo-status todo-urgent">!</span>"#,
-                    TodoStatus::Pending => r#"<span class="todo-status todo-pending">-</span>"#,
-                    TodoStatus::Canceled => r#"<span class="todo-status todo-canceled">_</span>"#,
-                    TodoStatus::Recurring(date) => {
-                        let date = date.as_deref().unwrap_or("");
-                        return format!(
-                            r#"<span class="todo-status todo-recurring">+ {}</span>"#,
-                            encode_minimal(date)
-                        );
-                    }
-                };
-                prefix.push(html.to_string());
+                prefix.push(todo_html(status));
             }
             DetachedModifierExtension::Priority(priority) => {
                 classes.push(format!("priority-{}", into_slug(priority)));
@@ -207,23 +154,40 @@ fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> 
         }
     }
 
-    let mut result = String::new();
-    write!(&mut result, "<li").unwrap();
+    let class_attr = if classes.is_empty() {
+        String::new()
+    } else {
+        format!(r#" class="{}""#, classes.join(" "))
+    };
+    let data_attrs = if attrs.is_empty() {
+        String::new()
+    } else {
+        format!(" {}", attrs.join(" "))
+    };
+    let prefix_html = if prefix.is_empty() {
+        String::new()
+    } else {
+        format!("{} ", prefix.join(" "))
+    };
 
-    if !classes.is_empty() {
-        write!(&mut result, r#" class="{}""#, classes.join(" ")).unwrap();
+    format!("<li{class_attr}{data_attrs}>{prefix_html}{content}</li>")
+}
+
+fn todo_html(status: &TodoStatus) -> &'static str {
+    match status {
+        TodoStatus::Undone => {
+            r#"<input type="checkbox" class="todo-status todo-undone" disabled />"#
+        }
+        TodoStatus::Done => {
+            r#"<input type="checkbox" class="todo-status todo-done" checked disabled />"#
+        }
+        TodoStatus::NeedsClarification => {
+            r#"<span class="todo-status todo-clarification">?</span>"#
+        }
+        TodoStatus::Paused => r#"<span class="todo-status todo-paused">=</span>"#,
+        TodoStatus::Urgent => r#"<span class="todo-status todo-urgent">!</span>"#,
+        TodoStatus::Pending => r#"<span class="todo-status todo-pending">-</span>"#,
+        TodoStatus::Canceled => r#"<span class="todo-status todo-canceled">_</span>"#,
+        TodoStatus::Recurring(_) => r#"<span class="todo-status todo-recurring">+</span>"#,
     }
-
-    for attr in &attrs {
-        write!(&mut result, " {attr}").unwrap();
-    }
-
-    write!(&mut result, ">").unwrap();
-
-    if !prefix.is_empty() {
-        write!(&mut result, "{} ", prefix.join(" ")).unwrap();
-    }
-
-    write!(&mut result, "{content}</li>").unwrap();
-    result
 }

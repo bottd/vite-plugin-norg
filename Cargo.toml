@@ -1,6 +1,6 @@
 [package]
 name = "vite-plugin-norg-parser"
-version = "1.2.10"
+version = "1.2.11"
 edition = "2021"
 authors = ["drake bott"]
 description = "wasm parser for vite-plugin-norg"
@@ -22,6 +22,7 @@ serde_json = "1.0"
 htmlescape = "0.3"
 rust-norg = { git = "https://github.com/nvim-neorg/rust-norg", rev = "79673015447b62d021d57b92f80be1454fe5cf83" }
 textwrap = "0.16.2"
+itertools = "0.14"
 
 [dev-dependencies]
 insta = { version = "1.44.3", features = ["yaml"] }
