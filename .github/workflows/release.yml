@@ -46,7 +46,7 @@ jobs:
         run: bun test
 
       - name: Semantic Release
-        run: npx semantic-release
+        run: bunx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
