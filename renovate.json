@@ -14,11 +14,6 @@
   },
   "packageRules": [
     {
-      "matchUpdateTypes": ["major", "minor", "patch"],
-      "matchManagers": ["npm", "cargo"],
-      "rangeStrategy": "pin"
-    },
-    {
       "matchUpdateTypes": ["minor", "patch"],
       "matchManagers": ["npm", "cargo", "nix"],
       "groupName": "non-major updates"
