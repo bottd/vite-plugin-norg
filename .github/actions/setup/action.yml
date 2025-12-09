@@ -1,5 +1,5 @@
-name: Setup Nix
-description: Install Nix and configure Cachix for caching
+name: Setup
+description: Install Nix, enter dev shell, and install dependencies
 
 inputs:
   cachix-name:
@@ -17,3 +17,10 @@ runs:
       uses: cachix/cachix-action@v15
       with:
         name: ${{ inputs.cachix-name }}
+
+    - name: Setup Nix dev environment
+      uses: nicknovitski/nix-develop@v1
+
+    - name: Install dependencies
+      shell: bash
+      run: bun install --frozen-lockfile

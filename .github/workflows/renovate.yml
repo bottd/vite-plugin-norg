@@ -1,0 +1,22 @@
+name: Renovate
+
+on:
+  schedule:
+    - cron: '0 5 * * *' # Daily at 5am UTC
+  workflow_dispatch:
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Run Renovate
+        uses: renovatebot/github-action@v44.0.5
+        with:
+          configurationFile: renovate.json
+          token: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
