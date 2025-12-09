@@ -6,6 +6,7 @@ export default norgPlugin;
 
 import type { SvelteComponent } from 'svelte';
 import type { FC } from 'react';
+import type { Component } from 'vue';
 import type { NorgParseResult } from '@parser';
 
 type NorgMetadata = NorgParseResult['metadata'];
@@ -32,4 +33,13 @@ export interface ReactModule {
 export interface SvelteModule {
   metadata: NorgMetadata;
   default: typeof SvelteComponent;
+}
+
+/**
+ * Module type for .norg files processed by the Vue generator
+ */
+export interface VueModule {
+  metadata: NorgMetadata;
+  toc: NorgParseResult['toc'];
+  default: Component;
 }

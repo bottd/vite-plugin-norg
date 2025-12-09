@@ -1,7 +1,7 @@
 # vite-plugin-norg
 
 [![npm version](https://img.shields.io/npm/v/vite-plugin-norg.svg)](https://www.npmjs.com/package/vite-plugin-norg)
-[![build status](https://img.shields.io/github/actions/workflow/status/bottd/vite-plugin-norg/publish.yml)](https://github.com/bottd/vite-plugin-norg/actions)
+[![build status](https://img.shields.io/github/actions/workflow/status/bottd/vite-plugin-norg/release.yml)](https://github.com/bottd/vite-plugin-norg/actions)
 [![license](https://img.shields.io/npm/l/vite-plugin-norg.svg)](LICENSE)
 
 **Neorg processor for Vite** - Transform `.norg` files into HTML, React, or Svelte with full TypeScript support.
