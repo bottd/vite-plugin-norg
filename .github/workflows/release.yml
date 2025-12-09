@@ -49,4 +49,3 @@ jobs:
         run: bunx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
