@@ -5,18 +5,17 @@ import type { NorgParseResult } from '@parser';
 import { generateHtmlOutput } from './generators/html';
 import { generateSvelteOutput } from './generators/svelte';
 import { generateReactOutput } from './generators/react';
-import { generateVueOutput } from './generators/vue';
 import { codeToHtml } from 'shiki';
 
 const NorgPluginOptionsSchema = z.object({
-  mode: z.enum(['html', 'svelte', 'react', 'vue']),
+  mode: z.enum(['html', 'svelte', 'react']),
   include: z.any().optional(),
   exclude: z.any().optional(),
   shikiOptions: z.any().optional(),
 });
 
 export interface NorgPluginOptions {
-  mode: 'html' | 'svelte' | 'react' | 'vue';
+  mode: 'html' | 'svelte' | 'react';
   include?: FilterPattern;
   exclude?: FilterPattern;
   shikiOptions?: Omit<Parameters<typeof codeToHtml>[1], 'lang'>;
@@ -27,7 +26,6 @@ const generators = {
   html: generateHtmlOutput,
   svelte: generateSvelteOutput,
   react: generateReactOutput,
-  vue: generateVueOutput,
 } as const satisfies Record<NorgPluginOptions['mode'], NorgGenerator>;
 
 export function norgPlugin(options: NorgPluginOptions) {
