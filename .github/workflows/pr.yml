@@ -16,7 +16,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Check formatting
-        run: nix fmt -- --check
+        run: nix fmt -- --fail-on-change
 
       - name: Run Nix flake checks
         run: nix flake check
