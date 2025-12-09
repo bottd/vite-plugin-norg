@@ -5,7 +5,7 @@
     "": {
       "name": "vite-plugin-norg",
       "dependencies": {
-        "zod": "^4.1.13",
+        "zod": "4.1.13",
       },
       "devDependencies": {
         "@eslint/js": "9.39.1",
