@@ -1,16 +1,25 @@
-name: PR Pipeline
+name: Release
 
 on:
-  pull_request:
+  push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
-  ci:
-    name: CI Pipeline
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -35,3 +44,9 @@ jobs:
 
       - name: Run JavaScript tests
         run: bun test
+
+      - name: Semantic Release
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
