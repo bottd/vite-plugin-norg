@@ -20,3 +20,5 @@ jobs:
         with:
           configurationFile: renovate.json
           token: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
+        env:
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
