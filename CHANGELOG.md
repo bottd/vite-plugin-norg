@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/bottd/vite-plugin-norg/compare/v1.3.1...v1.3.2) (2025-12-10)
+
+
+### Bug Fixes
+
+* **deps:** pin dependencies ([#11](https://github.com/bottd/vite-plugin-norg/issues/11)) ([369c797](https://github.com/bottd/vite-plugin-norg/commit/369c7978142304b80e615887ca4f1a8f14d58cf9))
+
 ## [1.3.1](https://github.com/bottd/vite-plugin-norg/compare/v1.3.0...v1.3.1) (2025-12-09)
 
 ### Bug Fixes
