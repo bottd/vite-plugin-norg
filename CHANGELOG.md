@@ -1,9 +1,8 @@
 ## [1.3.1](https://github.com/bottd/vite-plugin-norg/compare/v1.3.0...v1.3.1) (2025-12-09)
 
-
 ### Bug Fixes
 
-* update renovate config ([9bbedbc](https://github.com/bottd/vite-plugin-norg/commit/9bbedbc63570468b28d7141b7e9eeed4ecfd53ba))
+- update renovate config ([9bbedbc](https://github.com/bottd/vite-plugin-norg/commit/9bbedbc63570468b28d7141b7e9eeed4ecfd53ba))
 
 # [1.3.0](https://github.com/bottd/vite-plugin-norg/compare/v1.2.11...v1.3.0) (2025-12-09)
 
