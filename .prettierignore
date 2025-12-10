@@ -13,3 +13,4 @@ package-lock.json
 
 # Auto-generated files
 *.d.ts
+CHANGELOG.md
