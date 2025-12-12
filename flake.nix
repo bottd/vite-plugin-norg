@@ -104,27 +104,7 @@
             direnv
           ] ++ pre-commit-check.enabledPackages;
 
-          shellHook = pre-commit-check.shellHook + ''
-            export PATH="$PWD/node_modules/.bin:$PATH"
-
-            echo ""
-            echo "Vite Plugin Norg Development Environment"
-            echo "Node.js: $(node --version)"
-            echo "Rust: $(rustc --version)"
-            echo "wasm-pack: $(wasm-pack --version)"
-            echo ""
-            echo "Available commands:"
-            echo "  bun run build      - Build everything"
-            echo "  bun run build:wasm - Build WASM parser"
-            echo "  bun run build:js   - Build TypeScript"
-            echo "  bun run test       - Run tests"
-            echo "  bun run lint       - TypeScript linter"
-            echo "  bun run check      - Check TypeScript code"
-            echo "  cargo check        - Check Rust code"
-            echo "  cargo clippy       - Rust Linter"
-            echo "  nix fmt            - Format all code with treefmt"
-            echo ""
-          '';
+          shellHook = pre-commit-check.shellHook;
         };
       });
 }
