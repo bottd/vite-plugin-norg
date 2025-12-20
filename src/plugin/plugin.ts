@@ -1,134 +1,93 @@
-import { createFilter, type Plugin, FilterPattern } from 'vite';
-import { z } from 'zod';
-import { parseNorg } from '@parser';
-import type { NorgParseResult } from '@parser';
-import { generateHtmlOutput } from './generators/html';
-import { generateSvelteOutput } from './generators/svelte';
-import { generateReactOutput } from './generators/react';
-import { codeToHtml } from 'shiki';
+import { createFilter, type FilterPattern, type Plugin } from "vite";
+import { z } from "zod";
+import { parseNorg, getThemeCss } from "@parser";
+import type { NorgParseResult } from "@parser";
+import { generateHtmlOutput } from "./generators/html";
+import { generateSvelteOutput } from "./generators/svelte";
+import { generateReactOutput } from "./generators/react";
+
+export type ArboriumConfig =
+  | { theme: string; themes?: never }
+  | { themes: { light: string; dark: string }; theme?: never };
 
 const NorgPluginOptionsSchema = z.object({
-  mode: z.enum(['html', 'svelte', 'react']),
+  mode: z.enum(["html", "svelte", "react"]),
   include: z.any().optional(),
   exclude: z.any().optional(),
-  shikiOptions: z.any().optional(),
+  arboriumConfig: z.any().optional(),
 });
 
 export interface NorgPluginOptions {
-  mode: 'html' | 'svelte' | 'react';
+  mode: "html" | "svelte" | "react";
   include?: FilterPattern;
   exclude?: FilterPattern;
-  shikiOptions?: Omit<Parameters<typeof codeToHtml>[1], 'lang'>;
+  arboriumConfig?: ArboriumConfig;
 }
 
-export type NorgGenerator = (result: NorgParseResult) => string;
+export type NorgGenerator = (result: NorgParseResult, css: string) => string;
 const generators = {
   html: generateHtmlOutput,
   svelte: generateSvelteOutput,
   react: generateReactOutput,
-} as const satisfies Record<NorgPluginOptions['mode'], NorgGenerator>;
+} as const satisfies Record<NorgPluginOptions["mode"], NorgGenerator>;
 
-export function norgPlugin(options: NorgPluginOptions) {
+const VIRTUAL_CSS_ID = "virtual:norg-arborium.css";
+const RESOLVED_VIRTUAL_CSS_ID = "\0" + VIRTUAL_CSS_ID;
+
+function buildCss(config?: ArboriumConfig): string {
+  if (!config) return "";
+
+  if (config.theme) {
+    return getThemeCss(config.theme);
+  }
+
+  if (config.themes) {
+    return `
+      @media (prefers-color-scheme: light) {\n${getThemeCss(config.themes.light)}\n}
+      @media (prefers-color-scheme: dark) {\n${getThemeCss(config.themes.dark)}\n}
+    `;
+  }
+
+  return "";
+}
+
+export function norgPlugin(options: NorgPluginOptions): Plugin {
   const validatedOptions = NorgPluginOptionsSchema.parse(options);
-  const { include, exclude, mode, shikiOptions } = validatedOptions;
+  const { include, exclude, mode, arboriumConfig } = validatedOptions;
   const filter = createFilter(include, exclude);
-
-  const highlightOptions = {
-    themes: { light: 'github-light', dark: 'github-dark' },
-    ...shikiOptions,
-  };
-
-  const decodeHtmlEntities = (html: string): string =>
-    html
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&#x27;/g, "'")
-      .replace(/&#x2F;/g, '/')
-      .replace(/&#x60;/g, '`')
-      .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
-      .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
-
-  const highlightCodeBlocks = async (html: string): Promise<string> => {
-    const codeBlockRegex =
-      /<pre(?:\s+class="lang-(\w+)")?><code(?:\s+class="lang-\w+")?>([^]*?)<\/code><\/pre>/g;
-
-    const replacements = await Promise.all(
-      Array.from(html.matchAll(codeBlockRegex), async ([fullMatch, lang, code]) => {
-        const decodedCode = decodeHtmlEntities(code);
-        const language = lang ? lang.toLowerCase() : 'text';
-
-        try {
-          return {
-            original: fullMatch,
-            replacement: await codeToHtml(decodedCode, {
-              ...highlightOptions,
-              lang: language,
-            }),
-          };
-        } catch (error) {
-          // Fallback to text if language is not supported
-          try {
-            return {
-              original: fullMatch,
-              replacement: await codeToHtml(decodedCode, {
-                ...highlightOptions,
-                lang: 'text',
-              }),
-            };
-          } catch (fallbackError) {
-            console.warn(`Failed to highlight code block with language "${language}":`, error);
-            console.warn(`Fallback to 'text' also failed:`, fallbackError);
-            return { original: fullMatch, replacement: fullMatch };
-          }
-        }
-      })
-    );
-
-    let result = html;
-    for (const { original, replacement } of replacements) {
-      result = result.replace(original, () => replacement);
-    }
-
-    return result;
-  };
+  const css = buildCss(arboriumConfig as ArboriumConfig);
 
   return {
-    name: 'vite-plugin-norg',
-    enforce: 'pre',
+    name: "vite-plugin-norg",
+    enforce: "pre",
 
-    async resolveId(id, importer) {
-      if (!id.endsWith('.norg')) return null;
-
-      const resolved = await this.resolve(id, importer, { skipSelf: true });
-      if (resolved) {
-        return resolved.id;
+    resolveId(id) {
+      if (id === VIRTUAL_CSS_ID) {
+        return RESOLVED_VIRTUAL_CSS_ID;
       }
-
-      return null;
     },
 
     async load(id) {
-      if (!filter(id)) return;
+      if (id === RESOLVED_VIRTUAL_CSS_ID) {
+        return css;
+      }
+
+      if (!id.endsWith(".norg") || !filter(id)) return;
 
       try {
-        const { readFile } = await import('node:fs/promises');
+        const { readFile } = await import("node:fs/promises");
 
-        const content = await readFile(id, 'utf-8');
+        const content = await readFile(id, "utf-8");
         const result = parseNorg(content);
 
-        // highlightCodeBlocks adds syntax highlighting to code embedded in documents
-        const processedHtml = await highlightCodeBlocks(result.html);
-        return generators[mode]({ ...result, html: processedHtml });
+        return generators[mode](result, css);
       } catch (error) {
         this.error(new Error(`Failed to parse norg file ${id}: ${error}`));
       }
     },
 
     async handleHotUpdate(ctx) {
-      if (!filter(ctx.file) || !ctx.file.endsWith('.norg')) return;
+      if (!filter(ctx.file) || !ctx.file.endsWith(".norg")) return;
 
       const defaultRead = ctx.read;
       ctx.read = async function () {
@@ -136,13 +95,11 @@ export function norgPlugin(options: NorgPluginOptions) {
           const content = await defaultRead();
           const result = parseNorg(content);
 
-          // highlightCodeBlocks adds syntax highlighting to code embedded in documents
-          const processedHtml = await highlightCodeBlocks(result.html);
-          return generators[mode]({ ...result, html: processedHtml });
+          return generators[mode](result, css);
         } catch (error) {
           throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`);
         }
       };
     },
-  } satisfies Plugin;
+  };
 }

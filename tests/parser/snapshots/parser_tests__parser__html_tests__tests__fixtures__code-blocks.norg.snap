@@ -2,7 +2,7 @@
 source: tests/parser/html_tests.rs
 expression: "(html, toc, metadata)"
 ---
-- "<h1 id=\"code-blocks\">Code Blocks</h1>\n<h2 id=\"javascript\">JavaScript</h2>\n<pre class=\"lang-javascript\"><code class=\"lang-javascript\">function hello() { return &quot;world&quot;; }\n</code></pre><h2 id=\"python\">Python </h2>\n<pre class=\"lang-python\"><code class=\"lang-python\">def add(a, b): return a + b\n</code></pre><h2 id=\"plain\">Plain</h2>\n<pre><code>plain text\n</code></pre>"
+- "<h1 id=\"code-blocks\">Code Blocks</h1>\n<h2 id=\"javascript\">JavaScript</h2>\n<pre class=\"highlight lang-javascript\"><code><a-k>function</a-k> <a-v>hello</a-v><a-p>()</a-p> <a-p>{</a-p> <a-k>return</a-k> <a-s>&quot;world&quot;</a-s><a-p>;</a-p> <a-p>}</a-p>\n</code></pre><h2 id=\"python\">Python </h2>\n<pre class=\"highlight lang-python\"><code><a-k>def</a-k> <a-v>add</a-v>(<a-v>a</a-v>, <a-v>b</a-v>): <a-k>return</a-k> <a-v>a</a-v> <a-o>+</a-o> <a-v>b</a-v>\n</code></pre><h2 id=\"plain\">Plain</h2>\n<pre><code>plain text\n</code></pre>"
 - - level: 1
     title: Code Blocks
     id: code-blocks

@@ -89,17 +89,30 @@ interface NorgPluginOptions {
   mode: 'html' | 'react' | 'svelte';
   include?: FilterPattern;
   exclude?: FilterPattern;
-  // See https://shiki.style/guide for all options
-  shikiOptions?: {
+  arboriumConfig?: {
+    // Single theme
+    theme?: string;
+    // Or light/dark (uses prefers-color-scheme)
     themes?: {
-      // optional: defaults to 'github-light'
       light: string;
-      // optional: defaults to 'github-dark'
       dark: string;
     };
   };
 }
 ```
+
+## Code Syntax Highlighting
+
+Code blocks are highlighted using [arborium](https://arborium.bearcove.eu/), which generates highlights via tree-sitter. Set a theme to include highlights:
+
+```typescript
+norgPlugin({
+  mode: 'html',
+  arboriumConfig: { theme: 'github-dark' },
+});
+```
+
+See the [arborium themes](https://github.com/bearcove/arborium?tab=readme-ov-file#themes) for available options.
 
 **Requirements:**
 
