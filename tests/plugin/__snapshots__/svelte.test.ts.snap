@@ -17,7 +17,7 @@ exports[`Svelte Generator should generate correct Svelte component for code-bloc
   export const toc = [{"level":1,"title":"Code Blocks","id":"code-blocks"},{"level":2,"title":"JavaScript","id":"javascript"},{"level":2,"title":"Python ","id":"python"},{"level":2,"title":"Plain","id":"plain"}];
 </script>
 <script lang="ts">
-  const htmlContent = "<h1 id=\\"code-blocks\\">Code Blocks</h1>\\n<h2 id=\\"javascript\\">JavaScript</h2>\\n<pre class=\\"highlight lang-javascript\\"><code><a-k>function</a-k> <a-v>hello</a-v><a-p>()</a-p> <a-p>{</a-p> <a-k>return</a-k> <a-s>&quot;world&quot;</a-s><a-p>;</a-p> <a-p>}</a-p>\\n</code></pre><h2 id=\\"python\\">Python </h2>\\n<pre class=\\"highlight lang-python\\"><code><a-k>def</a-k> <a-v>add</a-v>(<a-v>a</a-v>, <a-v>b</a-v>): <a-k>return</a-k> <a-v>a</a-v> <a-o>+</a-o> <a-v>b</a-v>\\n</code></pre><h2 id=\\"plain\\">Plain</h2>\\n<pre><code>plain text\\n</code></pre>";
+  const htmlContent = "<h1 id=\\"code-blocks\\">Code Blocks</h1>\\n<h2 id=\\"javascript\\">JavaScript</h2>\\n<pre class=\\"arborium lang-javascript\\"><code><a-k>function</a-k> <a-v>hello</a-v><a-p>()</a-p> <a-p>{</a-p> <a-k>return</a-k> <a-s>&quot;world&quot;</a-s><a-p>;</a-p> <a-p>}</a-p>\\n</code></pre><h2 id=\\"python\\">Python </h2>\\n<pre class=\\"arborium lang-python\\"><code><a-k>def</a-k> <a-v>add</a-v>(<a-v>a</a-v>, <a-v>b</a-v>): <a-k>return</a-k> <a-v>a</a-v> <a-o>+</a-o> <a-v>b</a-v>\\n</code></pre><h2 id=\\"plain\\">Plain</h2>\\n<pre><code>plain text\\n</code></pre>";
 </script>
 {@html htmlContent}"
 `;
