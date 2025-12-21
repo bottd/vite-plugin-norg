@@ -23,7 +23,9 @@
       "types": "./dist/plugin/generators/html.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "npm run build:napi && npm run build:js",
     "build:napi": "napi build --release --platform --esm --output-dir dist/napi/",
