@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/bottd/vite-plugin-norg/compare/v1.3.9...v1.4.0) (2025-12-21)
+
+
+### Features
+
+* replace shiki with arborium ([#33](https://github.com/bottd/vite-plugin-norg/issues/33)) ([b84722b](https://github.com/bottd/vite-plugin-norg/commit/b84722bdfc534c86ea23d120cf75850eb2cefcd7))
+
 # [1.4.0](https://github.com/bottd/vite-plugin-norg/compare/v1.3.9...v1.4.0) (2025-12-20)
 
 
