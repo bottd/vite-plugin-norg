@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/bottd/vite-plugin-norg/compare/v2.0.1...v2.1.0) (2025-12-22)
+
+
+### Features
+
+* wrap lines in span for line-based styling ([d13fc2e](https://github.com/bottd/vite-plugin-norg/commit/d13fc2ee16d82cc49d41bc8a2b6924df6a86de70))
+
 ## [2.0.1](https://github.com/bottd/vite-plugin-norg/compare/v2.0.0...v2.0.1) (2025-12-22)
 
 
