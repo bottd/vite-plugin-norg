@@ -1,5 +1,6 @@
 use crate::segments::convert_segments;
 use crate::utils::into_slug;
+use arborium::Highlighter;
 use htmlescape::encode_minimal;
 use rust_norg::{
     DelimitingModifier, DetachedModifierExtension, NorgAST, NorgASTFlat, RangeableDetachedModifier,
@@ -23,12 +24,20 @@ pub fn nestable_modifier(
 pub fn verbatim_tag(name: &[String], parameters: &[String], content: &str) -> Option<String> {
     match name {
         [tag] if tag == "code" => {
-            let text = encode_minimal(&dedent(content));
-            Some(match parameters.first().filter(|lang| !lang.is_empty()) {
-                Some(lang) => format!(
-                    r#"<pre class="lang-{lang}"><code class="lang-{lang}">{text}</code></pre>"#
-                ),
-                None => format!("<pre><code>{text}</code></pre>"),
+            let code = dedent(content);
+            let lang = parameters
+                .first()
+                .filter(|l| !l.is_empty())
+                .map(String::as_str)
+                .unwrap_or("text");
+            let mut hl = Highlighter::new();
+            let highlighted = hl.highlight(lang, &code);
+
+            Some(match highlighted {
+                Ok(html) => {
+                    format!(r#"<pre class="arborium lang-{lang}"><code>{html}</code></pre>"#)
+                }
+                Err(_) => format!(r#"<pre><code>{}</code></pre>"#, encode_minimal(&code)),
             })
         }
         [tag] if tag == "image" => parameters
