@@ -1,4 +1,4 @@
-import { createFilter, type FilterPattern, type Plugin } from 'vite';
+import { createFilter, type FilterPattern } from 'vite';
 import { z } from 'zod';
 import { parseNorg, getThemeCss } from '@parser';
 import type { NorgParseResult } from '@parser';
@@ -51,7 +51,7 @@ function buildCss(config?: ArboriumConfig): string {
   return '';
 }
 
-export function norgPlugin(options: NorgPluginOptions): Plugin {
+export function norgPlugin(options: NorgPluginOptions) {
   const validatedOptions = NorgPluginOptionsSchema.parse(options);
   const { include, exclude, mode, arboriumConfig } = validatedOptions;
   const filter = createFilter(include, exclude);
@@ -59,7 +59,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
 
   return {
     name: 'vite-plugin-norg',
-    enforce: 'pre',
+    enforce: 'pre' as const,
 
     resolveId(id) {
       if (id === VIRTUAL_CSS_ID) {
