@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/bottd/vite-plugin-norg/compare/v2.0.0...v2.0.1) (2025-12-22)
+
+
+### Bug Fixes
+
+* remove vite types from plugin.ts to keep vite out of bundle ([c625c7f](https://github.com/bottd/vite-plugin-norg/commit/c625c7f58348381f07e474f16725f8e9898f3965))
+
 # [2.0.0](https://github.com/bottd/vite-plugin-norg/compare/v1.3.9...v2.0.0) (2025-12-22)
 
 
