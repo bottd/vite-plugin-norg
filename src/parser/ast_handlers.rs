@@ -35,9 +35,13 @@ pub fn verbatim_tag(name: &[String], parameters: &[String], content: &str) -> Op
 
             Some(match highlighted {
                 Ok(html) => {
-                    format!(r#"<pre class="arborium lang-{lang}"><code>{html}</code></pre>"#)
+                    let wrapped = wrap_lines(&html);
+                    format!(r#"<pre class="arborium lang-{lang}"><code>{wrapped}</code></pre>"#)
                 }
-                Err(_) => format!(r#"<pre><code>{}</code></pre>"#, encode_minimal(&code)),
+                Err(_) => {
+                    let wrapped = wrap_lines(&encode_minimal(&code));
+                    format!(r#"<pre><code>{wrapped}</code></pre>"#)
+                }
             })
         }
         [tag] if tag == "image" => parameters
@@ -199,4 +203,13 @@ fn todo_html(status: &TodoStatus) -> &'static str {
         TodoStatus::Canceled => r#"<span class="todo-status todo-canceled">_</span>"#,
         TodoStatus::Recurring(_) => r#"<span class="todo-status todo-recurring">+</span>"#,
     }
+}
+
+/// Wraps each of highlighted HTML in `<span class="line">`
+/// This enables per-line styling such as line numbers or highlighting specific lines
+fn wrap_lines(html: &str) -> String {
+    html.lines()
+        .map(|line| format!(r#"<span class="line">{line}</span>"#))
+        .collect::<Vec<_>>()
+        .join("")
 }
