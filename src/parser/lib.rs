@@ -12,6 +12,7 @@ pub use toc::extract_toc;
 pub use types::{ParsedNorg, TocEntry};
 pub use utils::into_slug;
 
+use arborium::theme::builtin;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde_json::Map;
@@ -37,4 +38,13 @@ pub fn parse_norg(content: String) -> Result<NorgParseResult> {
         html,
         toc,
     })
+}
+
+#[napi]
+pub fn get_theme_css(theme: String) -> String {
+    builtin::all()
+        .into_iter()
+        .find(|t| t.name == theme)
+        .map(|t| t.to_css("pre.arborium"))
+        .unwrap_or_default()
 }
