@@ -1,3 +1,16 @@
+# [2.0.0](https://github.com/bottd/vite-plugin-norg/compare/v1.3.9...v2.0.0) (2025-12-22)
+
+
+### Features
+
+* replace shiki with arborium ([4c66309](https://github.com/bottd/vite-plugin-norg/commit/4c663094b73afbf7e9eb21092be1d70262331586))
+
+
+### BREAKING CHANGES
+
+* plugin configuration uses arboriumConfig field instead
+of shikiOptions
+
 # [1.4.0](https://github.com/bottd/vite-plugin-norg/compare/v1.3.9...v1.4.0) (2025-12-21)
 
 
