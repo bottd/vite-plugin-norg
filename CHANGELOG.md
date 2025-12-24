@@ -1,3 +1,10 @@
+## [2.1.1](https://github.com/bottd/vite-plugin-norg/compare/v2.1.0...v2.1.1) (2025-12-24)
+
+
+### Bug Fixes
+
+* **deps:** pin rust crate arborium to v2.3.2 ([#34](https://github.com/bottd/vite-plugin-norg/issues/34)) ([e29427d](https://github.com/bottd/vite-plugin-norg/commit/e29427d53d3961d31886c2c52046f1fd57a0c0b6))
+
 # [2.1.0](https://github.com/bottd/vite-plugin-norg/compare/v2.0.1...v2.1.0) (2025-12-22)
 
 
