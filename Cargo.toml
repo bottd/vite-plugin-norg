@@ -1,8 +1,8 @@
 [package]
 name = "vite-plugin-norg-parser"
 version = "2.1.2"
-edition = "2021"
-authors = ["drake bott"]
+edition = "2024"
+authors = ["Drake Bott"]
 description = "wasm parser for vite-plugin-norg"
 license = "MIT"
 repository = "https://github.com/bottd/vite-plugin-norg"
