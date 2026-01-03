@@ -83,7 +83,7 @@
     "vite": "7.3.0",
     "vite-plugin-dts": "4.5.4",
     "vite-tsconfig-paths": "6.0.3",
-    "zod": "4.2.1"
+    "zod": "4.3.4"
   },
   "repository": {
     "type": "git",
