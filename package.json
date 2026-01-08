@@ -78,7 +78,7 @@
     "rimraf": "6.1.2",
     "svelte": "5.46.1",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.51.0",
+    "typescript-eslint": "8.52.0",
     "semantic-release": "25.0.2",
     "vite": "7.3.0",
     "vite-plugin-dts": "4.5.4",
