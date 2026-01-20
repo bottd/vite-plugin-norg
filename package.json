@@ -19,6 +19,9 @@
     "./react": {
       "types": "./dist/plugin/generators/react.d.ts"
     },
+    "./vue": {
+      "types": "./dist/plugin/generators/vue.d.ts"
+    },
     "./html": {
       "types": "./dist/plugin/generators/html.d.ts"
     }
@@ -45,7 +48,8 @@
     "napi",
     "rust",
     "svelte",
-    "react"
+    "react",
+    "vue"
   ],
   "peerDependencies": {
     "vite": "^7.0.0"
@@ -55,6 +59,9 @@
       "optional": true
     },
     "react": {
+      "optional": true
+    },
+    "vue": {
       "optional": true
     }
   },

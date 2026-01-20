@@ -1,12 +1,32 @@
 use crate::segments::convert_segments;
+use crate::types::InlineComponent;
 use crate::utils::into_slug;
 use arborium::Highlighter;
 use htmlescape::encode_minimal;
-use rust_norg::{
-    DelimitingModifier, DetachedModifierExtension, NorgAST, NorgASTFlat, RangeableDetachedModifier,
-    TodoStatus,
-};
+use rust_norg::{DelimitingModifier, DetachedModifierExtension, NorgASTFlat, TodoStatus};
 use textwrap::dedent;
+
+/// Result of processing a verbatim tag - includes optional HTML and optional inline component
+pub struct VerbatimTagResult {
+    pub html: Option<String>,
+    pub inline: Option<InlineComponent>,
+}
+
+impl VerbatimTagResult {
+    fn html_only(html: impl Into<String>) -> Self {
+        Self {
+            html: Some(html.into()),
+            inline: None,
+        }
+    }
+
+    fn inline_only(inline: InlineComponent) -> Self {
+        Self {
+            html: None,
+            inline: Some(inline),
+        }
+    }
+}
 
 pub fn nestable_modifier(
     text: &NorgASTFlat,
@@ -21,7 +41,19 @@ pub fn nestable_modifier(
     }
 }
 
-pub fn verbatim_tag(name: &[String], parameters: &[String], content: &str) -> Option<String> {
+/// Process a verbatim tag and return HTML with optional embedded component
+///
+/// # Arguments
+/// * `name` - The tag name (e.g., ["code"], ["embed"], ["image"])
+/// * `parameters` - Tag parameters (e.g., language for code, framework for embed)
+/// * `content` - The raw content inside the tag
+/// * `target_framework` - The target framework from config (e.g., "svelte", "react", "vue")
+pub fn verbatim_tag_with_embeds(
+    name: &[String],
+    parameters: &[String],
+    content: &str,
+    target_framework: Option<&str>,
+) -> Option<VerbatimTagResult> {
     match name {
         [tag] if tag == "code" => {
             let code = dedent(content);
@@ -33,7 +65,7 @@ pub fn verbatim_tag(name: &[String], parameters: &[String], content: &str) -> Op
             let mut hl = Highlighter::new();
             let highlighted = hl.highlight(lang, &code);
 
-            Some(match highlighted {
+            let html = match highlighted {
                 Ok(html) => {
                     let wrapped = wrap_lines(&html);
                     format!(r#"<pre class="arborium lang-{lang}"><code>{wrapped}</code></pre>"#)
@@ -42,7 +74,8 @@ pub fn verbatim_tag(name: &[String], parameters: &[String], content: &str) -> Op
                     let wrapped = wrap_lines(&encode_minimal(&code));
                     format!(r#"<pre><code>{wrapped}</code></pre>"#)
                 }
-            })
+            };
+            Some(VerbatimTagResult::html_only(html))
         }
         [tag] if tag == "image" => parameters
             .first()
@@ -53,80 +86,48 @@ pub fn verbatim_tag(name: &[String], parameters: &[String], content: &str) -> Op
                 } else {
                     format!("./{path}")
                 };
-                format!(
+                VerbatimTagResult::html_only(format!(
                     r#"<img src="{}" alt="{}" />"#,
                     encode_minimal(&src),
                     encode_minimal(content.trim())
-                )
+                ))
             }),
+        [tag] if tag == "inline" => {
+            // Framework must be specified as parameter (e.g., @inline svelte)
+            let framework = parameters
+                .first()
+                .filter(|p| !p.is_empty())
+                .map(String::as_str)
+                .or(target_framework)
+                .unwrap_or("");
+
+            // Validate framework
+            let valid_frameworks = ["svelte", "react", "vue"];
+            if !valid_frameworks.contains(&framework) {
+                return Some(VerbatimTagResult::html_only(format!(
+                    r#"<!-- inline error: invalid framework "{}" -->"#,
+                    encode_minimal(framework)
+                )));
+            }
+
+            // Return inline component without HTML marker
+            Some(VerbatimTagResult::inline_only(InlineComponent {
+                index: 0, // Index will be set by the caller based on position
+                framework: framework.to_string(),
+                code: content.to_string(),
+            }))
+        }
         [doc, meta] if doc == "document" && meta == "meta" => None,
-        _ => Some(format!(
+        _ => Some(VerbatimTagResult::html_only(format!(
             r#"<div class="verbatim">{}</div>"#,
             encode_minimal(content)
-        )),
-    }
-}
-
-pub fn heading(level: u16, title: &[rust_norg::ParagraphSegment], content: &[NorgAST]) -> String {
-    let text = convert_segments(title);
-    let id = into_slug(&text);
-    let heading = format!("<h{level} id=\"{id}\">{text}</h{level}>");
-    let body = crate::transform(content);
-
-    if body.trim().is_empty() {
-        heading
-    } else {
-        format!("{heading}\n{body}")
+        ))),
     }
 }
 
 pub fn paragraph(segments: &[rust_norg::ParagraphSegment]) -> Option<String> {
     let content = convert_segments(segments);
     (!content.trim().is_empty()).then(|| format!("<p>{content}</p>"))
-}
-
-pub fn rangeable_modifier(
-    modifier_type: &RangeableDetachedModifier,
-    title: &[rust_norg::ParagraphSegment],
-    content: &[NorgASTFlat],
-) -> String {
-    let title = convert_segments(title);
-    let body: String = content
-        .iter()
-        .filter_map(|node| match node {
-            NorgASTFlat::Paragraph(segments) => {
-                let html = convert_segments(segments);
-                (!html.trim().is_empty()).then(|| format!("<p>{html}</p>"))
-            }
-            _ => None,
-        })
-        .collect();
-
-    match modifier_type {
-        RangeableDetachedModifier::Definition => {
-            format!(
-                "<dl><dt>{}</dt><dd>{}</dd></dl>",
-                encode_minimal(&title),
-                body
-            )
-        }
-        RangeableDetachedModifier::Footnote => {
-            let id = into_slug(&title);
-            format!(
-                "<aside id=\"footnote-{}\" class=\"footnote\"><strong>{}</strong><p>{}</p></aside>",
-                encode_minimal(&id),
-                encode_minimal(&title),
-                body
-            )
-        }
-        RangeableDetachedModifier::Table => {
-            format!(
-                "<table><caption>{}</caption><tbody>{}</tbody></table>",
-                encode_minimal(&title),
-                body
-            )
-        }
-    }
 }
 
 pub fn delimiter(delim: &DelimitingModifier) -> String {

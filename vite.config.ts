@@ -17,7 +17,12 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/plugin/index.ts'),
       name: 'VitePluginNorg',
-      fileName: 'plugin/index',
+      fileName: format => {
+        if (format === 'es') {
+          return 'plugin/index.js';
+        }
+        return 'plugin/index.js';
+      },
       formats: ['es'],
     },
     rollupOptions: {
@@ -26,6 +31,9 @@ export default defineConfig({
         paths: {
           '@parser': '../napi/index.js',
         },
+        // Preserve the runtime module structure
+        preserveModules: true,
+        preserveModulesRoot: resolve(__dirname, 'src'),
       },
     },
     copyPublicDir: false,
