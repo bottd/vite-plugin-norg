@@ -2,35 +2,35 @@
 
 exports[`HTML Generator should generate correct HTML module for basic.norg 1`] = `
 "export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
-export const html = "<h1 id=\\"main-title\\">Main Title</h1>\\n<p>Text with <i>bold</i>, <em>italic</em>, <code>code</code>, and <s>strikethrough</s>.</p><h2 id=\\"lists\\">Lists</h2>\\n<ul><li>Item 1</li><li>Item 2</li></ul><ol><li>Number 1</li><li>Number 2</li></ol><h2 id=\\"link\\">Link</h2>\\n<p><a href=\\"https://example.com\\" target=\\"_blank\\">link text</a></p>";
+export const html = "<h1 id=\\"main-title\\">Main Title</h1><p>Text with <i>bold</i>, <em>italic</em>, <code>code</code>, and <s>strikethrough</s>.</p><h2 id=\\"lists\\">Lists</h2><h2 id=\\"link\\">Link</h2><p><a href=\\"https://example.com\\" target=\\"_blank\\">link text</a></p>";
 export const toc = [{"level":1,"title":"Main Title","id":"main-title"},{"level":2,"title":"Lists","id":"lists"},{"level":2,"title":"Link","id":"link"}];
 export default { metadata, html, toc };"
 `;
 
 exports[`HTML Generator should generate correct HTML module for code-blocks.norg 1`] = `
 "export const metadata = {"title":"\\"Code Test\\""};
-export const html = "<h1 id=\\"code-blocks\\">Code Blocks</h1>\\n<h2 id=\\"javascript\\">JavaScript</h2>\\n<pre class=\\"arborium lang-javascript\\"><code><span class=\\"line\\"><a-k>function</a-k> <a-f>hello</a-f><a-p>()</a-p> <a-p>{</a-p> <a-k>return</a-k> <a-s>&quot;world&quot;</a-s><a-p>;</a-p> <a-p>}</a-p></span></code></pre><h2 id=\\"python\\">Python </h2>\\n<pre class=\\"arborium lang-python\\"><code><span class=\\"line\\"><a-k>def</a-k> <a-f>add</a-f>(<a-v>a</a-v>, <a-v>b</a-v>): <a-k>return</a-k> <a-v>a</a-v> <a-o>+</a-o> <a-v>b</a-v></span></code></pre><h2 id=\\"plain\\">Plain</h2>\\n<pre><code><span class=\\"line\\">plain text</span></code></pre>";
+export const html = "<h1 id=\\"code-blocks\\">Code Blocks</h1><h2 id=\\"javascript\\">JavaScript</h2><pre class=\\"arborium lang-javascript\\"><code><span class=\\"line\\"><a-k>function</a-k> <a-v>hello</a-v><a-p>()</a-p> <a-p>{</a-p> <a-k>return</a-k> <a-s>&quot;world&quot;</a-s><a-p>;</a-p> <a-p>}</a-p></span></code></pre><h2 id=\\"python\\">Python </h2><pre class=\\"arborium lang-python\\"><code><span class=\\"line\\"><a-k>def</a-k> <a-v>add</a-v>(<a-v>a</a-v>, <a-v>b</a-v>): <a-k>return</a-k> <a-v>a</a-v> <a-o>+</a-o> <a-v>b</a-v></span></code></pre><h2 id=\\"plain\\">Plain</h2><pre><code><span class=\\"line\\">plain text</span></code></pre>";
 export const toc = [{"level":1,"title":"Code Blocks","id":"code-blocks"},{"level":2,"title":"JavaScript","id":"javascript"},{"level":2,"title":"Python ","id":"python"},{"level":2,"title":"Plain","id":"plain"}];
 export default { metadata, html, toc };"
 `;
 
 exports[`HTML Generator should generate correct HTML module for headings.norg 1`] = `
 "export const metadata = {"title":"\\"Headings\\""};
-export const html = "<h1 id=\\"h1\\">H1</h1>\\n<p>Content 1</p><h2 id=\\"h2\\">H2</h2>\\n<p>Content 2</p><h3 id=\\"h3\\">H3</h3>\\n<p>Content 3</p><h4 id=\\"h4\\">H4</h4>\\n<p>Content 4</p><h5 id=\\"h5\\">H5</h5>\\n<p>Content 5</p><h6 id=\\"h6\\">H6</h6>\\n<p>Content 6</p>";
+export const html = "<h1 id=\\"h1\\">H1</h1><p>Content 1</p><h2 id=\\"h2\\">H2</h2><p>Content 2</p><h3 id=\\"h3\\">H3</h3><p>Content 3</p><h4 id=\\"h4\\">H4</h4><p>Content 4</p><h5 id=\\"h5\\">H5</h5><p>Content 5</p><h6 id=\\"h6\\">H6</h6><p>Content 6</p>";
 export const toc = [{"level":1,"title":"H1","id":"h1"},{"level":2,"title":"H2","id":"h2"},{"level":3,"title":"H3","id":"h3"},{"level":4,"title":"H4","id":"h4"},{"level":5,"title":"H5","id":"h5"},{"level":6,"title":"H6","id":"h6"}];
 export default { metadata, html, toc };"
 `;
 
 exports[`HTML Generator should generate correct HTML module for images.norg 1`] = `
 "export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
-export const html = "<h1 id=\\"images\\">Images</h1>\\n<p>Image test</p><img src=\\"./relative/image.png\\" alt=\\"with alt text\\" />";
+export const html = "<h1 id=\\"images\\">Images</h1><p>Image test</p><img src=\\"./relative/image.png\\" alt=\\"with alt text\\" />";
 export const toc = [{"level":1,"title":"Images","id":"images"}];
 export default { metadata, html, toc };"
 `;
 
 exports[`HTML Generator should generate correct HTML module for links.norg 1`] = `
 "export const metadata = {"author":"Drake Bott","title":"Link Test"};
-export const html = "<h1 id=\\"link-types\\">Link Types</h1>\\n<h2 id=\\"url-links\\">URL Links</h2>\\n<p><a href=\\"https://example.com\\" target=\\"_blank\\">https://example.com</a> <a href=\\"https://github.com/nvim-neorg\\" target=\\"_blank\\">Neorg GitHub</a></p><h2 id=\\"file-links\\">File Links</h2><h2 id=\\"heading-links\\">Heading Links</h2>\\n<p><a href=\\"#token-text-main-token-whitespace-token-text-heading\\">Token(Text(&quot;Main&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-sub-token-whitespace-token-text-heading\\">Token(Text(&quot;Sub&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-introduction\\">Custom link text</a></p><h2 id=\\"mixed-content\\">Mixed Content</h2>\\n<p>This paragraph has a <a href=\\"https://rust-lang.org\\" target=\\"_blank\\">Rust website</a> and .</p>";
+export const html = "<h1 id=\\"link-types\\">Link Types</h1><h2 id=\\"url-links\\">URL Links</h2><p><a href=\\"https://example.com\\" target=\\"_blank\\">https://example.com</a> <a href=\\"https://github.com/nvim-neorg\\" target=\\"_blank\\">Neorg GitHub</a></p><h2 id=\\"file-links\\">File Links</h2><h2 id=\\"heading-links\\">Heading Links</h2><p><a href=\\"#token-text-main-token-whitespace-token-text-heading\\">Token(Text(&quot;Main&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-sub-token-whitespace-token-text-heading\\">Token(Text(&quot;Sub&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-introduction\\">Custom link text</a></p><h2 id=\\"mixed-content\\">Mixed Content</h2><p>This paragraph has a <a href=\\"https://rust-lang.org\\" target=\\"_blank\\">Rust website</a> and .</p>";
 export const toc = [{"level":1,"title":"Link Types","id":"link-types"},{"level":2,"title":"URL Links","id":"url-links"},{"level":2,"title":"File Links","id":"file-links"},{"level":2,"title":"Heading Links","id":"heading-links"},{"level":2,"title":"Mixed Content","id":"mixed-content"}];
 export default { metadata, html, toc };"
 `;
