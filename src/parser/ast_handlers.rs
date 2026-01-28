@@ -3,10 +3,12 @@ use crate::types::InlineComponent;
 use crate::utils::into_slug;
 use arborium::Highlighter;
 use htmlescape::encode_minimal;
+use itertools::Itertools;
 use rust_norg::{DelimitingModifier, DetachedModifierExtension, NorgASTFlat, TodoStatus};
 use textwrap::dedent;
 
-/// Result of processing a verbatim tag - includes optional HTML and optional inline component
+const VALID_FRAMEWORKS: &[&str] = &["svelte", "react", "vue"];
+
 pub struct VerbatimTagResult {
     pub html: Option<String>,
     pub inline: Option<InlineComponent>,
@@ -35,19 +37,12 @@ pub fn nestable_modifier(
     match text {
         NorgASTFlat::Paragraph(segments) => {
             let content = convert_segments(segments);
-            (!content.trim().is_empty()).then(|| format_nestable(&content, extensions))
+            (!content.trim().is_empty()).then(|| format_list_item(&content, extensions))
         }
         _ => None,
     }
 }
 
-/// Process a verbatim tag and return HTML with optional embedded component
-///
-/// # Arguments
-/// * `name` - The tag name (e.g., ["code"], ["embed"], ["image"])
-/// * `parameters` - Tag parameters (e.g., language for code, framework for embed)
-/// * `content` - The raw content inside the tag
-/// * `target_framework` - The target framework from config (e.g., "svelte", "react", "vue")
 pub fn verbatim_tag_with_embeds(
     name: &[String],
     parameters: &[String],
@@ -59,60 +54,52 @@ pub fn verbatim_tag_with_embeds(
             let code = dedent(content);
             let lang = parameters
                 .first()
-                .filter(|l| !l.is_empty())
+                .filter(|s| !s.is_empty())
                 .map(String::as_str)
                 .unwrap_or("text");
-            let mut hl = Highlighter::new();
-            let highlighted = hl.highlight(lang, &code);
 
+            let highlighted = Highlighter::new().highlight(lang, &code);
             let html = match highlighted {
-                Ok(html) => {
-                    let wrapped = wrap_lines(&html);
-                    format!(r#"<pre class="arborium lang-{lang}"><code>{wrapped}</code></pre>"#)
-                }
-                Err(_) => {
-                    let wrapped = wrap_lines(&encode_minimal(&code));
-                    format!(r#"<pre><code>{wrapped}</code></pre>"#)
-                }
+                Ok(h) => format!(
+                    r#"<pre class="arborium lang-{lang}"><code>{}</code></pre>"#,
+                    wrap_lines(&h)
+                ),
+                Err(_) => format!(
+                    r#"<pre><code>{}</code></pre>"#,
+                    wrap_lines(&encode_minimal(&code))
+                ),
             };
             Some(VerbatimTagResult::html_only(html))
         }
-        [tag] if tag == "image" => parameters
-            .first()
-            .filter(|path| !path.is_empty())
-            .map(|path| {
-                let src = if path.starts_with('/') || path.starts_with("http") {
-                    path.clone()
-                } else {
-                    format!("./{path}")
-                };
-                VerbatimTagResult::html_only(format!(
-                    r#"<img src="{}" alt="{}" />"#,
-                    encode_minimal(&src),
-                    encode_minimal(content.trim())
-                ))
-            }),
+        [tag] if tag == "image" => parameters.first().filter(|s| !s.is_empty()).map(|path| {
+            let src = if path.starts_with('/') || path.starts_with("http") {
+                path.clone()
+            } else {
+                format!("./{path}")
+            };
+            VerbatimTagResult::html_only(format!(
+                r#"<img src="{}" alt="{}" />"#,
+                encode_minimal(&src),
+                encode_minimal(content.trim())
+            ))
+        }),
         [tag] if tag == "inline" => {
-            // Framework must be specified as parameter (e.g., @inline svelte)
             let framework = parameters
                 .first()
-                .filter(|p| !p.is_empty())
+                .filter(|s| !s.is_empty())
                 .map(String::as_str)
                 .or(target_framework)
                 .unwrap_or("");
 
-            // Validate framework
-            let valid_frameworks = ["svelte", "react", "vue"];
-            if !valid_frameworks.contains(&framework) {
+            if !VALID_FRAMEWORKS.contains(&framework) {
                 return Some(VerbatimTagResult::html_only(format!(
-                    r#"<!-- inline error: invalid framework "{}" -->"#,
+                    r#"<div class="norg-error" style="color: red; border: 1px solid red; padding: 0.5em;">Inline error: invalid framework "{}"</div>"#,
                     encode_minimal(framework)
                 )));
             }
 
-            // Return inline component without HTML marker
             Some(VerbatimTagResult::inline_only(InlineComponent {
-                index: 0, // Index will be set by the caller based on position
+                index: 0, // Set by caller
                 framework: framework.to_string(),
                 code: content.to_string(),
             }))
@@ -130,40 +117,39 @@ pub fn paragraph(segments: &[rust_norg::ParagraphSegment]) -> Option<String> {
     (!content.trim().is_empty()).then(|| format!("<p>{content}</p>"))
 }
 
-pub fn delimiter(delim: &DelimitingModifier) -> String {
+pub fn delimiter(delim: &DelimitingModifier) -> &'static str {
     match delim {
         DelimitingModifier::Weak => "<hr class=\"weak\" />",
         DelimitingModifier::Strong => "<hr class=\"strong\" />",
         DelimitingModifier::HorizontalRule => "<hr />",
     }
-    .into()
 }
 
-fn format_nestable(content: &str, extensions: &[DetachedModifierExtension]) -> String {
+fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> String {
     let mut classes: Vec<String> = Vec::new();
     let mut attrs: Vec<String> = Vec::new();
-    let mut prefix: Vec<&str> = Vec::new();
+    let mut prefixes: Vec<&str> = Vec::new();
 
-    for extension in extensions {
-        match extension {
+    for ext in extensions {
+        match ext {
             DetachedModifierExtension::Todo(status) => {
                 if matches!(status, TodoStatus::Recurring(_)) {
                     classes.push("todo-recurring".into());
                 }
-                prefix.push(todo_html(status));
+                prefixes.push(todo_html(status));
             }
-            DetachedModifierExtension::Priority(priority) => {
-                classes.push(format!("priority-{}", into_slug(priority)));
-                attrs.push(format!(r#"data-priority="{}""#, encode_minimal(priority)));
+            DetachedModifierExtension::Priority(p) => {
+                classes.push(format!("priority-{}", into_slug(p)));
+                attrs.push(format!(r#"data-priority="{}""#, encode_minimal(p)));
             }
-            DetachedModifierExtension::Timestamp(timestamp) => {
-                attrs.push(format!(r#"data-timestamp="{}""#, encode_minimal(timestamp)));
+            DetachedModifierExtension::Timestamp(ts) => {
+                attrs.push(format!(r#"data-timestamp="{}""#, encode_minimal(ts)));
             }
-            DetachedModifierExtension::DueDate(date) => {
-                attrs.push(format!(r#"data-due="{}""#, encode_minimal(date)));
+            DetachedModifierExtension::DueDate(d) => {
+                attrs.push(format!(r#"data-due="{}""#, encode_minimal(d)));
             }
-            DetachedModifierExtension::StartDate(date) => {
-                attrs.push(format!(r#"data-start="{}""#, encode_minimal(date)));
+            DetachedModifierExtension::StartDate(d) => {
+                attrs.push(format!(r#"data-start="{}""#, encode_minimal(d)));
             }
         }
     }
@@ -178,10 +164,10 @@ fn format_nestable(content: &str, extensions: &[DetachedModifierExtension]) -> S
     } else {
         format!(" {}", attrs.join(" "))
     };
-    let prefix_html = if prefix.is_empty() {
+    let prefix_html = if prefixes.is_empty() {
         String::new()
     } else {
-        format!("{} ", prefix.join(" "))
+        format!("{} ", prefixes.join(" "))
     };
 
     format!("<li{class_attr}{data_attrs}>{prefix_html}{content}</li>")
@@ -206,11 +192,8 @@ fn todo_html(status: &TodoStatus) -> &'static str {
     }
 }
 
-/// Wraps each of highlighted HTML in `<span class="line">`
-/// This enables per-line styling such as line numbers or highlighting specific lines
 fn wrap_lines(html: &str) -> String {
     html.lines()
         .map(|line| format!(r#"<span class="line">{line}</span>"#))
-        .collect::<Vec<_>>()
         .join("")
 }
