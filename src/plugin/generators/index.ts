@@ -46,12 +46,16 @@ function generateSvelte(
     `  export const metadata = ${JSON.stringify(metadata ?? {})};`,
     `  export const toc = ${JSON.stringify(toc ?? [])};`,
     '</script>',
-    '<script lang="ts">',
   ];
 
-  if (css) lines.push('  import "virtual:norg-arborium.css";');
-  addInlineImports(lines, inlines, filePath, '  ');
-  lines.push('</script>');
+  // Only add script block if it has content
+  const scriptContent: string[] = [];
+  if (css) scriptContent.push('  import "virtual:norg-arborium.css";');
+  addInlineImports(scriptContent, inlines, filePath, '  ');
+
+  if (scriptContent.length > 0) {
+    lines.push('<script lang="ts">', ...scriptContent, '</script>');
+  }
 
   // Interleave HTML parts with inline components
   interleaveHtmlAndInlines(
@@ -94,7 +98,7 @@ function generateReact(
       htmlParts,
       inlines,
       (part, i) =>
-        `  React.createElement("span", { key: "html-${i}", dangerouslySetInnerHTML: { __html: ${JSON.stringify(part)} } }),`,
+        `  React.createElement("div", { key: "html-${i}", dangerouslySetInnerHTML: { __html: ${JSON.stringify(part)} } }),`,
       i => `  React.createElement(Inline${i}, { key: "inline-${i}" }),`
     );
     lines.push(');');
@@ -125,6 +129,7 @@ function generateVue(
     lines.push(`const htmlContent = ${JSON.stringify(htmlParts.join(''))};`);
   }
 
+  lines.push('', 'defineExpose({ metadata, toc });');
   lines.push('</script>', '', '<template>');
 
   if (inlines.length === 0) {
