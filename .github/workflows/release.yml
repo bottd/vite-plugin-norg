@@ -7,45 +7,57 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.host }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-unknown-linux-gnu
-            extra-args: ''
-          - target: aarch64-unknown-linux-gnu
-            extra-args: '--use-napi-cross'
-          - target: x86_64-unknown-linux-musl
-            extra-args: '-x'
+          # macOS - native runners
           - target: x86_64-apple-darwin
-            extra-args: '-x'
+            host: macos-latest
           - target: aarch64-apple-darwin
+            host: macos-latest
+          # Windows - native runner
+          - target: x86_64-pc-windows-msvc
+            host: windows-latest
+          # Linux gnu - napi-cross
+          - target: x86_64-unknown-linux-gnu
+            host: ubuntu-latest
+            extra-args: '--use-napi-cross'
+          - target: aarch64-unknown-linux-gnu
+            host: ubuntu-latest
+            extra-args: '--use-napi-cross'
+          # Linux musl - cargo-zigbuild
+          - target: x86_64-unknown-linux-musl
+            host: ubuntu-latest
+            extra-args: '-x'
+          - target: aarch64-unknown-linux-musl
+            host: ubuntu-latest
             extra-args: '-x'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup
+      - name: Setup (Nix)
+        if: runner.os != 'Windows'
         uses: ./.github/actions/setup
 
-      - name: Install zig
-        uses: mlugg/setup-zig@v2
+      - name: Setup (Windows)
+        if: runner.os == 'Windows'
+        uses: ./.github/actions/setup-windows
 
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@main
-
-      - name: Install cross-compilation tools
-        run: cargo binstall -y cargo-zigbuild cargo-xwin
+      - name: Setup (Linux Cross-Compilation)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-linux
 
       - name: Build native binding (${{ matrix.target }})
+        shell: bash
         run: |
           bunx napi build --release --platform --esm --strip \
             --output-dir dist/napi/ \
             --target "${{ matrix.target }}" ${{ matrix.extra-args }}
         env:
           MACOSX_DEPLOYMENT_TARGET: '10.13'
-          TARGET_CFLAGS: '-std=gnu11'
 
       - name: Upload native binding
         uses: actions/upload-artifact@v4

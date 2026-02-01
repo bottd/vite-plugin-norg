@@ -1,0 +1,15 @@
+name: Setup (Linux Cross-Compilation)
+description: Install zig and cargo-zigbuild for Linux cross-compilation
+
+runs:
+  using: composite
+  steps:
+    - name: Install zig
+      uses: mlugg/setup-zig@v2
+
+    - name: Install cargo-binstall
+      uses: cargo-bins/cargo-binstall@main
+
+    - name: Install cargo-zigbuild
+      shell: bash
+      run: cargo binstall -y cargo-zigbuild
