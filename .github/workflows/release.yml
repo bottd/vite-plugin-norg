@@ -8,6 +8,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            extra-args: ''
+          - target: aarch64-unknown-linux-gnu
+            extra-args: '--use-napi-cross'
+          - target: x86_64-unknown-linux-musl
+            extra-args: '-x'
+          - target: x86_64-apple-darwin
+            extra-args: '-x'
+          - target: aarch64-apple-darwin
+            extra-args: '-x'
+          - target: x86_64-pc-windows-msvc
+            extra-args: '-x'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -24,32 +40,19 @@ jobs:
       - name: Install cross-compilation tools
         run: cargo binstall -y cargo-zigbuild cargo-xwin
 
-      - name: Build native bindings
+      - name: Build native binding (${{ matrix.target }})
         run: |
-          build() {
-            echo "::group::Building $1"
-            bunx napi build --release --platform --esm --strip \
-              --output-dir dist/napi/ \
-              --target "$1" ${@:2}
-            echo "::endgroup::"
-          }
-          build x86_64-unknown-linux-gnu
-          build aarch64-unknown-linux-gnu --use-napi-cross
-          build x86_64-unknown-linux-musl -x
-          build x86_64-apple-darwin -x
-          build aarch64-apple-darwin -x
-          build x86_64-pc-windows-msvc -x
+          bunx napi build --release --platform --esm --strip \
+            --output-dir dist/napi/ \
+            --target "${{ matrix.target }}" ${{ matrix.extra-args }}
         env:
-          MACOSX_DEPLOYMENT_TARGET: "10.13"
-          TARGET_CFLAGS: "-std=gnu11"
+          MACOSX_DEPLOYMENT_TARGET: '10.13'
+          TARGET_CFLAGS: '-std=gnu11'
 
-      - name: List built bindings
-        run: ls -la dist/napi/
-
-      - name: Upload native bindings
+      - name: Upload native binding
         uses: actions/upload-artifact@v4
         with:
-          name: native-bindings
+          name: native-binding-${{ matrix.target }}
           path: dist/napi/*.node
           if-no-files-found: error
 
@@ -75,11 +78,9 @@ jobs:
       - name: Download native bindings
         uses: actions/download-artifact@v4
         with:
-          name: native-bindings
+          pattern: native-binding-*
           path: dist/napi
-
-      - name: List downloaded bindings
-        run: ls -la dist/napi/
+          merge-multiple: true
 
       - name: Build JavaScript
         run: bun run build:js
