@@ -22,8 +22,6 @@ jobs:
             extra-args: '-x'
           - target: aarch64-apple-darwin
             extra-args: '-x'
-          - target: x86_64-pc-windows-msvc
-            extra-args: '-x'
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
