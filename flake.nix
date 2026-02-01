@@ -24,9 +24,9 @@
           inherit system overlays;
         };
 
-        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+        rustToolchainToml = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+        rustToolchain = rustToolchainToml.override {
           extensions = [ "rust-src" ];
-          targets = [ "wasm32-unknown-unknown" ];
         };
 
         craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
