@@ -6,7 +6,54 @@ on:
   workflow_dispatch:
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Install zig
+        uses: mlugg/setup-zig@v2
+
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: Install cross-compilation tools
+        run: cargo binstall -y cargo-zigbuild cargo-xwin
+
+      - name: Build native bindings
+        run: |
+          build() {
+            echo "::group::Building $1"
+            bunx napi build --release --platform --esm --strip \
+              --output-dir dist/napi/ \
+              --target "$1" ${@:2}
+            echo "::endgroup::"
+          }
+          build x86_64-unknown-linux-gnu
+          build aarch64-unknown-linux-gnu --use-napi-cross
+          build x86_64-unknown-linux-musl -x
+          build x86_64-apple-darwin -x
+          build aarch64-apple-darwin -x
+          build x86_64-pc-windows-msvc -x
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
+
+      - name: List built bindings
+        run: ls -la dist/napi/
+
+      - name: Upload native bindings
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-bindings
+          path: dist/napi/*.node
+          if-no-files-found: error
+
   release:
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -24,14 +71,23 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
+      - name: Download native bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: native-bindings
+          path: dist/napi
+
+      - name: List downloaded bindings
+        run: ls -la dist/napi/
+
+      - name: Build JavaScript
+        run: bun run build:js
+
       - name: Check formatting
         run: nix fmt -- --fail-on-change
 
       - name: Run Nix flake checks
         run: nix flake check
-
-      - name: Build plugin
-        run: bun run build
 
       - name: Run clippy
         run: cargo clippy
