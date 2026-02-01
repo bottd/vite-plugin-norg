@@ -41,7 +41,7 @@ jobs:
           build x86_64-pc-windows-msvc -x
         env:
           MACOSX_DEPLOYMENT_TARGET: "10.13"
-          TARGET_CFLAGS: "-std=gnu99"
+          TARGET_CFLAGS: "-std=gnu11"
 
       - name: List built bindings
         run: ls -la dist/napi/
