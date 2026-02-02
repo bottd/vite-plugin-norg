@@ -23,8 +23,8 @@ export function generateOutput(
   }
 }
 
-function generateHtml({ htmlParts, metadata, toc }: NorgParseResult, css: string): string {
-  const html = htmlParts.join('');
+function generateHtml({ htmlParts, metadata, toc, inlines = [] }: NorgParseResult, css: string): string {
+  const html = embedInlines(htmlParts, inlines);
   const lines: string[] = [];
   if (css) lines.push('import "virtual:norg-arborium.css";');
   lines.push(
@@ -143,6 +143,15 @@ function addInlineImports(
   for (let i = 0; i < inlines.length; i++) {
     lines.push(`${indent}import Inline${i} from '${filePath}?inline=${i}';`);
   }
+}
+
+function embedInlines(htmlParts: string[], inlines: InlineComponent[]): string {
+  const parts: string[] = [];
+  for (let i = 0; i < htmlParts.length; i++) {
+    parts.push(htmlParts[i]);
+    if (i < inlines.length) parts.push(inlines[i].code);
+  }
+  return parts.join('');
 }
 
 function interleaveHtmlAndInlines(

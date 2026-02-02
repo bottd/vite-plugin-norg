@@ -1,6 +1,6 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
-exports[`React Generator should generate correct React component for basic.norg 1`] = `
+exports[`React Generator generates correct output for basic.norg 1`] = `
 "import React from "react";
 
 export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
@@ -12,7 +12,7 @@ export const Component = () => React.createElement("div", { dangerouslySetInnerH
 export default Component;"
 `;
 
-exports[`React Generator should generate correct React component for code-blocks.norg 1`] = `
+exports[`React Generator generates correct output for code-blocks.norg 1`] = `
 "import React from "react";
 
 export const metadata = {"title":"\\"Code Test\\""};
@@ -24,7 +24,7 @@ export const Component = () => React.createElement("div", { dangerouslySetInnerH
 export default Component;"
 `;
 
-exports[`React Generator should generate correct React component for headings.norg 1`] = `
+exports[`React Generator generates correct output for headings.norg 1`] = `
 "import React from "react";
 
 export const metadata = {"title":"\\"Headings\\""};
@@ -36,7 +36,7 @@ export const Component = () => React.createElement("div", { dangerouslySetInnerH
 export default Component;"
 `;
 
-exports[`React Generator should generate correct React component for images.norg 1`] = `
+exports[`React Generator generates correct output for images.norg 1`] = `
 "import React from "react";
 
 export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
@@ -48,7 +48,7 @@ export const Component = () => React.createElement("div", { dangerouslySetInnerH
 export default Component;"
 `;
 
-exports[`React Generator should generate correct React component for links.norg 1`] = `
+exports[`React Generator generates correct output for links.norg 1`] = `
 "import React from "react";
 
 export const metadata = {"author":"Drake Bott","title":"Link Test"};
