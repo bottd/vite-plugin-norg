@@ -1,8 +1,9 @@
 ---
 source: tests/parser/html_tests.rs
+assertion_line: 23
 expression: "(html, toc, metadata)"
 ---
-- "<h1 id=\"images\">Images</h1>\n<p>Image test</p><img src=\"./relative/image.png\" alt=\"with alt text\" />"
+- "<h1 id=\"images\">Images</h1><p>Image test</p><img src=\"./relative/image.png\" alt=\"with alt text\" />"
 - - level: 1
     title: Images
     id: images

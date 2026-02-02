@@ -15,7 +15,8 @@ fn test_norg_fixture_files(#[case] fixture_path: &str) {
     let ast = rust_norg::parse_tree(&content)
         .unwrap_or_else(|_| panic!("Failed to parse {fixture_path}"));
 
-    let html = transform(&ast);
+    let (html_parts, _inlines) = transform(&ast, None);
+    let html = html_parts.join("");
     let toc = extract_toc(&ast);
 
     let metadata = extract_metadata(&ast);

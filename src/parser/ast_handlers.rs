@@ -7,7 +7,7 @@ use itertools::Itertools;
 use rust_norg::{DelimitingModifier, DetachedModifierExtension, NorgASTFlat, TodoStatus};
 use textwrap::dedent;
 
-const VALID_FRAMEWORKS: &[&str] = &["svelte", "react", "vue"];
+const INLINE_FRAMEWORKS: &[&str] = &["svelte", "vue"];
 
 pub struct VerbatimTagResult {
     pub html: Option<String>,
@@ -91,13 +91,21 @@ pub fn verbatim_tag_with_embeds(
                 .or(target_framework)
                 .unwrap_or("");
 
-            if !VALID_FRAMEWORKS.contains(&framework) {
+            if !INLINE_FRAMEWORKS.contains(&framework) {
                 return Some(VerbatimTagResult::html_only(format!(
                     r#"<div class="norg-error" style="color: red; border: 1px solid red; padding: 0.5em;">Inline error: invalid framework "{}"</div>"#,
                     encode_minimal(framework)
                 )));
             }
 
+            // Validate that the inline framework matches the target framework
+            if let Some(target) = target_framework {
+                if framework != target {
+                    return Some(VerbatimTagResult::html_only(format!(
+                        r#"<div class="norg-error" style="color: red; border: 1px solid red; padding: 0.5em;">Inline error: @inline {framework} cannot be used in a {target} project</div>"#,
+                    )));
+                }
+            }
             Some(VerbatimTagResult::inline_only(InlineComponent {
                 index: 0, // Set by caller
                 framework: framework.to_string(),

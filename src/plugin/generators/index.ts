@@ -17,7 +17,7 @@ export function generateOutput(
     case 'svelte':
       return generateSvelte(result, css, filePath);
     case 'react':
-      return generateReact(result, css, filePath);
+      return generateReact(result, css);
     case 'vue':
       return generateVue(result, css, filePath);
   }
@@ -70,41 +70,24 @@ function generateSvelte(
 }
 
 function generateReact(
-  { htmlParts, metadata, toc, inlines = [] }: NorgParseResult,
+  { htmlParts, metadata, toc }: NorgParseResult,
   css: string,
-  filePath?: string
 ): string {
+  const html = htmlParts.join('');
   const lines: string[] = ['import React from "react";'];
   if (css) lines.push('import "virtual:norg-arborium.css";');
-  addInlineImports(lines, inlines, filePath);
 
   lines.push(
     '',
     `export const metadata = ${JSON.stringify(metadata ?? {})};`,
     `export const toc = ${JSON.stringify(toc ?? [])};`,
-    ''
+    '',
+    `const htmlContent = ${JSON.stringify(html)};`,
+    '',
+    'export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });',
+    'export default Component;'
   );
 
-  if (inlines.length === 0) {
-    lines.push(
-      `const htmlContent = ${JSON.stringify(htmlParts.join(''))};`,
-      '',
-      'export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });'
-    );
-  } else {
-    lines.push('export const Component = () => React.createElement(React.Fragment, null,');
-    interleaveHtmlAndInlines(
-      lines,
-      htmlParts,
-      inlines,
-      (part, i) =>
-        `  React.createElement("div", { key: "html-${i}", dangerouslySetInnerHTML: { __html: ${JSON.stringify(part)} } }),`,
-      i => `  React.createElement(Inline${i}, { key: "inline-${i}" }),`
-    );
-    lines.push(');');
-  }
-
-  lines.push('export default Component;');
   return lines.join('\n');
 }
 
@@ -113,15 +96,16 @@ function generateVue(
   css: string,
   filePath?: string
 ): string {
-  const lines: string[] = ['<script setup lang="ts">'];
+  // Separate <script> block for module exports (script setup vars aren't exports)
+  const lines: string[] = [
+    '<script lang="ts">',
+    `export const metadata = ${JSON.stringify(metadata ?? {})};`,
+    `export const toc = ${JSON.stringify(toc ?? [])};`,
+    '</script>',
+    '<script setup lang="ts">',
+  ];
   if (css) lines.push('import "virtual:norg-arborium.css";');
   addInlineImports(lines, inlines, filePath);
-
-  lines.push(
-    '',
-    `const metadata = ${JSON.stringify(metadata ?? {})};`,
-    `const toc = ${JSON.stringify(toc ?? [])};`
-  );
 
   if (inlines.length > 0) {
     lines.push(`const htmlParts = ${JSON.stringify(htmlParts)};`);

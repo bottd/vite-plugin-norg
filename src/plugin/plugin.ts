@@ -44,11 +44,25 @@ function buildCss(config?: ArboriumConfig): string {
 }
 
 /**
- * Parse the ?inline=N query parameter from a module ID
- * Returns the inline index if present, null otherwise
+ * Get the framework file extension for inline component module IDs.
+ * Framework plugins (vite-plugin-svelte, @vitejs/plugin-vue) identify files
+ * to compile by extension, so inline modules need a matching extension.
+ */
+function frameworkExtension(mode: GeneratorMode): '.svelte' | '.vue' | null {
+  switch (mode) {
+    case 'svelte': return '.svelte';
+    case 'vue': return '.vue';
+    default: return null;
+  }
+}
+
+/**
+ * Parse the ?inline=N query parameter from a module ID.
+ * Handles format: /path/file.norg.svelte?inline=0 or /path/file.norg.vue?inline=0
+ * Tolerates extra Vite query params (e.g., ?inline=0&t=123456)
  */
 function parseInlineQuery(id: string): { basePath: string; index: number } | null {
-  const match = id.match(/^(.+\.norg)\?inline=(\d+)$/);
+  const match = id.match(/^(.+\.norg)\.(?:svelte|vue)\?inline=(\d+)(?:&|$)/);
   if (!match) return null;
   return {
     basePath: match[1],
@@ -79,10 +93,12 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
 
       // Handle relative inline imports (e.g., './foo.norg?inline=0')
       if (id.includes('.norg?inline=') && importer) {
+        const ext = frameworkExtension(mode);
+        if (!ext) return; // html/react modes don't support inline
         // Remove the query part to get the relative path
         const [relativePath, query] = id.split('?');
         const absolutePath = resolve(dirname(importer), relativePath);
-        return `${absolutePath}?${query}`;
+        return `${absolutePath}${ext}?${query}`;
       }
     },
 
@@ -160,6 +176,23 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
           throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`);
         }
       };
+
+      // Invalidate inline component modules derived from this .norg file
+      const ext = frameworkExtension(mode);
+      if (ext) {
+        const inlinePrefix = ctx.file + ext + '?inline=';
+        const inlineModules = Array.from(ctx.server.moduleGraph.idToModuleMap.entries())
+          .filter(([id]) => id.startsWith(inlinePrefix))
+          .map(([, mod]) => mod);
+
+        for (const mod of inlineModules) {
+          ctx.server.moduleGraph.invalidateModule(mod);
+        }
+
+        if (inlineModules.length > 0) {
+          return [...ctx.modules, ...inlineModules];
+        }
+      }
     },
   };
 }
