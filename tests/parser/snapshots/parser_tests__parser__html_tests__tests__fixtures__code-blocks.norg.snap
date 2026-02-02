@@ -1,8 +1,9 @@
 ---
 source: tests/parser/html_tests.rs
+assertion_line: 22
 expression: "(html, toc, metadata)"
 ---
-- "<h1 id=\"code-blocks\">Code Blocks</h1>\n<h2 id=\"javascript\">JavaScript</h2>\n<pre class=\"arborium lang-javascript\"><code><span class=\"line\"><a-k>function</a-k> <a-v>hello</a-v><a-p>()</a-p> <a-p>{</a-p> <a-k>return</a-k> <a-s>&quot;world&quot;</a-s><a-p>;</a-p> <a-p>}</a-p></span></code></pre><h2 id=\"python\">Python </h2>\n<pre class=\"arborium lang-python\"><code><span class=\"line\"><a-k>def</a-k> <a-v>add</a-v>(<a-v>a</a-v>, <a-v>b</a-v>): <a-k>return</a-k> <a-v>a</a-v> <a-o>+</a-o> <a-v>b</a-v></span></code></pre><h2 id=\"plain\">Plain</h2>\n<pre><code><span class=\"line\">plain text</span></code></pre>"
+- "<h1 id=\"code-blocks\">Code Blocks</h1>\n<h2 id=\"javascript\">JavaScript</h2>\n<pre class=\"arborium lang-javascript\"><code><span class=\"line\"><a-k>function</a-k> <a-f>hello</a-f><a-p>()</a-p> <a-p>{</a-p> <a-k>return</a-k> <a-s>&quot;world&quot;</a-s><a-p>;</a-p> <a-p>}</a-p></span></code></pre><h2 id=\"python\">Python </h2>\n<pre class=\"arborium lang-python\"><code><span class=\"line\"><a-k>def</a-k> <a-f>add</a-f>(<a-v>a</a-v>, <a-v>b</a-v>): <a-k>return</a-k> <a-v>a</a-v> <a-o>+</a-o> <a-v>b</a-v></span></code></pre><h2 id=\"plain\">Plain</h2>\n<pre><code><span class=\"line\">plain text</span></code></pre>"
 - - level: 1
     title: Code Blocks
     id: code-blocks
