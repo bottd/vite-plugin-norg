@@ -12,7 +12,6 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "strictNullChecks": true,
-    "types": ["vitest/globals"],
     "baseUrl": ".",
     "paths": {
       "@parser": ["./dist/napi/index"]
