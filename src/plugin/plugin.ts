@@ -1,20 +1,12 @@
+import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { createFilter, type FilterPattern, type HmrContext } from 'vite';
-import { z } from 'zod';
-import { parseNorg, parseNorgWithFramework, getThemeCss } from '@parser';
-import type { NorgParseResult } from '@parser';
+import { parseNorgWithFramework, getThemeCss } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
 
 export type ArboriumConfig =
   | { theme: string; themes?: never }
   | { themes: { light: string; dark: string }; theme?: never };
-
-const NorgPluginOptionsSchema = z.object({
-  mode: z.enum(['html', 'svelte', 'react', 'vue']),
-  include: z.any().optional(),
-  exclude: z.any().optional(),
-  arboriumConfig: z.any().optional(),
-});
 
 export interface NorgPluginOptions {
   mode: GeneratorMode;
@@ -70,17 +62,17 @@ function parseInlineQuery(id: string): { basePath: string; index: number } | nul
   };
 }
 
-export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
-  const validatedOptions = NorgPluginOptionsSchema.parse(options);
-  const { include, exclude, mode, arboriumConfig } = validatedOptions;
-  const filter = createFilter(include, exclude);
-  const css = buildCss(arboriumConfig as ArboriumConfig);
+function parse(content: string, mode: GeneratorMode) {
+  return parseNorgWithFramework(content, mode);
+}
 
-  // For framework modes, pass framework to parser for @inline support
-  const framework = mode === 'html' ? null : mode;
+export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
+  const { include, exclude, mode, arboriumConfig } = options;
+  const filter = createFilter(include, exclude);
+  const css = buildCss(arboriumConfig);
 
   // Cache parsed results to avoid re-parsing for inline component requests
-  const parseCache = new Map<string, NorgParseResult>();
+  const parseCache = new Map<string, ReturnType<typeof parse>>();
 
   return {
     name: 'vite-plugin-norg',
@@ -94,8 +86,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       // Handle relative inline imports (e.g., './foo.norg?inline=0')
       if (id.includes('.norg?inline=') && importer) {
         const ext = frameworkExtension(mode);
-        if (!ext) return; // html/react modes don't support inline
-        // Remove the query part to get the relative path
+        if (!ext) return;
         const [relativePath, query] = id.split('?');
         const absolutePath = resolve(dirname(importer), relativePath);
         return `${absolutePath}${ext}?${query}`;
@@ -112,44 +103,31 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       if (inlineQuery) {
         const { basePath, index } = inlineQuery;
 
-        try {
-          // Check cache first
-          let result = parseCache.get(basePath);
-          if (!result) {
-            const { readFile } = await import('node:fs/promises');
-            const content = await readFile(basePath, 'utf-8');
-            result = framework ? parseNorgWithFramework(content, framework) : parseNorg(content);
-            parseCache.set(basePath, result);
-          }
-
-          const inline = result.inlines?.[index];
-          if (!inline) {
-            throw new Error(`Inline component ${index} not found in ${basePath}`);
-          }
-
-          // Return the raw component code - Vite will process it based on the extension
-          return inline.code;
-        } catch (error) {
-          throw new Error(`Failed to load inline component ${index} from ${basePath}: ${error}`);
+        let result = parseCache.get(basePath);
+        if (!result) {
+          const content = await readFile(basePath, 'utf-8');
+          result = parse(content, mode);
+          parseCache.set(basePath, result);
         }
+
+        const inline = result.inlines?.[index];
+        if (!inline) {
+          throw new Error(`Inline component ${index} not found in ${basePath}`);
+        }
+
+        return inline.code;
       }
 
       // Handle main .norg file
       if (!id.endsWith('.norg') || !filter(id)) return;
 
-      try {
-        const { readFile } = await import('node:fs/promises');
+      const content = await readFile(id, 'utf-8');
+      const result = parse(content, mode);
 
-        const content = await readFile(id, 'utf-8');
-        const result = framework ? parseNorgWithFramework(content, framework) : parseNorg(content);
+      // Cache for potential inline requests
+      parseCache.set(id, result);
 
-        // Cache for potential inline requests
-        parseCache.set(id, result);
-
-        return generateOutput(mode, result, css, id);
-      } catch (error) {
-        throw new Error(`Failed to parse norg file ${id}: ${error}`);
-      }
+      return generateOutput(mode, result, css, id);
     },
 
     async handleHotUpdate(ctx: HmrContext) {
@@ -162,19 +140,10 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
 
       const defaultRead = ctx.read;
       ctx.read = async function () {
-        try {
-          const content = await defaultRead();
-          const result = framework
-            ? parseNorgWithFramework(content, framework)
-            : parseNorg(content);
-
-          // Update cache
-          parseCache.set(ctx.file, result);
-
-          return generateOutput(mode, result, css, ctx.file);
-        } catch (error) {
-          throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`);
-        }
+        const content = await defaultRead();
+        const result = parse(content, mode);
+        parseCache.set(ctx.file, result);
+        return generateOutput(mode, result, css, ctx.file);
       };
 
       // Invalidate inline component modules derived from this .norg file

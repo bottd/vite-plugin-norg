@@ -7,7 +7,7 @@ use itertools::Itertools;
 use rust_norg::{DelimitingModifier, DetachedModifierExtension, NorgASTFlat, TodoStatus};
 use textwrap::dedent;
 
-const INLINE_FRAMEWORKS: &[&str] = &["svelte", "vue"];
+const INLINE_FRAMEWORKS: &[&str] = &["html", "svelte", "vue"];
 
 pub struct VerbatimTagResult {
     pub html: Option<String>,
