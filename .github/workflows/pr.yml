@@ -33,5 +33,8 @@ jobs:
       - name: Run Rust tests
         run: cargo test
 
+      - name: Verify build output
+        run: ls -laR dist/
+
       - name: Run JavaScript tests
         run: bun test
