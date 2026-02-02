@@ -1,3 +1,17 @@
+# [2.2.0](https://github.com/bottd/vite-plugin-norg/compare/v2.1.8...v2.2.0) (2026-02-02)
+
+
+### Bug Fixes
+
+* add aarch64-unknown-linux-musl target ([f9fa2c6](https://github.com/bottd/vite-plugin-norg/commit/f9fa2c683b4fe384964fe93e26f7351c043fcb8b))
+* sync rust-toolchains, bump deps ([a97cdae](https://github.com/bottd/vite-plugin-norg/commit/a97cdae53ef9879cd7537f85adb669d00aa0295d))
+* sync rust-toolchains, bump deps ([f36831a](https://github.com/bottd/vite-plugin-norg/commit/f36831a426c49ce8c10e6a943dcb83ad26a26e74))
+
+
+### Features
+
+* cross-platform compilation ([e4cb5fa](https://github.com/bottd/vite-plugin-norg/commit/e4cb5fa7b7d1fa04fff85be3fde26769e9cab532))
+
 ## [2.1.8](https://github.com/bottd/vite-plugin-norg/compare/v2.1.7...v2.1.8) (2026-01-08)
 
 ## [2.1.7](https://github.com/bottd/vite-plugin-norg/compare/v2.1.6...v2.1.7) (2026-01-06)
