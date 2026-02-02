@@ -23,7 +23,10 @@ export function generateOutput(
   }
 }
 
-function generateHtml({ htmlParts, metadata, toc, inlines = [] }: NorgParseResult, css: string): string {
+function generateHtml(
+  { htmlParts, metadata, toc, inlines = [] }: NorgParseResult,
+  css: string
+): string {
   const html = embedInlines(htmlParts, inlines);
   const lines: string[] = [];
   if (css) lines.push('import "virtual:norg-arborium.css";');
@@ -69,10 +72,7 @@ function generateSvelte(
   return lines.join('\n');
 }
 
-function generateReact(
-  { htmlParts, metadata, toc }: NorgParseResult,
-  css: string,
-): string {
+function generateReact({ htmlParts, metadata, toc }: NorgParseResult, css: string): string {
   const html = htmlParts.join('');
   const lines: string[] = ['import React from "react";'];
   if (css) lines.push('import "virtual:norg-arborium.css";');
@@ -124,7 +124,7 @@ function generateVue(
       lines,
       htmlParts,
       inlines,
-      (_part, i) => `    <span v-html="htmlParts[${i}]"></span>`,
+      (_part, i) => `    <div v-html="htmlParts[${i}]"></div>`,
       i => `    <Inline${i} />`
     );
     lines.push('  </div>');

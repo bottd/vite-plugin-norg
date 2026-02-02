@@ -39,7 +39,8 @@ pub fn parse_norg_with_framework(
         .map_err(|e| Error::from_reason(format!("Parse error: {e:?}")))?;
 
     let target_framework = framework.as_deref();
-    let (html_parts, inlines) = transform(&ast, target_framework);
+    let (html_parts, inlines) = transform(&ast, target_framework)
+        .map_err(|err| Error::from_reason(format_inline_error(&content, &err)))?;
     let toc = extract_toc(&ast);
     let metadata = extract_metadata(&ast);
 
@@ -49,6 +50,31 @@ pub fn parse_norg_with_framework(
         toc,
         inlines,
     })
+}
+
+fn format_inline_error(content: &str, err: &crate::ast_handlers::InlineParseError) -> String {
+    let base = err.to_string();
+    if let Some(line) = find_inline_line(content, err.index) {
+        format!("{base}. Offending line: {line}")
+    } else {
+        base
+    }
+}
+
+fn find_inline_line(content: &str, index: usize) -> Option<String> {
+    let mut count = 0;
+    for line in content.lines() {
+        let trimmed = line.trim_start();
+        if let Some(rest) = trimmed.strip_prefix("@inline") {
+            if rest.is_empty() || rest.chars().next().map_or(true, |c| c.is_whitespace()) {
+                if count == index {
+                    return Some(line.to_string());
+                }
+                count += 1;
+            }
+        }
+    }
+    None
 }
 
 #[napi]

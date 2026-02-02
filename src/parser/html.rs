@@ -40,16 +40,16 @@ impl TransformState<'_> {
 pub fn transform(
     ast: &[NorgAST],
     target_framework: Option<&str>,
-) -> (Vec<String>, Vec<InlineComponent>) {
+) -> Result<(Vec<String>, Vec<InlineComponent>), InlineParseError> {
     let mut state = TransformState {
         target_framework,
         ..Default::default()
     };
-    transform_nodes(ast, &mut state);
-    state.finalize()
+    transform_nodes(ast, &mut state)?;
+    Ok(state.finalize())
 }
 
-fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) {
+fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), InlineParseError> {
     for (list_type, group) in nodes
         .iter()
         .chunk_by(|node| match node {
@@ -80,14 +80,15 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) {
             }
             None => {
                 for node in group {
-                    transform_node(node, state);
+                    transform_node(node, state)?;
                 }
             }
         }
     }
+    Ok(())
 }
 
-fn transform_node(node: &NorgAST, state: &mut TransformState) {
+fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), InlineParseError> {
     match node {
         NorgAST::NestableDetachedModifier { .. } => {}
         NorgAST::VerbatimRangedTag {
@@ -98,6 +99,10 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) {
         } => {
             if let Some(result) =
                 verbatim_tag_with_embeds(name, parameters, content, state.target_framework)
+                    .map_err(|kind| InlineParseError {
+                        index: state.inlines.len(),
+                        kind,
+                    })?
             {
                 state.apply_verbatim(result);
             }
@@ -111,7 +116,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) {
             let title_html = crate::segments::convert_segments(title);
             let id = crate::utils::into_slug(&title_html);
             state.push_html(&format!("<h{level} id=\"{id}\">{title_html}</h{level}>"));
-            transform_nodes(content, state);
+            transform_nodes(content, state)?;
         }
         NorgAST::Paragraph(segments) => {
             if let Some(html) = paragraph(segments) {
@@ -133,6 +138,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) {
             eprintln!("Warning: unimplemented tag");
         }
     }
+    Ok(())
 }
 
 fn rangeable_modifier(
