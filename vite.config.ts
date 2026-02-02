@@ -17,12 +17,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/plugin/index.ts'),
       name: 'VitePluginNorg',
-      fileName: format => {
-        if (format === 'es') {
-          return 'plugin/index.js';
-        }
-        return 'plugin/index.js';
-      },
+      fileName: 'plugin/index',
       formats: ['es'],
     },
     rollupOptions: {
