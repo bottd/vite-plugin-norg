@@ -1,3 +1,39 @@
+# [1.0.0](https://github.com/bottd/vite-plugin-norg/compare/v0.1.0...v1.0.0) (2026-02-02)
+
+
+### Bug Fixes
+
+* add aarch64-unknown-linux-musl target ([f9fa2c6](https://github.com/bottd/vite-plugin-norg/commit/f9fa2c683b4fe384964fe93e26f7351c043fcb8b))
+* add permissions to renovate workflow ([2e61bbb](https://github.com/bottd/vite-plugin-norg/commit/2e61bbb8b61350aa5c4a107238a20970ff1f8ec6))
+* **deps:** pin dependencies ([#11](https://github.com/bottd/vite-plugin-norg/issues/11)) ([aa9c1da](https://github.com/bottd/vite-plugin-norg/commit/aa9c1dae16e20a8129111991bbec5a6b2df70ecc))
+* **deps:** pin rust crate arborium to v2.3.2 ([#34](https://github.com/bottd/vite-plugin-norg/issues/34)) ([ae1bf3f](https://github.com/bottd/vite-plugin-norg/commit/ae1bf3ff8d1dedc82b117101cca1d8444e222633))
+* release on refactor, patch, chore ([e473f54](https://github.com/bottd/vite-plugin-norg/commit/e473f54c04070783972509d4b551a26d5209ec5b))
+* remove vite types from plugin.ts to keep vite out of bundle ([fce2a57](https://github.com/bottd/vite-plugin-norg/commit/fce2a5792078a49299a11ab226d857e29d526831))
+* sync rust-toolchains, bump deps ([a97cdae](https://github.com/bottd/vite-plugin-norg/commit/a97cdae53ef9879cd7537f85adb669d00aa0295d))
+* sync rust-toolchains, bump deps ([f36831a](https://github.com/bottd/vite-plugin-norg/commit/f36831a426c49ce8c10e6a943dcb83ad26a26e74))
+* update renovate config ([c61f70e](https://github.com/bottd/vite-plugin-norg/commit/c61f70e088935375bfba094beb0c4a59a107fe4f))
+
+
+### Features
+
+* add renovate for automated dependency updates ([d83fb35](https://github.com/bottd/vite-plugin-norg/commit/d83fb35e461a393e93b16cc9020441897d230775))
+* add renovate for automated dependency updates ([d3f4558](https://github.com/bottd/vite-plugin-norg/commit/d3f45588a0310da0f38da5feb09435a9b24f8df9))
+* add renovate for automated dependency updates ([dd5470c](https://github.com/bottd/vite-plugin-norg/commit/dd5470c76e6f633c5162b78b95b0d1aac5c23141))
+* cross-platform compilation ([e4cb5fa](https://github.com/bottd/vite-plugin-norg/commit/e4cb5fa7b7d1fa04fff85be3fde26769e9cab532))
+* export toc in generators ([2e34187](https://github.com/bottd/vite-plugin-norg/commit/2e341872f25cb09e2372115c0ffed4fa504ff3f9))
+* pnpm to bun ([fc45d25](https://github.com/bottd/vite-plugin-norg/commit/fc45d25940e72d6ad9bc7ee3a345d257dd096249))
+* replace shiki with arborium ([fe847a5](https://github.com/bottd/vite-plugin-norg/commit/fe847a5352610b2e081435c63c80aedcf5d37ab7))
+* use pnpm ([41518a8](https://github.com/bottd/vite-plugin-norg/commit/41518a823e7decf2afe6a6523dce3153e54c05bf))
+* vitest to bun test ([23e9ecb](https://github.com/bottd/vite-plugin-norg/commit/23e9ecbe729fd395b6efc0cdba89bf3c06fed1c3))
+* vitest to bun test ([7dffc8b](https://github.com/bottd/vite-plugin-norg/commit/7dffc8bdcf4b02b65e936057c476fa45835225f7))
+* wrap lines in span for line-based styling ([47bd2d6](https://github.com/bottd/vite-plugin-norg/commit/47bd2d6abf7c038dbc02e5f9fa8321e530819cb2))
+
+
+### BREAKING CHANGES
+
+* plugin configuration uses arboriumConfig field instead
+of shikiOptions
+
 ## [2.1.8](https://github.com/bottd/vite-plugin-norg/compare/v2.1.7...v2.1.8) (2026-01-08)
 
 ## [2.1.7](https://github.com/bottd/vite-plugin-norg/compare/v2.1.6...v2.1.7) (2026-01-06)
