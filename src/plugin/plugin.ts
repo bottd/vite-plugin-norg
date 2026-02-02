@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { createFilter, type FilterPattern, type HmrContext } from 'vite';
+import { z } from 'zod';
 import { parseNorgWithFramework, getThemeCss } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
 
@@ -14,6 +15,18 @@ export interface NorgPluginOptions {
   exclude?: FilterPattern;
   arboriumConfig?: ArboriumConfig;
 }
+
+const optionsSchema = z.object({
+  mode: z.enum(['html', 'svelte', 'react', 'vue']),
+  include: z.any().optional(),
+  exclude: z.any().optional(),
+  arboriumConfig: z
+    .union([
+      z.object({ theme: z.string() }),
+      z.object({ themes: z.object({ light: z.string(), dark: z.string() }) }),
+    ])
+    .optional(),
+});
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
 const RESOLVED_VIRTUAL_CSS_ID = '\0' + VIRTUAL_CSS_ID;
@@ -42,9 +55,12 @@ function buildCss(config?: ArboriumConfig): string {
  */
 function frameworkExtension(mode: GeneratorMode): '.svelte' | '.vue' | null {
   switch (mode) {
-    case 'svelte': return '.svelte';
-    case 'vue': return '.vue';
-    default: return null;
+    case 'svelte':
+      return '.svelte';
+    case 'vue':
+      return '.vue';
+    default:
+      return null;
   }
 }
 
@@ -67,7 +83,11 @@ function parse(content: string, mode: GeneratorMode) {
 }
 
 export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
-  const { include, exclude, mode, arboriumConfig } = options;
+  const parsed = optionsSchema.safeParse(options);
+  if (!parsed.success) {
+    throw new Error(`[vite-plugin-norg] Invalid options: ${parsed.error.message}`);
+  }
+  const { include, exclude, mode, arboriumConfig } = parsed.data;
   const filter = createFilter(include, exclude);
   const css = buildCss(arboriumConfig);
 

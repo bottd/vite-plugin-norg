@@ -2,14 +2,14 @@
 
 exports[`HTML Generator generates correct output for basic.norg 1`] = `
 "export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
-export const html = "<h1 id=\\"main-title\\">Main Title</h1><p>Text with <i>bold</i>, <em>italic</em>, <code>code</code>, and <s>strikethrough</s>.</p><h2 id=\\"lists\\">Lists</h2><h2 id=\\"link\\">Link</h2><p><a href=\\"https://example.com\\" target=\\"_blank\\">link text</a></p>";
+export const html = "<h1 id=\\"main-title\\">Main Title</h1><p>Text with <i>bold</i>, <em>italic</em>, <code>code</code>, and <s>strikethrough</s>.</p><h2 id=\\"lists\\">Lists</h2><ul><li>Item 1</li><li>Item 2</li></ul><ol><li>Number 1</li><li>Number 2</li></ol><h2 id=\\"link\\">Link</h2><p><a href=\\"https://example.com\\" target=\\"_blank\\">link text</a></p>";
 export const toc = [{"level":1,"title":"Main Title","id":"main-title"},{"level":2,"title":"Lists","id":"lists"},{"level":2,"title":"Link","id":"link"}];
 export default { metadata, html, toc };"
 `;
 
 exports[`HTML Generator generates correct output for code-blocks.norg 1`] = `
 "export const metadata = {"title":"\\"Code Test\\""};
-export const html = "<h1 id=\\"code-blocks\\">Code Blocks</h1><h2 id=\\"javascript\\">JavaScript</h2><pre class=\\"arborium lang-javascript\\"><code><span class=\\"line\\"><a-k>function</a-k> <a-v>hello</a-v><a-p>()</a-p> <a-p>{</a-p> <a-k>return</a-k> <a-s>&quot;world&quot;</a-s><a-p>;</a-p> <a-p>}</a-p></span></code></pre><h2 id=\\"python\\">Python </h2><pre class=\\"arborium lang-python\\"><code><span class=\\"line\\"><a-k>def</a-k> <a-v>add</a-v>(<a-v>a</a-v>, <a-v>b</a-v>): <a-k>return</a-k> <a-v>a</a-v> <a-o>+</a-o> <a-v>b</a-v></span></code></pre><h2 id=\\"plain\\">Plain</h2><pre><code><span class=\\"line\\">plain text</span></code></pre>";
+export const html = "<h1 id=\\"code-blocks\\">Code Blocks</h1><h2 id=\\"javascript\\">JavaScript</h2><pre class=\\"arborium lang-javascript\\"><code><span class=\\"line\\"><a-k>function</a-k> <a-f>hello</a-f><a-p>()</a-p> <a-p>{</a-p> <a-k>return</a-k> <a-s>&quot;world&quot;</a-s><a-p>;</a-p> <a-p>}</a-p></span></code></pre><h2 id=\\"python\\">Python </h2><pre class=\\"arborium lang-python\\"><code><span class=\\"line\\"><a-k>def</a-k> <a-f>add</a-f>(<a-v>a</a-v>, <a-v>b</a-v>): <a-k>return</a-k> <a-v>a</a-v> <a-o>+</a-o> <a-v>b</a-v></span></code></pre><h2 id=\\"plain\\">Plain</h2><pre><code><span class=\\"line\\">plain text</span></code></pre>";
 export const toc = [{"level":1,"title":"Code Blocks","id":"code-blocks"},{"level":2,"title":"JavaScript","id":"javascript"},{"level":2,"title":"Python ","id":"python"},{"level":2,"title":"Plain","id":"plain"}];
 export default { metadata, html, toc };"
 `;

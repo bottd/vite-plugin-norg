@@ -10,13 +10,13 @@ pub struct TocEntry {
     pub id: String,
 }
 
-/// An inline framework component (Svelte, Vue, React) extracted from an @inline tag
+/// An inline block extracted from an @inline tag (html, svelte, vue)
 #[napi(object)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InlineComponent {
     /// Position of this inline component in the document (0-indexed)
     pub index: u32,
-    /// Framework type ("svelte" | "react" | "vue")
+    /// Framework type ("html" | "svelte" | "vue")
     pub framework: String,
     /// Raw component code (user writes full component with imports)
     pub code: String,

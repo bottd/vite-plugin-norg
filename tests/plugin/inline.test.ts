@@ -68,10 +68,18 @@ let x = 1;
 some code
 @end
 `;
-      const result = parseNorgWithFramework(content, 'svelte');
+      expect(() => parseNorgWithFramework(content, 'svelte')).toThrow(/invalid framework/i);
+    });
 
-      expect(result.htmlParts.join('')).toContain('invalid framework');
-      expect(result.inlines).toHaveLength(0);
+    it('should error when inline framework mismatches target', async () => {
+      const content = `
+@inline vue
+<template><div>Hi</div></template>
+@end
+`;
+      expect(() => parseNorgWithFramework(content, 'svelte')).toThrow(
+        /cannot be used in a svelte project/i
+      );
     });
   });
 
@@ -84,11 +92,8 @@ some code
 </script>
 @end
 `;
-      const result = parseNorgWithFramework(content, null);
-
       // Without a framework, @inline tags should produce an error
-      expect(result.inlines).toHaveLength(0);
-      expect(result.htmlParts.join('')).toContain('invalid framework');
+      expect(() => parseNorgWithFramework(content, null)).toThrow(/missing framework/i);
     });
   });
 });
