@@ -7,8 +7,8 @@ const __dirname = dirname(__filename);
 
 const fixtures = ['basic.norg', 'code-blocks.norg', 'headings.norg', 'images.norg', 'links.norg'];
 
-describe('Svelte Generator', () => {
-  const plugin = norgPlugin({ mode: 'svelte', include: ['**/*.norg'] });
+describe('Vue Generator', () => {
+  const plugin = norgPlugin({ mode: 'vue', include: ['**/*.norg'] });
 
   it.each(fixtures)('generates correct output for %s', async fixture => {
     const fixturePath = join(__dirname, '../fixtures', fixture);

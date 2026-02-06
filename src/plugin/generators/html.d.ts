@@ -1,5 +1,15 @@
+import type { TocEntry } from '@parser';
+
+export interface HtmlModule {
+  metadata: Record<string, unknown>;
+  html: string;
+  toc: TocEntry[];
+}
+
 declare module '*.norg' {
-	import { HtmlModule } from 'vite-plugin-norg';
-	export const metadata: HtmlModule['metadata'];
-	export const html: HtmlModule['html'];
+  export const metadata: Record<string, unknown>;
+  export const html: string;
+  export const toc: TocEntry[];
+  const _default: HtmlModule;
+  export default _default;
 }
