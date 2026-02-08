@@ -21,6 +21,9 @@
     },
     "./html": {
       "types": "./dist/plugin/generators/html.d.ts"
+    },
+    "./metadata": {
+      "types": "./dist/plugin/generators/metadata.d.ts"
     }
   },
   "files": [

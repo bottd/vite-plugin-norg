@@ -1,35 +1,42 @@
 import { createFilter, type FilterPattern } from 'vite';
 import { z } from 'zod';
-import { parseNorg, getThemeCss } from '@parser';
+import { parseNorg, parseNorgMetadata, getThemeCss } from '@parser';
 import type { NorgParseResult } from '@parser';
 import { generateHtmlOutput } from './generators/html';
 import { generateSvelteOutput } from './generators/svelte';
 import { generateReactOutput } from './generators/react';
+import { generateMetadataOutput } from './generators/metadata';
 
 export type ArboriumConfig =
   | { theme: string; themes?: never }
   | { themes: { light: string; dark: string }; theme?: never };
 
 const NorgPluginOptionsSchema = z.object({
-  mode: z.enum(['html', 'svelte', 'react']),
+  mode: z.enum(['html', 'svelte', 'react', 'metadata']),
   include: z.any().optional(),
   exclude: z.any().optional(),
   arboriumConfig: z.any().optional(),
 });
 
 export interface NorgPluginOptions {
-  mode: 'html' | 'svelte' | 'react';
+  mode: 'html' | 'svelte' | 'react' | 'metadata';
   include?: FilterPattern;
   exclude?: FilterPattern;
   arboriumConfig?: ArboriumConfig;
 }
 
+type ContentMode = 'html' | 'svelte' | 'react';
 export type NorgGenerator = (result: NorgParseResult, css: string) => string;
 const generators = {
   html: generateHtmlOutput,
   svelte: generateSvelteOutput,
   react: generateReactOutput,
-} as const satisfies Record<NorgPluginOptions['mode'], NorgGenerator>;
+} as const satisfies Record<ContentMode, NorgGenerator>;
+
+function parseId(id: string): { filepath: string; query: string } {
+  const [filepath, query = ''] = id.split('?', 2);
+  return { filepath, query };
+}
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
 const RESOLVED_VIRTUAL_CSS_ID = '\0' + VIRTUAL_CSS_ID;
@@ -72,22 +79,42 @@ export function norgPlugin(options: NorgPluginOptions) {
         return css;
       }
 
-      if (!id.endsWith('.norg') || !filter(id)) return;
+      const { filepath, query } = parseId(id);
+      if (!filepath.endsWith('.norg') || !filter(filepath)) return;
 
       try {
         const { readFile } = await import('node:fs/promises');
 
-        const content = await readFile(id, 'utf-8');
-        const result = parseNorg(content);
+        const content = await readFile(filepath, 'utf-8');
 
+        if (mode === 'metadata' || query === 'metadata') {
+          const result = parseNorgMetadata(content);
+          return generateMetadataOutput(result);
+        }
+
+        const result = parseNorg(content);
         return generators[mode](result, css);
       } catch (error) {
-        this.error(new Error(`Failed to parse norg file ${id}: ${error}`));
+        this.error(new Error(`Failed to parse norg file ${filepath}: ${error}`));
       }
     },
 
     async handleHotUpdate(ctx) {
       if (!filter(ctx.file) || !ctx.file.endsWith('.norg')) return;
+
+      if (mode === 'metadata') {
+        const defaultRead = ctx.read;
+        ctx.read = async function () {
+          try {
+            const content = await defaultRead();
+            const result = parseNorgMetadata(content);
+            return generateMetadataOutput(result);
+          } catch (error) {
+            throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`);
+          }
+        };
+        return;
+      }
 
       const defaultRead = ctx.read;
       ctx.read = async function () {
