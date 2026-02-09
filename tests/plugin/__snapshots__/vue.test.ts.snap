@@ -79,3 +79,20 @@ defineExpose({ metadata, toc });
   <div v-html="htmlContent"></div>
 </template>"
 `;
+
+exports[`Vue Generator generates correct output for inline-css.norg 1`] = `
+"<script lang="ts">
+export const metadata = {"title":"Inline CSS Test"};
+export const toc = [{"level":1,"title":"Styled Content","id":"styled-content"},{"level":1,"title":"More Styled Content","id":"more-styled-content"}];
+</script>
+<script setup lang="ts">
+import 'virtual:norg-css:/Users/drakebott/workspace/vite-plugin-norg/tests/fixtures/inline-css.norg';
+const htmlContent = "<h1 id=\\"styled-content\\">Styled Content</h1><p>This content has document-scoped CSS.</p><h1 id=\\"more-styled-content\\">More Styled Content</h1><p>Another section with additional styles.</p>";
+
+defineExpose({ metadata, toc });
+</script>
+
+<template>
+  <div v-html="htmlContent"></div>
+</template>"
+`;

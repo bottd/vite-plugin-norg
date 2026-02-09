@@ -21,10 +21,10 @@ describe('@inline feature', () => {
 `;
       const result = parseNorgWithFramework(content, 'svelte');
 
-      expect(result.inlines).toHaveLength(1);
-      expect(result.inlines[0].index).toBe(0);
-      expect(result.inlines[0].framework).toBe('svelte');
-      expect(result.inlines[0].code).toContain('let count');
+      expect(result.inlineComponents).toHaveLength(1);
+      expect(result.inlineComponents[0].index).toBe(0);
+      expect(result.inlineComponents[0].framework).toBe('svelte');
+      expect(result.inlineComponents[0].code).toContain('let count');
       // With N inlines, there should be N+1 parts
       expect(result.htmlParts).toHaveLength(2);
     });
@@ -43,9 +43,9 @@ describe('@inline feature', () => {
 `;
       const result = parseNorgWithFramework(content, 'svelte');
 
-      expect(result.inlines).toHaveLength(2);
-      expect(result.inlines[0].index).toBe(0);
-      expect(result.inlines[1].index).toBe(1);
+      expect(result.inlineComponents).toHaveLength(2);
+      expect(result.inlineComponents[0].index).toBe(0);
+      expect(result.inlineComponents[1].index).toBe(1);
       // With N inlines, there should be N+1 parts
       expect(result.htmlParts).toHaveLength(3);
     });
@@ -58,8 +58,8 @@ let x = 1;
 `;
       const result = parseNorgWithFramework(content, 'svelte');
 
-      expect(result.inlines).toHaveLength(1);
-      expect(result.inlines[0].framework).toBe('svelte');
+      expect(result.inlineComponents).toHaveLength(1);
+      expect(result.inlineComponents[0].framework).toBe('svelte');
     });
 
     it('should error on invalid framework', async () => {

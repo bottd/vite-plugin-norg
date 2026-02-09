@@ -1,0 +1,13 @@
+---
+source: tests/parser/html_tests.rs
+expression: "(html, toc, metadata, inline_css)"
+---
+- "<h1 id=\"styled-content\">Styled Content</h1><p>This content has document-scoped CSS.</p><h1 id=\"more-styled-content\">More Styled Content</h1><p>Another section with additional styles.</p>"
+- - level: 1
+    title: Styled Content
+    id: styled-content
+  - level: 1
+    title: More Styled Content
+    id: more-styled-content
+- title: Inline CSS Test
+- ".styled-heading {\n  color: blue;\n  font-size: 2rem;\n}\n\n.norg-content p {\n  line-height: 1.6;\n  margin-bottom: 1rem;\n}\n"

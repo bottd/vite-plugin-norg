@@ -7,15 +7,16 @@ use rust_norg::{NestableDetachedModifier, NorgAST};
 struct TransformState<'a> {
     parts: Vec<String>,
     current_html: String,
-    inlines: Vec<InlineComponent>,
+    inline_components: Vec<InlineComponent>,
+    css_blocks: Vec<String>,
     target_framework: Option<&'a str>,
 }
 
 impl TransformState<'_> {
     fn push_inline(&mut self, mut inline: InlineComponent) {
-        inline.index = self.inlines.len() as u32;
+        inline.index = self.inline_components.len() as u32;
         self.parts.push(std::mem::take(&mut self.current_html));
-        self.inlines.push(inline);
+        self.inline_components.push(inline);
     }
 
     fn push_html(&mut self, html: &str) {
@@ -29,18 +30,22 @@ impl TransformState<'_> {
         if let Some(html) = result.html {
             self.push_html(&html);
         }
+        if let Some(css) = result.css {
+            self.css_blocks.push(css);
+        }
     }
 
-    fn finalize(mut self) -> (Vec<String>, Vec<InlineComponent>) {
+    fn finalize(mut self) -> (Vec<String>, Vec<InlineComponent>, String) {
         self.parts.push(self.current_html);
-        (self.parts, self.inlines)
+        let inline_css = self.css_blocks.join("\n");
+        (self.parts, self.inline_components, inline_css)
     }
 }
 
 pub fn transform(
     ast: &[NorgAST],
     target_framework: Option<&str>,
-) -> Result<(Vec<String>, Vec<InlineComponent>), InlineParseError> {
+) -> Result<(Vec<String>, Vec<InlineComponent>, String), InlineParseError> {
     let mut state = TransformState {
         target_framework,
         ..Default::default()
@@ -100,7 +105,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Inli
             if let Some(result) =
                 verbatim_tag_with_embeds(name, parameters, content, state.target_framework)
                     .map_err(|kind| InlineParseError {
-                        index: state.inlines.len(),
+                        index: state.inline_components.len(),
                         kind,
                     })?
             {

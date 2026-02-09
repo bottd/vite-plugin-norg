@@ -5,7 +5,14 @@ import { norgPlugin } from '../../src/plugin/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const fixtures = ['basic.norg', 'code-blocks.norg', 'headings.norg', 'images.norg', 'links.norg'];
+const fixtures = [
+  'basic.norg',
+  'code-blocks.norg',
+  'headings.norg',
+  'images.norg',
+  'links.norg',
+  'inline-css.norg',
+];
 
 describe('Svelte Generator', () => {
   const plugin = norgPlugin({ mode: 'svelte', include: ['**/*.norg'] });

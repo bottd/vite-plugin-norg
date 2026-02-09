@@ -31,6 +31,9 @@ const optionsSchema = z.object({
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
 const RESOLVED_VIRTUAL_CSS_ID = '\0' + VIRTUAL_CSS_ID;
 
+const VIRTUAL_DOC_CSS_PREFIX = 'virtual:norg-css:';
+const RESOLVED_VIRTUAL_DOC_CSS_PREFIX = '\0' + VIRTUAL_DOC_CSS_PREFIX;
+
 function buildCss(config?: ArboriumConfig): string {
   if (!config) return '';
 
@@ -94,6 +97,9 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
   // Cache parsed results to avoid re-parsing for inline component requests
   const parseCache = new Map<string, ReturnType<typeof parse>>();
 
+  // Track inline module IDs per .norg file for O(1) HMR invalidation
+  const inlineModuleIds = new Map<string, Set<string>>();
+
   return {
     name: 'vite-plugin-norg',
     enforce: 'pre' as const,
@@ -101,6 +107,10 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
     resolveId(id: string, importer?: string) {
       if (id === VIRTUAL_CSS_ID) {
         return RESOLVED_VIRTUAL_CSS_ID;
+      }
+
+      if (id.startsWith(VIRTUAL_DOC_CSS_PREFIX)) {
+        return '\0' + id;
       }
 
       // Handle relative inline imports (e.g., './foo.norg?inline=0')
@@ -118,10 +128,40 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return css;
       }
 
+      // Handle per-document CSS virtual module
+      if (id.startsWith(RESOLVED_VIRTUAL_DOC_CSS_PREFIX)) {
+        const filePath = id.slice(RESOLVED_VIRTUAL_DOC_CSS_PREFIX.length);
+
+        // Track for HMR invalidation
+        let ids = inlineModuleIds.get(filePath);
+        if (!ids) {
+          ids = new Set();
+          inlineModuleIds.set(filePath, ids);
+        }
+        ids.add(id);
+
+        let result = parseCache.get(filePath);
+        if (!result) {
+          const content = await readFile(filePath, 'utf-8');
+          result = parse(content, mode);
+          parseCache.set(filePath, result);
+        }
+
+        return result.inlineCss ?? '';
+      }
+
       // Check for inline component request
       const inlineQuery = parseInlineQuery(id);
       if (inlineQuery) {
         const { basePath, index } = inlineQuery;
+
+        // Track this inline module for HMR invalidation
+        let ids = inlineModuleIds.get(basePath);
+        if (!ids) {
+          ids = new Set();
+          inlineModuleIds.set(basePath, ids);
+        }
+        ids.add(id);
 
         let result = parseCache.get(basePath);
         if (!result) {
@@ -130,7 +170,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
           parseCache.set(basePath, result);
         }
 
-        const inline = result.inlines?.[index];
+        const inline = result.inlineComponents?.[index];
         if (!inline) {
           throw new Error(`Inline component ${index} not found in ${basePath}`);
         }
@@ -150,7 +190,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       return generateOutput(mode, result, css, id);
     },
 
-    async handleHotUpdate(ctx: HmrContext) {
+    handleHotUpdate(ctx: HmrContext) {
       // Invalidate cache on file change
       if (ctx.file.endsWith('.norg')) {
         parseCache.delete(ctx.file);
@@ -158,24 +198,16 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
 
       if (!filter(ctx.file) || !ctx.file.endsWith('.norg')) return;
 
-      const defaultRead = ctx.read;
-      ctx.read = async function () {
-        const content = await defaultRead();
-        const result = parse(content, mode);
-        parseCache.set(ctx.file, result);
-        return generateOutput(mode, result, css, ctx.file);
-      };
-
       // Invalidate inline component modules derived from this .norg file
-      const ext = frameworkExtension(mode);
-      if (ext) {
-        const inlinePrefix = ctx.file + ext + '?inline=';
-        const inlineModules = Array.from(ctx.server.moduleGraph.idToModuleMap.entries())
-          .filter(([id]) => id.startsWith(inlinePrefix))
-          .map(([, mod]) => mod);
-
-        for (const mod of inlineModules) {
-          ctx.server.moduleGraph.invalidateModule(mod);
+      const trackedIds = inlineModuleIds.get(ctx.file);
+      if (trackedIds) {
+        const inlineModules: import('vite').ModuleNode[] = [];
+        for (const id of trackedIds) {
+          const mod = ctx.server.moduleGraph.getModuleById(id);
+          if (mod) {
+            ctx.server.moduleGraph.invalidateModule(mod);
+            inlineModules.push(mod);
+          }
         }
 
         if (inlineModules.length > 0) {
