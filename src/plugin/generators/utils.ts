@@ -1,2 +1,14 @@
-export const lines = (...parts: (string | false | null | undefined)[]) =>
-  parts.filter((p): p is string => !!p).join('\n');
+import { dedent } from 'ts-dedent';
+
+export const lines = (strings: TemplateStringsArray, ...values: unknown[]) =>
+  dedent(
+    strings,
+    ...values.map((v, i) => {
+      if (v === false || v == null) return '\0';
+      if (/=\s*$/.test(strings[i])) return JSON.stringify(v);
+      return String(v);
+    })
+  )
+    .split('\n')
+    .filter(l => !l.includes('\0'))
+    .join('\n');
