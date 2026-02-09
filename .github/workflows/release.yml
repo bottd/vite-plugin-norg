@@ -50,6 +50,11 @@ jobs:
         if: runner.os == 'Linux'
         uses: ./.github/actions/setup-linux
 
+      - name: Use clang-cl on Windows
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "CC_x86_64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
+
       - name: Build native binding (${{ matrix.target }})
         shell: bash
         run: |
@@ -59,7 +64,6 @@ jobs:
         env:
           MACOSX_DEPLOYMENT_TARGET: '10.13'
           TARGET_CFLAGS: '-std=gnu11'
-          CC: ${{ runner.os == 'Windows' && 'clang-cl' || '' }}
 
       - name: Upload native binding
         uses: actions/upload-artifact@v4
