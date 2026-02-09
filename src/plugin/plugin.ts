@@ -99,7 +99,7 @@ export function norgPlugin(options: NorgPluginOptions) {
           const result = parseNorg(content);
           return generators[mode](result, css);
         } catch (error) {
-          throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`);
+          throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`, { cause: error });
         }
       };
     },
