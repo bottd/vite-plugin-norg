@@ -42,6 +42,9 @@ Add a type reference to `app.d.ts` based on your output target:
 
 // For HTML
 /// <reference types="vite-plugin-norg/html" />
+
+// For Metadata
+/// <reference types="vite-plugin-norg/metadata" />
 ```
 
 This provides type checking for `.norg` modules
@@ -80,13 +83,26 @@ export default function App() {
 <Document />
 ```
 
+### Metadata Output
+
+```javascript
+import { metadata } from './document.norg';
+console.log(metadata.title); // "My Document"
+```
+
+You can also append `?metadata` to any import to get metadata-only output regardless of mode:
+
+```javascript
+import { metadata } from './document.norg?metadata';
+```
+
 ## Configuration Reference
 
 ```typescript
 import type { FilterPattern } from 'vite';
 
 interface NorgPluginOptions {
-  mode: 'html' | 'react' | 'svelte';
+  mode: 'html' | 'react' | 'svelte' | 'metadata';
   include?: FilterPattern;
   exclude?: FilterPattern;
   arboriumConfig?: {

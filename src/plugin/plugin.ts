@@ -1,24 +1,25 @@
-import { createFilter, type FilterPattern } from 'vite';
+import { createFilter, type FilterPattern, type Plugin } from 'vite';
 import { z } from 'zod';
 import { parseNorg, getThemeCss } from '@parser';
 import type { NorgParseResult } from '@parser';
 import { generateHtmlOutput } from './generators/html';
 import { generateSvelteOutput } from './generators/svelte';
 import { generateReactOutput } from './generators/react';
+import { generateMetadataOutput } from './generators/metadata';
 
 export type ArboriumConfig =
   | { theme: string; themes?: never }
   | { themes: { light: string; dark: string }; theme?: never };
 
 const NorgPluginOptionsSchema = z.object({
-  mode: z.enum(['html', 'svelte', 'react']),
+  mode: z.enum(['html', 'svelte', 'react', 'metadata']),
   include: z.any().optional(),
   exclude: z.any().optional(),
   arboriumConfig: z.any().optional(),
 });
 
 export interface NorgPluginOptions {
-  mode: 'html' | 'svelte' | 'react';
+  mode: 'html' | 'svelte' | 'react' | 'metadata';
   include?: FilterPattern;
   exclude?: FilterPattern;
   arboriumConfig?: ArboriumConfig;
@@ -29,6 +30,7 @@ const generators = {
   html: generateHtmlOutput,
   svelte: generateSvelteOutput,
   react: generateReactOutput,
+  metadata: generateMetadataOutput,
 } as const satisfies Record<NorgPluginOptions['mode'], NorgGenerator>;
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
@@ -59,7 +61,7 @@ export function norgPlugin(options: NorgPluginOptions) {
 
   return {
     name: 'vite-plugin-norg',
-    enforce: 'pre' as const,
+    enforce: 'pre',
 
     resolveId(id) {
       if (id === VIRTUAL_CSS_ID) {
@@ -72,17 +74,18 @@ export function norgPlugin(options: NorgPluginOptions) {
         return css;
       }
 
-      if (!id.endsWith('.norg') || !filter(id)) return;
+      const [filepath, query = ''] = id.split('?', 2);
+      if (!filepath.endsWith('.norg') || !filter(filepath)) return;
 
       try {
         const { readFile } = await import('node:fs/promises');
 
-        const content = await readFile(id, 'utf-8');
+        const content = await readFile(filepath, 'utf-8');
+        const generator = query === 'metadata' ? generators.metadata : generators[mode];
         const result = parseNorg(content);
-
-        return generators[mode](result, css);
+        return generator(result, css);
       } catch (error) {
-        this.error(new Error(`Failed to parse norg file ${id}: ${error}`));
+        this.error(new Error(`Failed to parse norg file ${filepath}: ${error}`));
       }
     },
 
@@ -94,12 +97,11 @@ export function norgPlugin(options: NorgPluginOptions) {
         try {
           const content = await defaultRead();
           const result = parseNorg(content);
-
           return generators[mode](result, css);
         } catch (error) {
           throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`);
         }
       };
     },
-  };
+  } satisfies Plugin;
 }

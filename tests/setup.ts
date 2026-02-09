@@ -1,4 +1,4 @@
 import { mock } from 'bun:test';
-import { parseNorg, getThemeCss } from '../dist/napi/index.js';
+import { parseNorg, parseNorgMetadata, getThemeCss } from '../dist/napi/index.js';
 
-mock.module('@parser', () => ({ parseNorg, getThemeCss }));
+mock.module('@parser', () => ({ parseNorg, parseNorgMetadata, getThemeCss }));

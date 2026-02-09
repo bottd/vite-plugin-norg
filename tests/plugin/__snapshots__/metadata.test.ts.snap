@@ -1,0 +1,51 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`Metadata Generator mode: metadata should generate correct metadata module for basic.norg 1`] = `
+"export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
+export default { metadata };"
+`;
+
+exports[`Metadata Generator mode: metadata should generate correct metadata module for code-blocks.norg 1`] = `
+"export const metadata = {"title":"\\"Code Test\\""};
+export default { metadata };"
+`;
+
+exports[`Metadata Generator mode: metadata should generate correct metadata module for headings.norg 1`] = `
+"export const metadata = {"title":"\\"Headings\\""};
+export default { metadata };"
+`;
+
+exports[`Metadata Generator mode: metadata should generate correct metadata module for images.norg 1`] = `
+"export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
+export default { metadata };"
+`;
+
+exports[`Metadata Generator mode: metadata should generate correct metadata module for links.norg 1`] = `
+"export const metadata = {"author":"Drake Bott","title":"Link Test"};
+export default { metadata };"
+`;
+
+exports[`Metadata Generator ?metadata query should generate correct metadata module for basic.norg via ?metadata query 1`] = `
+"export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
+export default { metadata };"
+`;
+
+exports[`Metadata Generator ?metadata query should generate correct metadata module for code-blocks.norg via ?metadata query 1`] = `
+"export const metadata = {"title":"\\"Code Test\\""};
+export default { metadata };"
+`;
+
+exports[`Metadata Generator ?metadata query should generate correct metadata module for headings.norg via ?metadata query 1`] = `
+"export const metadata = {"title":"\\"Headings\\""};
+export default { metadata };"
+`;
+
+exports[`Metadata Generator ?metadata query should generate correct metadata module for images.norg via ?metadata query 1`] = `
+"export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
+export default { metadata };"
+`;
+
+exports[`Metadata Generator ?metadata query should generate correct metadata module for links.norg via ?metadata query 1`] = `
+"export const metadata = {"author":"Drake Bott","title":"Link Test"};
+export default { metadata };"
+`;

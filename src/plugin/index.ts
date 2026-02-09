@@ -1,5 +1,5 @@
 export { norgPlugin, type ArboriumConfig } from './plugin';
-export type { NorgParseResult, TocEntry } from '@parser';
+export type { NorgParseResult, NorgMetadataResult, TocEntry } from '@parser';
 
 import { norgPlugin } from './plugin';
 export default norgPlugin;
@@ -32,4 +32,11 @@ export interface ReactModule {
 export interface SvelteModule {
   metadata: NorgMetadata;
   default: typeof SvelteComponent;
+}
+
+/**
+ * Module type for .norg files processed by the metadata generator
+ */
+export interface MetadataModule {
+  metadata: NorgMetadata;
 }
