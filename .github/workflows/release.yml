@@ -59,6 +59,7 @@ jobs:
         env:
           MACOSX_DEPLOYMENT_TARGET: '10.13'
           TARGET_CFLAGS: '-std=gnu11'
+          CC: ${{ runner.os == 'Windows' && 'clang-cl' || '' }}
 
       - name: Upload native binding
         uses: actions/upload-artifact@v4
