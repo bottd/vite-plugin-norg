@@ -13,23 +13,25 @@ export function generateOutput(
 ): string {
   switch (mode) {
     case 'html':
-      return generateHtml(result, css);
+      return generateHtml(result, css, filePath);
     case 'svelte':
       return generateSvelte(result, css, filePath);
     case 'react':
-      return generateReact(result, css);
+      return generateReact(result, css, filePath);
     case 'vue':
       return generateVue(result, css, filePath);
   }
 }
 
 function generateHtml(
-  { htmlParts, metadata, toc, inlines = [] }: NorgParseResult,
-  css: string
+  { htmlParts, metadata, toc, inlineComponents = [], inlineCss = '' }: NorgParseResult,
+  css: string,
+  filePath?: string
 ): string {
-  const html = embedInlines(htmlParts, inlines);
+  const html = embedInlines(htmlParts, inlineComponents);
   const lines: string[] = [];
   if (css) lines.push('import "virtual:norg-arborium.css";');
+  if (inlineCss && filePath) lines.push(`import 'virtual:norg-css:${filePath}';`);
   lines.push(
     `export const metadata = ${JSON.stringify(metadata ?? {})};`,
     `export const html = ${JSON.stringify(html)};`,
@@ -40,7 +42,7 @@ function generateHtml(
 }
 
 function generateSvelte(
-  { htmlParts, metadata, toc, inlines = [] }: NorgParseResult,
+  { htmlParts, metadata, toc, inlineComponents = [], inlineCss = '' }: NorgParseResult,
   css: string,
   filePath?: string
 ): string {
@@ -54,7 +56,8 @@ function generateSvelte(
   // Only add script block if it has content
   const scriptContent: string[] = [];
   if (css) scriptContent.push('  import "virtual:norg-arborium.css";');
-  addInlineImports(scriptContent, inlines, filePath, '  ');
+  if (inlineCss && filePath) scriptContent.push(`  import 'virtual:norg-css:${filePath}';`);
+  addInlineImports(scriptContent, inlineComponents, filePath, '  ');
 
   if (scriptContent.length > 0) {
     lines.push('<script lang="ts">', ...scriptContent, '</script>');
@@ -64,7 +67,7 @@ function generateSvelte(
   interleaveHtmlAndInlines(
     lines,
     htmlParts,
-    inlines,
+    inlineComponents,
     part => `{@html ${JSON.stringify(part)}}`,
     i => `<Inline${i} />`
   );
@@ -72,10 +75,15 @@ function generateSvelte(
   return lines.join('\n');
 }
 
-function generateReact({ htmlParts, metadata, toc }: NorgParseResult, css: string): string {
+function generateReact(
+  { htmlParts, metadata, toc, inlineCss = '' }: NorgParseResult,
+  css: string,
+  filePath?: string
+): string {
   const html = htmlParts.join('');
   const lines: string[] = ['import React from "react";'];
   if (css) lines.push('import "virtual:norg-arborium.css";');
+  if (inlineCss && filePath) lines.push(`import 'virtual:norg-css:${filePath}';`);
 
   lines.push(
     '',
@@ -92,7 +100,7 @@ function generateReact({ htmlParts, metadata, toc }: NorgParseResult, css: strin
 }
 
 function generateVue(
-  { htmlParts, metadata, toc, inlines = [] }: NorgParseResult,
+  { htmlParts, metadata, toc, inlineComponents = [], inlineCss = '' }: NorgParseResult,
   css: string,
   filePath?: string
 ): string {
@@ -105,9 +113,10 @@ function generateVue(
     '<script setup lang="ts">',
   ];
   if (css) lines.push('import "virtual:norg-arborium.css";');
-  addInlineImports(lines, inlines, filePath);
+  if (inlineCss && filePath) lines.push(`import 'virtual:norg-css:${filePath}';`);
+  addInlineImports(lines, inlineComponents, filePath);
 
-  if (inlines.length > 0) {
+  if (inlineComponents.length > 0) {
     lines.push(`const htmlParts = ${JSON.stringify(htmlParts)};`);
   } else {
     lines.push(`const htmlContent = ${JSON.stringify(htmlParts.join(''))};`);
@@ -116,14 +125,14 @@ function generateVue(
   lines.push('', 'defineExpose({ metadata, toc });');
   lines.push('</script>', '', '<template>');
 
-  if (inlines.length === 0) {
+  if (inlineComponents.length === 0) {
     lines.push('  <div v-html="htmlContent"></div>');
   } else {
     lines.push('  <div>');
     interleaveHtmlAndInlines(
       lines,
       htmlParts,
-      inlines,
+      inlineComponents,
       (_part, i) => `    <div v-html="htmlParts[${i}]"></div>`,
       i => `    <Inline${i} />`
     );
@@ -136,20 +145,20 @@ function generateVue(
 
 function addInlineImports(
   lines: string[],
-  inlines: InlineComponent[],
+  inlineComponents: InlineComponent[],
   filePath?: string,
   indent = ''
 ): void {
-  for (let i = 0; i < inlines.length; i++) {
+  for (let i = 0; i < inlineComponents.length; i++) {
     lines.push(`${indent}import Inline${i} from '${filePath}?inline=${i}';`);
   }
 }
 
-function embedInlines(htmlParts: string[], inlines: InlineComponent[]): string {
+function embedInlines(htmlParts: string[], inlineComponents: InlineComponent[]): string {
   const parts: string[] = [];
   for (let i = 0; i < htmlParts.length; i++) {
     parts.push(htmlParts[i]);
-    if (i < inlines.length) parts.push(inlines[i].code);
+    if (i < inlineComponents.length) parts.push(inlineComponents[i].code);
   }
   return parts.join('');
 }
@@ -157,12 +166,12 @@ function embedInlines(htmlParts: string[], inlines: InlineComponent[]): string {
 function interleaveHtmlAndInlines(
   lines: string[],
   htmlParts: string[],
-  inlines: InlineComponent[],
+  inlineComponents: InlineComponent[],
   formatHtml: (part: string, index: number) => string,
   formatInline: (index: number) => string
 ): void {
   for (let i = 0; i < htmlParts.length; i++) {
     if (htmlParts[i]) lines.push(formatHtml(htmlParts[i], i));
-    if (i < inlines.length) lines.push(formatInline(i));
+    if (i < inlineComponents.length) lines.push(formatInline(i));
   }
 }

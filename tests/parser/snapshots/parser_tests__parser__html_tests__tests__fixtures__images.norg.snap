@@ -1,7 +1,6 @@
 ---
 source: tests/parser/html_tests.rs
-assertion_line: 23
-expression: "(html, toc, metadata)"
+expression: "(html, toc, metadata, inline_css)"
 ---
 - "<h1 id=\"images\">Images</h1><p>Image test</p><img src=\"./relative/image.png\" alt=\"with alt text\" />"
 - - level: 1
@@ -12,3 +11,4 @@ expression: "(html, toc, metadata)"
   title: Images
   updated: "2025-07-10T18:00:36-0600"
   version: 1.1.1
+- ""

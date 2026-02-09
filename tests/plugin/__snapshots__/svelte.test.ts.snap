@@ -39,3 +39,14 @@ exports[`Svelte Generator generates correct output for links.norg 1`] = `
 </script>
 {@html "<h1 id=\\"link-types\\">Link Types</h1><h2 id=\\"url-links\\">URL Links</h2><p><a href=\\"https://example.com\\" target=\\"_blank\\">https://example.com</a> <a href=\\"https://github.com/nvim-neorg\\" target=\\"_blank\\">Neorg GitHub</a></p><h2 id=\\"file-links\\">File Links</h2><h2 id=\\"heading-links\\">Heading Links</h2><p><a href=\\"#token-text-main-token-whitespace-token-text-heading\\">Token(Text(&quot;Main&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-sub-token-whitespace-token-text-heading\\">Token(Text(&quot;Sub&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-introduction\\">Custom link text</a></p><h2 id=\\"mixed-content\\">Mixed Content</h2><p>This paragraph has a <a href=\\"https://rust-lang.org\\" target=\\"_blank\\">Rust website</a> and .</p>"}"
 `;
+
+exports[`Svelte Generator generates correct output for inline-css.norg 1`] = `
+"<script lang="ts" module>
+  export const metadata = {"title":"Inline CSS Test"};
+  export const toc = [{"level":1,"title":"Styled Content","id":"styled-content"},{"level":1,"title":"More Styled Content","id":"more-styled-content"}];
+</script>
+<script lang="ts">
+  import 'virtual:norg-css:/Users/drakebott/workspace/vite-plugin-norg/tests/fixtures/inline-css.norg';
+</script>
+{@html "<h1 id=\\"styled-content\\">Styled Content</h1><p>This content has document-scoped CSS.</p><h1 id=\\"more-styled-content\\">More Styled Content</h1><p>Another section with additional styles.</p>"}"
+`;

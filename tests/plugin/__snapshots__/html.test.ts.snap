@@ -34,3 +34,11 @@ export const html = "<h1 id=\\"link-types\\">Link Types</h1><h2 id=\\"url-links\
 export const toc = [{"level":1,"title":"Link Types","id":"link-types"},{"level":2,"title":"URL Links","id":"url-links"},{"level":2,"title":"File Links","id":"file-links"},{"level":2,"title":"Heading Links","id":"heading-links"},{"level":2,"title":"Mixed Content","id":"mixed-content"}];
 export default { metadata, html, toc };"
 `;
+
+exports[`HTML Generator generates correct output for inline-css.norg 1`] = `
+"import 'virtual:norg-css:/Users/drakebott/workspace/vite-plugin-norg/tests/fixtures/inline-css.norg';
+export const metadata = {"title":"Inline CSS Test"};
+export const html = "<h1 id=\\"styled-content\\">Styled Content</h1><p>This content has document-scoped CSS.</p><h1 id=\\"more-styled-content\\">More Styled Content</h1><p>Another section with additional styles.</p>";
+export const toc = [{"level":1,"title":"Styled Content","id":"styled-content"},{"level":1,"title":"More Styled Content","id":"more-styled-content"}];
+export default { metadata, html, toc };"
+`;

@@ -46,6 +46,7 @@ impl std::fmt::Display for InlineParseError {
 pub struct VerbatimTagResult {
     pub html: Option<String>,
     pub inline: Option<InlineComponent>,
+    pub css: Option<String>,
 }
 
 impl VerbatimTagResult {
@@ -53,6 +54,7 @@ impl VerbatimTagResult {
         Self {
             html: Some(html.into()),
             inline: None,
+            css: None,
         }
     }
 
@@ -60,6 +62,15 @@ impl VerbatimTagResult {
         Self {
             html: None,
             inline: Some(inline),
+            css: None,
+        }
+    }
+
+    fn css_only(css: impl Into<String>) -> Self {
+        Self {
+            html: None,
+            inline: None,
+            css: Some(css.into()),
         }
     }
 }
@@ -124,6 +135,11 @@ pub fn verbatim_tag_with_embeds(
                 .map(String::as_str)
                 .or(target_framework)
                 .unwrap_or("");
+
+            // CSS is not a framework — return early without entering framework validation
+            if framework == "css" {
+                return Ok(Some(VerbatimTagResult::css_only(content)));
+            }
 
             if framework.is_empty() {
                 return Err(InlineParseErrorKind::MissingFramework);

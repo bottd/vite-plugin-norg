@@ -27,5 +27,6 @@ pub struct ParsedNorg {
     pub metadata: Value,
     pub html_parts: Vec<String>,
     pub toc: Vec<TocEntry>,
-    pub inlines: Vec<InlineComponent>,
+    pub inline_components: Vec<InlineComponent>,
+    pub inline_css: String,
 }

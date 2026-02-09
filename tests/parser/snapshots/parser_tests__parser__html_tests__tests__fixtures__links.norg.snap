@@ -1,7 +1,6 @@
 ---
 source: tests/parser/html_tests.rs
-assertion_line: 23
-expression: "(html, toc, metadata)"
+expression: "(html, toc, metadata, inline_css)"
 ---
 - "<h1 id=\"link-types\">Link Types</h1><h2 id=\"url-links\">URL Links</h2><p><a href=\"https://example.com\" target=\"_blank\">https://example.com</a> <a href=\"https://github.com/nvim-neorg\" target=\"_blank\">Neorg GitHub</a></p><h2 id=\"file-links\">File Links</h2><h2 id=\"heading-links\">Heading Links</h2><p><a href=\"#token-text-main-token-whitespace-token-text-heading\">Token(Text(&quot;Main&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\"#token-text-sub-token-whitespace-token-text-heading\">Token(Text(&quot;Sub&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\"#token-text-introduction\">Custom link text</a></p><h2 id=\"mixed-content\">Mixed Content</h2><p>This paragraph has a <a href=\"https://rust-lang.org\" target=\"_blank\">Rust website</a> and .</p>"
 - - level: 1
@@ -21,3 +20,4 @@ expression: "(html, toc, metadata)"
     id: mixed-content
 - author: Drake Bott
   title: Link Test
+- ""

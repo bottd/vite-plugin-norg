@@ -59,3 +59,16 @@ const htmlContent = "<h1 id=\\"link-types\\">Link Types</h1><h2 id=\\"url-links\
 export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });
 export default Component;"
 `;
+
+exports[`React Generator generates correct output for inline-css.norg 1`] = `
+"import React from "react";
+import 'virtual:norg-css:/Users/drakebott/workspace/vite-plugin-norg/tests/fixtures/inline-css.norg';
+
+export const metadata = {"title":"Inline CSS Test"};
+export const toc = [{"level":1,"title":"Styled Content","id":"styled-content"},{"level":1,"title":"More Styled Content","id":"more-styled-content"}];
+
+const htmlContent = "<h1 id=\\"styled-content\\">Styled Content</h1><p>This content has document-scoped CSS.</p><h1 id=\\"more-styled-content\\">More Styled Content</h1><p>Another section with additional styles.</p>";
+
+export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });
+export default Component;"
+`;

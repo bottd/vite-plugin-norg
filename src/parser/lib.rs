@@ -22,7 +22,8 @@ pub struct NorgParseResult {
     pub metadata: Map<String, serde_json::Value>,
     pub html_parts: Vec<String>,
     pub toc: Vec<TocEntry>,
-    pub inlines: Vec<InlineComponent>,
+    pub inline_components: Vec<InlineComponent>,
+    pub inline_css: String,
 }
 
 #[napi]
@@ -39,7 +40,7 @@ pub fn parse_norg_with_framework(
         .map_err(|e| Error::from_reason(format!("Parse error: {e:?}")))?;
 
     let target_framework = framework.as_deref();
-    let (html_parts, inlines) = transform(&ast, target_framework)
+    let (html_parts, inline_components, inline_css) = transform(&ast, target_framework)
         .map_err(|err| Error::from_reason(format_inline_error(&content, &err)))?;
     let toc = extract_toc(&ast);
     let metadata = extract_metadata(&ast);
@@ -48,7 +49,8 @@ pub fn parse_norg_with_framework(
         metadata,
         html_parts,
         toc,
-        inlines,
+        inline_components,
+        inline_css,
     })
 }
 
