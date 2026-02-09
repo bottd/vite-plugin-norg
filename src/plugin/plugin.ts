@@ -1,6 +1,6 @@
 import { createFilter, type FilterPattern, type Plugin } from 'vite';
 import { z } from 'zod';
-import { parseNorg, parseNorgMetadata, getThemeCss } from '@parser';
+import { parseNorg, getThemeCss } from '@parser';
 import type { NorgParseResult } from '@parser';
 import { generateHtmlOutput } from './generators/html';
 import { generateSvelteOutput } from './generators/svelte';
@@ -25,13 +25,13 @@ export interface NorgPluginOptions {
   arboriumConfig?: ArboriumConfig;
 }
 
-type ContentMode = 'html' | 'svelte' | 'react';
 export type NorgGenerator = (result: NorgParseResult, css: string) => string;
 const generators = {
   html: generateHtmlOutput,
   svelte: generateSvelteOutput,
   react: generateReactOutput,
-} as const satisfies Record<ContentMode, NorgGenerator>;
+  metadata: generateMetadataOutput,
+} as const satisfies Record<NorgPluginOptions['mode'], NorgGenerator>;
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
 const RESOLVED_VIRTUAL_CSS_ID = '\0' + VIRTUAL_CSS_ID;
@@ -81,14 +81,9 @@ export function norgPlugin(options: NorgPluginOptions) {
         const { readFile } = await import('node:fs/promises');
 
         const content = await readFile(filepath, 'utf-8');
-
-        if (mode === 'metadata' || query === 'metadata') {
-          const result = parseNorgMetadata(content);
-          return generateMetadataOutput(result);
-        }
-
+        const generator = query === 'metadata' ? generators.metadata : generators[mode];
         const result = parseNorg(content);
-        return generators[mode](result, css);
+        return generator(result, css);
       } catch (error) {
         this.error(new Error(`Failed to parse norg file ${filepath}: ${error}`));
       }
@@ -101,10 +96,6 @@ export function norgPlugin(options: NorgPluginOptions) {
       ctx.read = async function () {
         try {
           const content = await defaultRead();
-          if (mode === 'metadata') {
-            const result = parseNorgMetadata(content);
-            return generateMetadataOutput(result);
-          }
           const result = parseNorg(content);
           return generators[mode](result, css);
         } catch (error) {
