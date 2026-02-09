@@ -9,15 +9,12 @@ const fixtures = ['basic.norg', 'code-blocks.norg', 'headings.norg', 'images.nor
 
 describe('Metadata Generator', () => {
   describe('mode: metadata', () => {
-    it.each(fixtures)(
-      'should generate correct metadata module for %s',
-      async fixture => {
-        const fixturePath = join(__dirname, '../fixtures', fixture);
-        const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
-        const result = await plugin.load(fixturePath);
-        expect(result).toMatchSnapshot();
-      }
-    );
+    it.each(fixtures)('should generate correct metadata module for %s', async fixture => {
+      const fixturePath = join(__dirname, '../fixtures', fixture);
+      const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
+      const result = await plugin.load(fixturePath);
+      expect(result).toMatchSnapshot();
+    });
 
     it('should return undefined for non-norg files', async () => {
       const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
@@ -82,17 +79,14 @@ describe('Metadata Generator', () => {
   });
 
   describe('?metadata on different modes', () => {
-    it.each(['html', 'svelte', 'react'] as const)(
-      '?metadata works on %s mode',
-      async mode => {
-        const fixturePath = join(__dirname, '../fixtures/basic.norg');
-        const plugin = norgPlugin({ mode, include: ['**/*.norg'] });
-        const result = await plugin.load(`${fixturePath}?metadata`);
+    it.each(['html', 'svelte', 'react'] as const)('?metadata works on %s mode', async mode => {
+      const fixturePath = join(__dirname, '../fixtures/basic.norg');
+      const plugin = norgPlugin({ mode, include: ['**/*.norg'] });
+      const result = await plugin.load(`${fixturePath}?metadata`);
 
-        expect(result).toContain('export const metadata');
-        expect(result).not.toContain('export const html');
-        expect(result).not.toContain('export const toc');
-      }
-    );
+      expect(result).toContain('export const metadata');
+      expect(result).not.toContain('export const html');
+      expect(result).not.toContain('export const toc');
+    });
   });
 });

@@ -102,26 +102,15 @@ export function norgPlugin(options: NorgPluginOptions) {
     async handleHotUpdate(ctx) {
       if (!filter(ctx.file) || !ctx.file.endsWith('.norg')) return;
 
-      if (mode === 'metadata') {
-        const defaultRead = ctx.read;
-        ctx.read = async function () {
-          try {
-            const content = await defaultRead();
-            const result = parseNorgMetadata(content);
-            return generateMetadataOutput(result);
-          } catch (error) {
-            throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`);
-          }
-        };
-        return;
-      }
-
       const defaultRead = ctx.read;
       ctx.read = async function () {
         try {
           const content = await defaultRead();
+          if (mode === 'metadata') {
+            const result = parseNorgMetadata(content);
+            return generateMetadataOutput(result);
+          }
           const result = parseNorg(content);
-
           return generators[mode](result, css);
         } catch (error) {
           throw new Error(`Failed to parse norg file ${ctx.file}: ${error}`);
