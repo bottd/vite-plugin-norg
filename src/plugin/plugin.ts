@@ -33,11 +33,6 @@ const generators = {
   react: generateReactOutput,
 } as const satisfies Record<ContentMode, NorgGenerator>;
 
-function parseId(id: string): { filepath: string; query: string } {
-  const [filepath, query = ''] = id.split('?', 2);
-  return { filepath, query };
-}
-
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
 const RESOLVED_VIRTUAL_CSS_ID = '\0' + VIRTUAL_CSS_ID;
 
@@ -58,7 +53,7 @@ function buildCss(config?: ArboriumConfig): string {
   return '';
 }
 
-export function norgPlugin(options: NorgPluginOptions): Plugin {
+export function norgPlugin(options: NorgPluginOptions) {
   const validatedOptions = NorgPluginOptionsSchema.parse(options);
   const { include, exclude, mode, arboriumConfig } = validatedOptions;
   const filter = createFilter(include, exclude);
@@ -79,7 +74,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
         return css;
       }
 
-      const { filepath, query } = parseId(id);
+      const [filepath, query = ''] = id.split('?', 2);
       if (!filepath.endsWith('.norg') || !filter(filepath)) return;
 
       try {
@@ -117,5 +112,5 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
         }
       };
     },
-  };
+  } satisfies Plugin;
 }
