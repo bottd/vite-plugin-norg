@@ -4,7 +4,7 @@ export const lines = (strings: TemplateStringsArray, ...values: unknown[]) =>
   dedent(
     strings,
     ...values.map((v, i) => {
-      if (v === false || v == null) return '\0';
+      if (!v) return '\0';
       if (/=\s*$/.test(strings[i])) return JSON.stringify(v);
       return String(v);
     })

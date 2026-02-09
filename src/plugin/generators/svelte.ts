@@ -8,7 +8,7 @@ export const generateSvelteOutput = ({ html, metadata, toc }: NorgParseResult, c
       export const toc = ${toc ?? []};
     </script>
     <script lang="ts">
-      ${css ? `import "virtual:norg-arborium.css";` : null}
+      ${css && `import "virtual:norg-arborium.css";`}
       const htmlContent = ${html};
     </script>
     {@html htmlContent}

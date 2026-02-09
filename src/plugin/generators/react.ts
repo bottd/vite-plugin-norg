@@ -4,7 +4,7 @@ import { lines } from './utils';
 export const generateReactOutput = ({ html, metadata, toc }: NorgParseResult, css: string) =>
   lines`
     import React from "react";
-    ${css ? `import "virtual:norg-arborium.css";` : null}
+    ${css && `import "virtual:norg-arborium.css";`}
     export const metadata = ${metadata ?? {}};
     export const toc = ${toc ?? []};
     const htmlContent = ${html};
