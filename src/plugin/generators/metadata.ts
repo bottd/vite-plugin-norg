@@ -1,8 +1,8 @@
 import type { NorgMetadataResult } from '@parser';
+import { lines } from './utils';
 
-export function generateMetadataOutput({ metadata }: NorgMetadataResult): string {
-  return [
+export const generateMetadataOutput = ({ metadata }: NorgMetadataResult) =>
+  lines(
     `export const metadata = ${JSON.stringify(metadata ?? {})};`,
-    `export default { metadata };`,
-  ].join('\n');
-}
+    `export default { metadata };`
+  );
