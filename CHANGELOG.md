@@ -1,3 +1,15 @@
+# [2.3.0](https://github.com/bottd/vite-plugin-norg/compare/v2.2.0...v2.3.0) (2026-02-10)
+
+
+### Bug Fixes
+
+* **deps:** update non-major updates ([#31](https://github.com/bottd/vite-plugin-norg/issues/31)) ([c488080](https://github.com/bottd/vite-plugin-norg/commit/c4880803f37467312e313edbfbb0eb2543b6af16))
+
+
+### Features
+
+* metadata export option ([#50](https://github.com/bottd/vite-plugin-norg/issues/50)) ([514da9c](https://github.com/bottd/vite-plugin-norg/commit/514da9c3a60128b90d7523c314d35c4cabfc3add))
+
 # [2.2.0](https://github.com/bottd/vite-plugin-norg/compare/v2.1.8...v2.2.0) (2026-02-02)
 
 
