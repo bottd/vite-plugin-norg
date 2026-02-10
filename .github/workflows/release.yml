@@ -50,6 +50,11 @@ jobs:
         if: runner.os == 'Linux'
         uses: ./.github/actions/setup-linux
 
+      - name: Use clang-cl on Windows
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "CC_x86_64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
+
       - name: Build native binding (${{ matrix.target }})
         shell: bash
         run: |

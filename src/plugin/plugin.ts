@@ -17,7 +17,7 @@ export interface NorgPluginOptions {
 }
 
 const optionsSchema = z.object({
-  mode: z.enum(['html', 'svelte', 'react', 'vue']),
+  mode: z.enum(['html', 'svelte', 'react', 'vue', 'metadata']),
   include: z.any().optional(),
   exclude: z.any().optional(),
   arboriumConfig: z
@@ -102,7 +102,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
 
   return {
     name: 'vite-plugin-norg',
-    enforce: 'pre' as const,
+    enforce: 'pre',
 
     resolveId(id: string, importer?: string) {
       if (id === VIRTUAL_CSS_ID) {
@@ -120,6 +120,13 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         const [relativePath, query] = id.split('?');
         const absolutePath = resolve(dirname(importer), relativePath);
         return `${absolutePath}${ext}?${query}`;
+      }
+
+      // Handle ?metadata query
+      if (id.endsWith('.norg?metadata') && importer) {
+        const relativePath = id.replace('?metadata', '');
+        const absolutePath = resolve(dirname(importer), relativePath);
+        return `${absolutePath}?metadata`;
       }
     },
 
@@ -178,6 +185,14 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return inline.code;
       }
 
+      // Handle ?metadata query
+      const [filepath, query = ''] = id.split('?', 2);
+      if (query === 'metadata' && filepath.endsWith('.norg') && filter(filepath)) {
+        const content = await readFile(filepath, 'utf-8');
+        const result = parse(content, mode);
+        return generateOutput('metadata', result, css, filepath);
+      }
+
       // Handle main .norg file
       if (!id.endsWith('.norg') || !filter(id)) return;
 
@@ -215,5 +230,5 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         }
       }
     },
-  };
+  } satisfies import('vite').Plugin;
 }

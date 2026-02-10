@@ -79,6 +79,19 @@ fn find_inline_line(content: &str, index: usize) -> Option<String> {
     None
 }
 
+#[napi(object)]
+pub struct NorgMetadataResult {
+    pub metadata: Map<String, serde_json::Value>,
+}
+
+#[napi]
+pub fn parse_norg_metadata(content: String) -> Result<NorgMetadataResult> {
+    let ast = rust_norg::parse_tree(&content)
+        .map_err(|e| Error::from_reason(format!("Parse error: {e:?}")))?;
+    let metadata = extract_metadata(&ast);
+    Ok(NorgMetadataResult { metadata })
+}
+
 #[napi]
 pub fn get_theme_css(theme: String) -> String {
     builtin::all()

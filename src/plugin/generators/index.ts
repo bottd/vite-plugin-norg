@@ -1,6 +1,6 @@
 import type { NorgParseResult, InlineComponent } from '@parser';
 
-export type GeneratorMode = 'html' | 'svelte' | 'react' | 'vue';
+export type GeneratorMode = 'html' | 'svelte' | 'react' | 'vue' | 'metadata';
 
 /**
  * Generate output for the specified framework mode
@@ -20,6 +20,8 @@ export function generateOutput(
       return generateReact(result, css, filePath);
     case 'vue':
       return generateVue(result, css, filePath);
+    case 'metadata':
+      return generateMetadata(result);
   }
 }
 
@@ -141,6 +143,13 @@ function generateVue(
 
   lines.push('</template>');
   return lines.join('\n');
+}
+
+function generateMetadata({ metadata }: NorgParseResult): string {
+  return [
+    `export const metadata = ${JSON.stringify(metadata ?? {})};`,
+    `export default { metadata };`,
+  ].join('\n');
 }
 
 function addInlineImports(
