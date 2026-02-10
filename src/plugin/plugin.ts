@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
+import { readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
-import { createFilter, type FilterPattern, type HmrContext } from 'vite';
+import { createFilter, type FilterPattern, type HmrContext, type ResolvedConfig } from 'vite';
 import { z } from 'zod';
 import { parseNorgWithFramework, getThemeCss } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
@@ -16,6 +17,8 @@ export interface NorgPluginOptions {
   arboriumConfig?: ArboriumConfig;
   /** Map of component names to import paths. Auto-injects imports into @inline blocks. */
   components?: Record<string, string>;
+  /** Directory of .svelte components to auto-discover. Uses Vite aliases (e.g. '$lib/components/changelog'). */
+  componentDir?: string;
 }
 
 const optionsSchema = z.object({
@@ -29,6 +32,7 @@ const optionsSchema = z.object({
     ])
     .optional(),
   components: z.record(z.string(), z.string()).optional(),
+  componentDir: z.string().optional(),
 });
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
@@ -84,6 +88,37 @@ function parseInlineQuery(id: string): { basePath: string; index: number } | nul
   };
 }
 
+/**
+ * Resolve a Vite alias path (e.g. '$lib/components') to a filesystem path
+ * using the resolved Vite config's alias entries.
+ */
+function resolveAliasPath(aliasPath: string, config: ResolvedConfig): string {
+  const aliases = config.resolve.alias;
+  if (Array.isArray(aliases)) {
+    for (const alias of aliases) {
+      const find = typeof alias.find === 'string' ? alias.find : null;
+      if (find && aliasPath.startsWith(find)) {
+        return aliasPath.replace(find, alias.replacement);
+      }
+    }
+  }
+  return aliasPath;
+}
+
+/**
+ * Scan a directory for .svelte files and return a component name → import path map.
+ */
+function discoverComponents(fsPath: string, importPrefix: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const file of readdirSync(fsPath)) {
+    if (file.endsWith('.svelte')) {
+      const name = file.replace('.svelte', '');
+      result[name] = `${importPrefix}/${file}`;
+    }
+  }
+  return result;
+}
+
 function parse(content: string, mode: GeneratorMode) {
   return parseNorgWithFramework(content, mode);
 }
@@ -134,9 +169,14 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
   if (!parsed.success) {
     throw new Error(`[vite-plugin-norg] Invalid options: ${parsed.error.message}`);
   }
-  const { include, exclude, mode, arboriumConfig, components } = parsed.data;
+  const { include, exclude, mode, arboriumConfig, components, componentDir } = parsed.data;
   const filter = createFilter(include, exclude);
   const css = buildCss(arboriumConfig);
+
+  // Mutable map built from `components` + `componentDir` (resolved in configResolved)
+  let resolvedComponents: Record<string, string> | undefined = components
+    ? { ...components }
+    : undefined;
 
   // Cache parsed results to avoid re-parsing for inline component requests
   const parseCache = new Map<string, ReturnType<typeof parse>>();
@@ -147,6 +187,13 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
   return {
     name: 'vite-plugin-norg',
     enforce: 'pre',
+
+    configResolved(config) {
+      if (!componentDir) return;
+      const fsPath = resolveAliasPath(componentDir, config);
+      const discovered = discoverComponents(fsPath, componentDir);
+      resolvedComponents = { ...discovered, ...resolvedComponents };
+    },
 
     resolveId(id: string, importer?: string) {
       if (id === VIRTUAL_CSS_ID) {
@@ -226,8 +273,8 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
           throw new Error(`Inline component ${index} not found in ${basePath}`);
         }
 
-        const code = components
-          ? injectComponentImports(inline.code, components)
+        const code = resolvedComponents
+          ? injectComponentImports(inline.code, resolvedComponents)
           : inline.code;
         return code;
       }
