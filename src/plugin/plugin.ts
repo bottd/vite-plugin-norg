@@ -14,6 +14,8 @@ export interface NorgPluginOptions {
   include?: FilterPattern;
   exclude?: FilterPattern;
   arboriumConfig?: ArboriumConfig;
+  /** Map of component names to import paths. Auto-injects imports into @inline blocks. */
+  components?: Record<string, string>;
 }
 
 const optionsSchema = z.object({
@@ -26,6 +28,7 @@ const optionsSchema = z.object({
       z.object({ themes: z.object({ light: z.string(), dark: z.string() }) }),
     ])
     .optional(),
+  components: z.record(z.string(), z.string()).optional(),
 });
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
@@ -85,12 +88,53 @@ function parse(content: string, mode: GeneratorMode) {
   return parseNorgWithFramework(content, mode);
 }
 
+/**
+ * Auto-inject component imports into an inline block's code.
+ * For each registered component, if `<ComponentName` appears in the template
+ * (outside `<script>`) and is not already imported, an import statement is added.
+ */
+export function injectComponentImports(
+  code: string,
+  components: Record<string, string>
+): string {
+  // Find which components are used in the template but not yet imported
+  const needed: { name: string; path: string }[] = [];
+  for (const [name, importPath] of Object.entries(components)) {
+    // Check usage: <ComponentName (as an opening tag)
+    const usagePattern = new RegExp(`<${name}[\\s/>]`);
+    if (!usagePattern.test(code)) continue;
+
+    // Check if already imported
+    const importPattern = new RegExp(`import\\s+${name}\\b`);
+    if (importPattern.test(code)) continue;
+
+    needed.push({ name, path: importPath });
+  }
+
+  if (needed.length === 0) return code;
+
+  const importStatements = needed
+    .map((c) => `  import ${c.name} from '${c.path}';`)
+    .join('\n');
+
+  // If there's an existing <script> tag, inject after it
+  const scriptMatch = code.match(/(<script[^>]*>)/);
+  if (scriptMatch) {
+    const tag = scriptMatch[1];
+    const idx = code.indexOf(tag) + tag.length;
+    return code.slice(0, idx) + '\n' + importStatements + code.slice(idx);
+  }
+
+  // No <script> tag — prepend one
+  return `<script>\n${importStatements}\n</script>\n${code}`;
+}
+
 export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
   const parsed = optionsSchema.safeParse(options);
   if (!parsed.success) {
     throw new Error(`[vite-plugin-norg] Invalid options: ${parsed.error.message}`);
   }
-  const { include, exclude, mode, arboriumConfig } = parsed.data;
+  const { include, exclude, mode, arboriumConfig, components } = parsed.data;
   const filter = createFilter(include, exclude);
   const css = buildCss(arboriumConfig);
 
@@ -182,7 +226,10 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
           throw new Error(`Inline component ${index} not found in ${basePath}`);
         }
 
-        return inline.code;
+        const code = components
+          ? injectComponentImports(inline.code, components)
+          : inline.code;
+        return code;
       }
 
       // Handle ?metadata query

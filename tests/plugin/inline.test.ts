@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { parseNorgWithFramework } from '@parser';
+import { injectComponentImports } from '../../src/plugin/plugin';
 
 describe('@inline feature', () => {
   describe('with framework mode', () => {
@@ -80,6 +81,92 @@ some code
       expect(() => parseNorgWithFramework(content, 'svelte')).toThrow(
         /cannot be used in a svelte project/i
       );
+    });
+  });
+
+  describe('injectComponentImports', () => {
+    const components = {
+      EntityHeading: '$lib/components/changelog/EntityHeading.svelte',
+      AbilityHeading: '$lib/components/changelog/AbilityHeading.svelte',
+      SectionPreview: '$lib/components/changelog/SectionPreview.svelte',
+    };
+
+    it('should inject imports when no <script> tag exists', () => {
+      const code = '<EntityHeading name="Abrams" type="hero" />';
+      const result = injectComponentImports(code, components);
+
+      expect(result).toContain('<script>');
+      expect(result).toContain(
+        "import EntityHeading from '$lib/components/changelog/EntityHeading.svelte';"
+      );
+      expect(result).toContain('</script>');
+      expect(result).toContain('<EntityHeading name="Abrams" type="hero" />');
+    });
+
+    it('should inject imports into existing <script> tag', () => {
+      const code = `<script>
+  let x = 1;
+</script>
+<EntityHeading name="Abrams" type="hero" />`;
+      const result = injectComponentImports(code, components);
+
+      expect(result).toContain(
+        "import EntityHeading from '$lib/components/changelog/EntityHeading.svelte';"
+      );
+      // Should not add a second <script> tag
+      expect(result.match(/<script>/g)).toHaveLength(1);
+      expect(result).toContain('let x = 1;');
+    });
+
+    it('should not duplicate already-imported components', () => {
+      const code = `<script>
+  import EntityHeading from '$lib/components/changelog/EntityHeading.svelte';
+</script>
+<EntityHeading name="Abrams" type="hero" />`;
+      const result = injectComponentImports(code, components);
+
+      // Count occurrences of the import — should be exactly 1
+      const matches = result.match(/import EntityHeading/g);
+      expect(matches).toHaveLength(1);
+    });
+
+    it('should leave unregistered component names alone', () => {
+      const code = '<UnknownComponent foo="bar" />';
+      const result = injectComponentImports(code, components);
+
+      // No imports injected, code unchanged
+      expect(result).toBe(code);
+    });
+
+    it('should inject multiple components in one block', () => {
+      const code = `<EntityHeading name="Abrams" type="hero" />
+<AbilityHeading name="Charge" />
+<SectionPreview title="Overview" />`;
+      const result = injectComponentImports(code, components);
+
+      expect(result).toContain(
+        "import EntityHeading from '$lib/components/changelog/EntityHeading.svelte';"
+      );
+      expect(result).toContain(
+        "import AbilityHeading from '$lib/components/changelog/AbilityHeading.svelte';"
+      );
+      expect(result).toContain(
+        "import SectionPreview from '$lib/components/changelog/SectionPreview.svelte';"
+      );
+    });
+
+    it('should handle <script lang="ts"> tags', () => {
+      const code = `<script lang="ts">
+  let x: number = 1;
+</script>
+<EntityHeading name="Abrams" type="hero" />`;
+      const result = injectComponentImports(code, components);
+
+      expect(result).toContain(
+        "import EntityHeading from '$lib/components/changelog/EntityHeading.svelte';"
+      );
+      // Should still have only one script tag
+      expect(result.match(/<script/g)).toHaveLength(1);
     });
   });
 
