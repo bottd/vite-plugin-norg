@@ -3,7 +3,7 @@
   "license": "MIT",
   "homepage": "https://github.com/bottd/vite-plugin-norg#README",
   "name": "vite-plugin-norg",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "type": "module",
   "description": "A Vite plugin for rendering Norg files",
   "main": "dist/plugin/index.js",

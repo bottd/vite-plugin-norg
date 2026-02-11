@@ -1,3 +1,10 @@
+## [2.3.1](https://github.com/bottd/vite-plugin-norg/compare/v2.3.0...v2.3.1) (2026-02-11)
+
+
+### Bug Fixes
+
+* **deps:** pin dependency ts-dedent to 2.2.0 ([#51](https://github.com/bottd/vite-plugin-norg/issues/51)) ([f0c439c](https://github.com/bottd/vite-plugin-norg/commit/f0c439cf0a52385b6687a525f89a2fcecc877871))
+
 # [2.3.0](https://github.com/bottd/vite-plugin-norg/compare/v2.2.0...v2.3.0) (2026-02-10)
 
 
