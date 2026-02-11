@@ -5,7 +5,7 @@
     "": {
       "name": "vite-plugin-norg",
       "dependencies": {
-        "ts-dedent": "^2.2.0",
+        "ts-dedent": "2.2.0",
       },
       "devDependencies": {
         "@eslint/js": "10.0.1",

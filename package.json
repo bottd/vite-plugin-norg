@@ -93,6 +93,6 @@
     "url": "git+https://github.com/bottd/vite-plugin-norg.git"
   },
   "dependencies": {
-    "ts-dedent": "^2.2.0"
+    "ts-dedent": "2.2.0"
   }
 }
