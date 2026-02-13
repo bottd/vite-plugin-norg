@@ -1,0 +1,25 @@
+@document.meta
+title: Inline CSS Test
+@end
+
+* Styled Content
+
+This content has document-scoped CSS.
+
+@inline css
+.styled-heading {
+  color: blue;
+  font-size: 2rem;
+}
+@end
+
+* More Styled Content
+
+Another section with additional styles.
+
+@inline css
+.norg-content p {
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+@end

@@ -1,0 +1,52 @@
+@document.meta
+title: Inline Test
+@end
+
+* Testing Svelte Inlines
+
+This is a counter component:
+
+@inline svelte
+<script>
+  let count = 0;
+</script>
+
+<button on:click={() => count++}>
+  Count: {count}
+</button>
+
+<style>
+  button {
+    background: blue;
+    color: white;
+  }
+</style>
+@end
+
+* Multiple Inlines
+
+First inline:
+
+@inline svelte
+<div>Hello from Svelte!</div>
+@end
+
+Second inline:
+
+@inline svelte
+<script>
+  let name = "World";
+</script>
+
+<h1>Hello {name}!</h1>
+@end
+
+* Content Between Inlines
+
+This text is between two inline blocks.
+
+@inline svelte
+<p>Another component</p>
+@end
+
+This text comes after the third inline.

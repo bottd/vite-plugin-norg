@@ -1,8 +1,8 @@
 ---
 source: tests/parser/html_tests.rs
-expression: "(html, toc, metadata)"
+expression: "(html, toc, metadata, inline_css)"
 ---
-- "<h1 id=\"h1\">H1</h1>\n<p>Content 1</p><h2 id=\"h2\">H2</h2>\n<p>Content 2</p><h3 id=\"h3\">H3</h3>\n<p>Content 3</p><h4 id=\"h4\">H4</h4>\n<p>Content 4</p><h5 id=\"h5\">H5</h5>\n<p>Content 5</p><h6 id=\"h6\">H6</h6>\n<p>Content 6</p>"
+- "<h1 id=\"h1\">H1</h1><p>Content 1</p><h2 id=\"h2\">H2</h2><p>Content 2</p><h3 id=\"h3\">H3</h3><p>Content 3</p><h4 id=\"h4\">H4</h4><p>Content 4</p><h5 id=\"h5\">H5</h5><p>Content 5</p><h6 id=\"h6\">H6</h6><p>Content 6</p>"
 - - level: 1
     title: H1
     id: h1
@@ -22,3 +22,4 @@ expression: "(html, toc, metadata)"
     title: H6
     id: h6
 - title: "\"Headings\""
+- ""

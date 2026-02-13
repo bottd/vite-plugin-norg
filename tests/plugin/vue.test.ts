@@ -14,21 +14,8 @@ const fixtures = [
   'inline-css.norg',
 ];
 
-describe('HTML Generator', () => {
-  const plugin = norgPlugin({ mode: 'html', include: ['**/*.norg'] });
-
-  it('has correct plugin name', () => {
-    expect(plugin.name).toBe('vite-plugin-norg');
-  });
-
-  it('enforces pre', () => {
-    expect(plugin.enforce).toBe('pre');
-  });
-
-  it('ignores non-norg files', async () => {
-    const result = await plugin.load('test.js');
-    expect(result).toBeUndefined();
-  });
+describe('Vue Generator', () => {
+  const plugin = norgPlugin({ mode: 'vue', include: ['**/*.norg'] });
 
   it.each(fixtures)('generates correct output for %s', async fixture => {
     const fixturePath = join(__dirname, '../fixtures', fixture);

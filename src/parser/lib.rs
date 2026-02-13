@@ -9,7 +9,7 @@ mod utils;
 pub use html::transform;
 pub use metadata::extract_metadata;
 pub use toc::extract_toc;
-pub use types::{ParsedNorg, TocEntry};
+pub use types::{InlineComponent, ParsedNorg, TocEntry};
 pub use utils::into_slug;
 
 use arborium::theme::builtin;
@@ -20,24 +20,63 @@ use serde_json::Map;
 #[napi(object)]
 pub struct NorgParseResult {
     pub metadata: Map<String, serde_json::Value>,
-    pub html: String,
+    pub html_parts: Vec<String>,
     pub toc: Vec<TocEntry>,
+    pub inline_components: Vec<InlineComponent>,
+    pub inline_css: String,
 }
 
 #[napi]
 pub fn parse_norg(content: String) -> Result<NorgParseResult> {
+    parse_norg_with_framework(content, Option::<String>::None)
+}
+
+#[napi]
+pub fn parse_norg_with_framework(
+    content: String,
+    framework: Option<String>,
+) -> Result<NorgParseResult> {
     let ast = rust_norg::parse_tree(&content)
         .map_err(|e| Error::from_reason(format!("Parse error: {e:?}")))?;
 
-    let html = transform(&ast);
+    let target_framework = framework.as_deref();
+    let (html_parts, inline_components, inline_css) = transform(&ast, target_framework)
+        .map_err(|err| Error::from_reason(format_inline_error(&content, &err)))?;
     let toc = extract_toc(&ast);
     let metadata = extract_metadata(&ast);
 
     Ok(NorgParseResult {
         metadata,
-        html,
+        html_parts,
         toc,
+        inline_components,
+        inline_css,
     })
+}
+
+fn format_inline_error(content: &str, err: &crate::ast_handlers::InlineParseError) -> String {
+    let base = err.to_string();
+    if let Some(line) = find_inline_line(content, err.index) {
+        format!("{base}. Offending line: {line}")
+    } else {
+        base
+    }
+}
+
+fn find_inline_line(content: &str, index: usize) -> Option<String> {
+    let mut count = 0;
+    for line in content.lines() {
+        let trimmed = line.trim_start();
+        if let Some(rest) = trimmed.strip_prefix("@inline") {
+            if rest.is_empty() || rest.chars().next().map_or(true, |c| c.is_whitespace()) {
+                if count == index {
+                    return Some(line.to_string());
+                }
+                count += 1;
+            }
+        }
+    }
+    None
 }
 
 #[napi(object)]

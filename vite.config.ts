@@ -26,6 +26,9 @@ export default defineConfig({
         paths: {
           '@parser': '../napi/index.js',
         },
+        // Preserve the runtime module structure
+        preserveModules: true,
+        preserveModulesRoot: resolve(__dirname, 'src'),
       },
     },
     copyPublicDir: false,

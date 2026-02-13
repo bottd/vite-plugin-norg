@@ -1,74 +1,98 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
-exports[`React Generator generates correct output for basic.norg 1`] = `
-"import React from "react";
-
+exports[`Vue Generator generates correct output for basic.norg 1`] = `
+"<script lang="ts">
 export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
 export const toc = [{"level":1,"title":"Main Title","id":"main-title"},{"level":2,"title":"Lists","id":"lists"},{"level":2,"title":"Link","id":"link"}];
-
+</script>
+<script setup lang="ts">
 const htmlContent = "<h1 id=\\"main-title\\">Main Title</h1><p>Text with <i>bold</i>, <em>italic</em>, <code>code</code>, and <s>strikethrough</s>.</p><h2 id=\\"lists\\">Lists</h2><ul><li>Item 1</li><li>Item 2</li></ul><ol><li>Number 1</li><li>Number 2</li></ol><h2 id=\\"link\\">Link</h2><p><a href=\\"https://example.com\\" target=\\"_blank\\">link text</a></p>";
 
-export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });
-export default Component;"
+defineExpose({ metadata, toc });
+</script>
+
+<template>
+  <div v-html="htmlContent"></div>
+</template>"
 `;
 
-exports[`React Generator generates correct output for code-blocks.norg 1`] = `
-"import React from "react";
-
+exports[`Vue Generator generates correct output for code-blocks.norg 1`] = `
+"<script lang="ts">
 export const metadata = {"title":"\\"Code Test\\""};
 export const toc = [{"level":1,"title":"Code Blocks","id":"code-blocks"},{"level":2,"title":"JavaScript","id":"javascript"},{"level":2,"title":"Python ","id":"python"},{"level":2,"title":"Plain","id":"plain"}];
-
+</script>
+<script setup lang="ts">
 const htmlContent = "<h1 id=\\"code-blocks\\">Code Blocks</h1><h2 id=\\"javascript\\">JavaScript</h2><pre class=\\"arborium lang-javascript\\"><code><span class=\\"line\\"><a-k>function</a-k> <a-f>hello</a-f><a-p>()</a-p> <a-p>{</a-p> <a-k>return</a-k> <a-s>&quot;world&quot;</a-s><a-p>;</a-p> <a-p>}</a-p></span></code></pre><h2 id=\\"python\\">Python </h2><pre class=\\"arborium lang-python\\"><code><span class=\\"line\\"><a-k>def</a-k> <a-f>add</a-f>(<a-v>a</a-v>, <a-v>b</a-v>): <a-k>return</a-k> <a-v>a</a-v> <a-o>+</a-o> <a-v>b</a-v></span></code></pre><h2 id=\\"plain\\">Plain</h2><pre><code><span class=\\"line\\">plain text</span></code></pre>";
 
-export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });
-export default Component;"
+defineExpose({ metadata, toc });
+</script>
+
+<template>
+  <div v-html="htmlContent"></div>
+</template>"
 `;
 
-exports[`React Generator generates correct output for headings.norg 1`] = `
-"import React from "react";
-
+exports[`Vue Generator generates correct output for headings.norg 1`] = `
+"<script lang="ts">
 export const metadata = {"title":"\\"Headings\\""};
 export const toc = [{"level":1,"title":"H1","id":"h1"},{"level":2,"title":"H2","id":"h2"},{"level":3,"title":"H3","id":"h3"},{"level":4,"title":"H4","id":"h4"},{"level":5,"title":"H5","id":"h5"},{"level":6,"title":"H6","id":"h6"}];
-
+</script>
+<script setup lang="ts">
 const htmlContent = "<h1 id=\\"h1\\">H1</h1><p>Content 1</p><h2 id=\\"h2\\">H2</h2><p>Content 2</p><h3 id=\\"h3\\">H3</h3><p>Content 3</p><h4 id=\\"h4\\">H4</h4><p>Content 4</p><h5 id=\\"h5\\">H5</h5><p>Content 5</p><h6 id=\\"h6\\">H6</h6><p>Content 6</p>";
 
-export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });
-export default Component;"
+defineExpose({ metadata, toc });
+</script>
+
+<template>
+  <div v-html="htmlContent"></div>
+</template>"
 `;
 
-exports[`React Generator generates correct output for images.norg 1`] = `
-"import React from "react";
-
+exports[`Vue Generator generates correct output for images.norg 1`] = `
+"<script lang="ts">
 export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
 export const toc = [{"level":1,"title":"Images","id":"images"}];
-
+</script>
+<script setup lang="ts">
 const htmlContent = "<h1 id=\\"images\\">Images</h1><p>Image test</p><img src=\\"./relative/image.png\\" alt=\\"with alt text\\" />";
 
-export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });
-export default Component;"
+defineExpose({ metadata, toc });
+</script>
+
+<template>
+  <div v-html="htmlContent"></div>
+</template>"
 `;
 
-exports[`React Generator generates correct output for links.norg 1`] = `
-"import React from "react";
-
+exports[`Vue Generator generates correct output for links.norg 1`] = `
+"<script lang="ts">
 export const metadata = {"author":"Drake Bott","title":"Link Test"};
 export const toc = [{"level":1,"title":"Link Types","id":"link-types"},{"level":2,"title":"URL Links","id":"url-links"},{"level":2,"title":"File Links","id":"file-links"},{"level":2,"title":"Heading Links","id":"heading-links"},{"level":2,"title":"Mixed Content","id":"mixed-content"}];
-
+</script>
+<script setup lang="ts">
 const htmlContent = "<h1 id=\\"link-types\\">Link Types</h1><h2 id=\\"url-links\\">URL Links</h2><p><a href=\\"https://example.com\\" target=\\"_blank\\">https://example.com</a> <a href=\\"https://github.com/nvim-neorg\\" target=\\"_blank\\">Neorg GitHub</a></p><h2 id=\\"file-links\\">File Links</h2><h2 id=\\"heading-links\\">Heading Links</h2><p><a href=\\"#token-text-main-token-whitespace-token-text-heading\\">Token(Text(&quot;Main&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-sub-token-whitespace-token-text-heading\\">Token(Text(&quot;Sub&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-introduction\\">Custom link text</a></p><h2 id=\\"mixed-content\\">Mixed Content</h2><p>This paragraph has a <a href=\\"https://rust-lang.org\\" target=\\"_blank\\">Rust website</a> and .</p>";
 
-export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });
-export default Component;"
+defineExpose({ metadata, toc });
+</script>
+
+<template>
+  <div v-html="htmlContent"></div>
+</template>"
 `;
 
-exports[`React Generator generates correct output for inline-css.norg 1`] = `
-"import React from "react";
-import 'virtual:norg-css:/Users/drakebott/workspace/vite-plugin-norg/tests/fixtures/inline-css.norg';
-
+exports[`Vue Generator generates correct output for inline-css.norg 1`] = `
+"<script lang="ts">
 export const metadata = {"title":"Inline CSS Test"};
 export const toc = [{"level":1,"title":"Styled Content","id":"styled-content"},{"level":1,"title":"More Styled Content","id":"more-styled-content"}];
-
+</script>
+<script setup lang="ts">
+import 'virtual:norg-css:/Users/drakebott/workspace/vite-plugin-norg/tests/fixtures/inline-css.norg';
 const htmlContent = "<h1 id=\\"styled-content\\">Styled Content</h1><p>This content has document-scoped CSS.</p><h1 id=\\"more-styled-content\\">More Styled Content</h1><p>Another section with additional styles.</p>";
 
-export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });
-export default Component;"
+defineExpose({ metadata, toc });
+</script>
+
+<template>
+  <div v-html="htmlContent"></div>
+</template>"
 `;
