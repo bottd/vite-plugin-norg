@@ -1,6 +1,6 @@
 [package]
 name = "vite-plugin-norg-parser"
-version = "2.3.1"
+version = "2.3.2"
 edition = "2024"
 authors = ["Drake Bott"]
 description = "wasm parser for vite-plugin-norg"
