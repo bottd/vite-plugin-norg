@@ -1,3 +1,5 @@
+## [2.3.3](https://github.com/bottd/vite-plugin-norg/compare/v2.3.2...v2.3.3) (2026-02-15)
+
 ## [2.3.2](https://github.com/bottd/vite-plugin-norg/compare/v2.3.1...v2.3.2) (2026-02-13)
 
 ## [2.3.1](https://github.com/bottd/vite-plugin-norg/compare/v2.3.0...v2.3.1) (2026-02-11)
