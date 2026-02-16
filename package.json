@@ -79,7 +79,7 @@
     "prettier": "3.8.1",
     "react": "19.2.4",
     "rimraf": "6.1.2",
-    "svelte": "5.50.0",
+    "svelte": "5.51.1",
     "typescript": "5.9.3",
     "typescript-eslint": "8.55.0",
     "semantic-release": "25.0.3",
