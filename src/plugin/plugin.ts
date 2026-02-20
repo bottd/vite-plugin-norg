@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
-import { createFilter, type FilterPattern, type HmrContext } from 'vite';
+import { createFilter, type FilterPattern, type HmrContext, type Plugin } from 'vite';
 import { z } from 'zod';
 import { parseNorgWithFramework, getThemeCss } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
@@ -17,7 +17,7 @@ export interface NorgPluginOptions {
 }
 
 const optionsSchema = z.object({
-  mode: z.enum(['html', 'svelte', 'react', 'vue']),
+  mode: z.enum(['html', 'svelte', 'react', 'vue', 'metadata']),
   include: z.any().optional(),
   exclude: z.any().optional(),
   arboriumConfig: z
@@ -176,6 +176,15 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         }
 
         return inline.code;
+      }
+
+      // Handle ?metadata query on any mode
+      const [filepath, query] = id.split('?', 2);
+      if (query === 'metadata' && filepath.endsWith('.norg') && filter(filepath)) {
+        const content = await readFile(filepath, 'utf-8');
+        const result = parse(content, mode);
+        parseCache.set(filepath, result);
+        return generateOutput('metadata', result, css, filepath);
       }
 
       // Handle main .norg file
