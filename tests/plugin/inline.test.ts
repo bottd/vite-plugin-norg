@@ -1,5 +1,13 @@
+import { fileURLToPath } from 'node:url';
+import { join, dirname } from 'node:path';
 import { describe, expect, it } from 'bun:test';
 import { parseNorgWithFramework } from '@parser';
+import { norgPlugin } from '../../src/plugin/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const fixturesDir = join(__dirname, '../fixtures');
+const componentsDir = join(fixturesDir, 'components');
 
 describe('@inline feature', () => {
   describe('with framework mode', () => {
@@ -88,6 +96,74 @@ some code
 @end
 `;
       expect(() => parseNorgWithFramework(content, null)).toThrow(/missing language/i);
+    });
+  });
+
+  describe('componentDir', () => {
+    const inlineFixture = join(fixturesDir, 'inline.norg');
+
+    async function createPlugin(opts: Parameters<typeof norgPlugin>[0]) {
+      const plugin = norgPlugin(opts);
+      const hook = plugin.buildStart;
+      if (typeof hook === 'function') {
+        await (hook as () => Promise<void>)();
+      }
+      return plugin;
+    }
+
+    it('should inject component imports into inline modules with existing <script>', async () => {
+      const plugin = await createPlugin({
+        mode: 'svelte',
+        include: ['**/*.norg'],
+        componentDir: componentsDir,
+      });
+
+      // Load inline=0 which has a <script> tag
+      const result = await plugin.load(`${inlineFixture}.svelte?inline=0`);
+
+      expect(result).toContain("import Badge from '");
+      expect(result).toContain("import Counter from '");
+      expect(result).toMatch(/<script>\nimport /);
+    });
+
+    it('should inject component imports into inline modules without <script>', async () => {
+      const plugin = await createPlugin({
+        mode: 'svelte',
+        include: ['**/*.norg'],
+        componentDir: componentsDir,
+      });
+
+      // Load inline=1 which is just <div>Hello from Svelte!</div> (no script tag)
+      const result = await plugin.load(`${inlineFixture}.svelte?inline=1`);
+
+      expect(result).toContain("import Badge from '");
+      expect(result).toContain("import Counter from '");
+      expect(result).toMatch(/^<script>\nimport /);
+      expect(result).toContain('</script>\n<div>Hello from Svelte!</div>');
+    });
+
+    it('should not inject imports when no componentDir is set', async () => {
+      const plugin = await createPlugin({
+        mode: 'svelte',
+        include: ['**/*.norg'],
+      });
+
+      const result = await plugin.load(`${inlineFixture}.svelte?inline=1`);
+
+      expect(result).not.toContain('import Badge');
+      expect(result).not.toContain('import Counter');
+    });
+
+    it('should not inject imports for non-inline modules', async () => {
+      const plugin = await createPlugin({
+        mode: 'svelte',
+        include: ['**/*.norg'],
+        componentDir: componentsDir,
+      });
+
+      const result = await plugin.load(inlineFixture);
+
+      expect(result).not.toContain(`import Badge from '${componentsDir}`);
     });
   });
 });

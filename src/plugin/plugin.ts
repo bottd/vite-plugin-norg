@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
+import { readFile, readdir } from 'node:fs/promises';
+import { resolve, dirname, basename } from 'node:path';
 import { createFilter, type FilterPattern, type HmrContext, type Plugin } from 'vite';
 import { z } from 'zod';
 import { parseNorgWithFramework, getThemeCss } from '@parser';
@@ -14,6 +14,7 @@ export interface NorgPluginOptions {
   include?: FilterPattern;
   exclude?: FilterPattern;
   arboriumConfig?: ArboriumConfig;
+  componentDir?: string;
 }
 
 const optionsSchema = z.object({
@@ -26,6 +27,7 @@ const optionsSchema = z.object({
       z.object({ themes: z.object({ light: z.string(), dark: z.string() }) }),
     ])
     .optional(),
+  componentDir: z.string().optional(),
 });
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
@@ -81,6 +83,65 @@ function parseInlineQuery(id: string): { basePath: string; index: number } | nul
   };
 }
 
+/**
+ * Scan a directory for framework component files and return a name→path map.
+ * e.g., Counter.svelte → Map { "Counter" => "/abs/path/Counter.svelte" }
+ */
+async function scanComponentDir(dir: string, mode: GeneratorMode): Promise<Map<string, string>> {
+  const ext = frameworkExtension(mode);
+  if (!ext) return new Map();
+
+  const entries = await readdir(dir);
+  const components = new Map<string, string>();
+  for (const entry of entries) {
+    if (entry.endsWith(ext)) {
+      const name = basename(entry, ext);
+      components.set(name, resolve(dir, entry));
+    }
+  }
+  return components;
+}
+
+function injectAfterTag(code: string, pattern: RegExp, content: string): string | null {
+  const match = code.match(pattern);
+  if (!match || match.index === undefined) return null;
+  const pos = match.index + match[0].length;
+  return code.slice(0, pos) + '\n' + content + '\n' + code.slice(pos);
+}
+
+/**
+ * Inject component import statements into inline module code.
+ * For Svelte: injects into existing <script> or prepends a new one.
+ * For Vue: injects into existing <script setup> or prepends a new one.
+ */
+function injectComponentImports(
+  code: string,
+  components: Map<string, string>,
+  mode: GeneratorMode
+): string {
+  if (components.size === 0) return code;
+
+  const imports = Array.from(components.entries())
+    .map(([name, path]) => `import ${name} from '${path}';`)
+    .join('\n');
+
+  if (mode === 'svelte') {
+    return (
+      injectAfterTag(code, /<script(?![^>]*\b(?:module|context\s*=))[^>]*>/, imports) ??
+      `<script>\n${imports}\n</script>\n${code}`
+    );
+  }
+
+  if (mode === 'vue') {
+    return (
+      injectAfterTag(code, /<script\s+setup[^>]*>/, imports) ??
+      `<script setup>\n${imports}\n</script>\n${code}`
+    );
+  }
+
+  return code;
+}
+
 function parse(content: string, mode: GeneratorMode) {
   return parseNorgWithFramework(content, mode);
 }
@@ -90,19 +151,64 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
   if (!parsed.success) {
     throw new Error(`[vite-plugin-norg] Invalid options: ${parsed.error.message}`);
   }
-  const { include, exclude, mode, arboriumConfig } = parsed.data;
+  const { include, exclude, mode, arboriumConfig, componentDir } = parsed.data;
   const filter = createFilter(include, exclude);
   const css = buildCss(arboriumConfig);
+  const resolvedComponentDir = componentDir ? resolve(componentDir) : undefined;
 
-  // Cache parsed results to avoid re-parsing for inline component requests
   const parseCache = new Map<string, ReturnType<typeof parse>>();
-
-  // Track inline module IDs per .norg file for O(1) HMR invalidation
   const inlineModuleIds = new Map<string, Set<string>>();
+  let components = new Map<string, string>();
+
+  function trackModule(filePath: string, moduleId: string) {
+    let ids = inlineModuleIds.get(filePath);
+    if (!ids) {
+      ids = new Set();
+      inlineModuleIds.set(filePath, ids);
+    }
+    ids.add(moduleId);
+  }
+
+  async function cachedParse(filePath: string) {
+    let result = parseCache.get(filePath);
+    if (!result) {
+      const content = await readFile(filePath, 'utf-8');
+      result = parse(content, mode);
+      parseCache.set(filePath, result);
+    }
+    return result;
+  }
+
+  function invalidateModules(
+    ctx: HmrContext,
+    moduleIds: Iterable<string>
+  ): import('vite').ModuleNode[] {
+    const modules: import('vite').ModuleNode[] = [];
+    for (const id of moduleIds) {
+      const mod = ctx.server.moduleGraph.getModuleById(id);
+      if (mod) {
+        ctx.server.moduleGraph.invalidateModule(mod);
+        modules.push(mod);
+      }
+    }
+    return modules;
+  }
 
   return {
     name: 'vite-plugin-norg',
     enforce: 'pre',
+
+    async buildStart() {
+      if (resolvedComponentDir) {
+        components = await scanComponentDir(resolvedComponentDir, mode);
+      }
+    },
+
+    configureServer(server) {
+      if (resolvedComponentDir) {
+        server.watcher.add(resolvedComponentDir);
+      }
+    },
 
     resolveId(id: string, importer?: string) {
       if (id === VIRTUAL_CSS_ID) {
@@ -131,22 +237,8 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       // Handle per-document CSS virtual module
       if (id.startsWith(RESOLVED_VIRTUAL_DOC_CSS_PREFIX)) {
         const filePath = id.slice(RESOLVED_VIRTUAL_DOC_CSS_PREFIX.length);
-
-        // Track for HMR invalidation
-        let ids = inlineModuleIds.get(filePath);
-        if (!ids) {
-          ids = new Set();
-          inlineModuleIds.set(filePath, ids);
-        }
-        ids.add(id);
-
-        let result = parseCache.get(filePath);
-        if (!result) {
-          const content = await readFile(filePath, 'utf-8');
-          result = parse(content, mode);
-          parseCache.set(filePath, result);
-        }
-
+        trackModule(filePath, id);
+        const result = await cachedParse(filePath);
         return result.inlineCss ?? '';
       }
 
@@ -154,36 +246,21 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       const inlineQuery = parseInlineQuery(id);
       if (inlineQuery) {
         const { basePath, index } = inlineQuery;
-
-        // Track this inline module for HMR invalidation
-        let ids = inlineModuleIds.get(basePath);
-        if (!ids) {
-          ids = new Set();
-          inlineModuleIds.set(basePath, ids);
-        }
-        ids.add(id);
-
-        let result = parseCache.get(basePath);
-        if (!result) {
-          const content = await readFile(basePath, 'utf-8');
-          result = parse(content, mode);
-          parseCache.set(basePath, result);
-        }
+        trackModule(basePath, id);
+        const result = await cachedParse(basePath);
 
         const inline = result.inlineComponents?.[index];
         if (!inline) {
           throw new Error(`Inline component ${index} not found in ${basePath}`);
         }
 
-        return inline.code;
+        return injectComponentImports(inline.code, components, mode);
       }
 
       // Handle ?metadata query on any mode
       const [filepath, query] = id.split('?', 2);
       if (query === 'metadata' && filepath.endsWith('.norg') && filter(filepath)) {
-        const content = await readFile(filepath, 'utf-8');
-        const result = parse(content, mode);
-        parseCache.set(filepath, result);
+        const result = await cachedParse(filepath);
         return generateOutput('metadata', result, css, filepath);
       }
 
@@ -192,14 +269,24 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
 
       const content = await readFile(id, 'utf-8');
       const result = parse(content, mode);
-
-      // Cache for potential inline requests
       parseCache.set(id, result);
 
       return generateOutput(mode, result, css, id);
     },
 
-    handleHotUpdate(ctx: HmrContext) {
+    async handleHotUpdate(ctx: HmrContext) {
+      // If a file in componentDir changed, re-scan and invalidate all inline modules
+      if (resolvedComponentDir && ctx.file.startsWith(resolvedComponentDir + '/')) {
+        components = await scanComponentDir(resolvedComponentDir, mode);
+
+        const allIds = [...inlineModuleIds.values()].flatMap(ids => [...ids]);
+        const invalidated = invalidateModules(ctx, allIds);
+        if (invalidated.length > 0) {
+          return [...ctx.modules, ...invalidated];
+        }
+        return;
+      }
+
       // Invalidate cache on file change
       if (ctx.file.endsWith('.norg')) {
         parseCache.delete(ctx.file);
@@ -210,17 +297,9 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       // Invalidate inline component modules derived from this .norg file
       const trackedIds = inlineModuleIds.get(ctx.file);
       if (trackedIds) {
-        const inlineModules: import('vite').ModuleNode[] = [];
-        for (const id of trackedIds) {
-          const mod = ctx.server.moduleGraph.getModuleById(id);
-          if (mod) {
-            ctx.server.moduleGraph.invalidateModule(mod);
-            inlineModules.push(mod);
-          }
-        }
-
-        if (inlineModules.length > 0) {
-          return [...ctx.modules, ...inlineModules];
+        const invalidated = invalidateModules(ctx, trackedIds);
+        if (invalidated.length > 0) {
+          return [...ctx.modules, ...invalidated];
         }
       }
     },
