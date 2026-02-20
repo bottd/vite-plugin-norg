@@ -4,6 +4,7 @@ import { norgPlugin } from '../../src/plugin/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const fixturesDir = join(__dirname, '../fixtures');
 
 const fixtures = [
   'basic.norg',
@@ -18,8 +19,8 @@ describe('Svelte Generator', () => {
   const plugin = norgPlugin({ mode: 'svelte', include: ['**/*.norg'] });
 
   it.each(fixtures)('generates correct output for %s', async fixture => {
-    const fixturePath = join(__dirname, '../fixtures', fixture);
+    const fixturePath = join(fixturesDir, fixture);
     const result = await plugin.load(fixturePath);
-    expect(result).toMatchSnapshot();
+    expect((result as string).replaceAll(fixturesDir, '<fixtures>')).toMatchSnapshot();
   });
 });
