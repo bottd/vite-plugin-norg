@@ -152,13 +152,13 @@ pub fn verbatim_tag_with_embeds(
             }
 
             // Validate that the inline framework matches the target framework
-            if let Some(target) = target_framework {
-                if framework != target {
-                    return Err(InlineParseErrorKind::FrameworkMismatch {
-                        framework: framework.to_string(),
-                        target: target.to_string(),
-                    });
-                }
+            if let Some(target) = target_framework
+                && framework != target
+            {
+                return Err(InlineParseErrorKind::FrameworkMismatch {
+                    framework: framework.to_string(),
+                    target: target.to_string(),
+                });
             }
             Ok(Some(VerbatimTagResult::inline_only(InlineComponent {
                 index: 0, // Set by caller

@@ -80,13 +80,13 @@ fn find_inline_line(content: &str, index: usize) -> Option<String> {
     let mut count = 0;
     for line in content.lines() {
         let trimmed = line.trim_start();
-        if let Some(rest) = trimmed.strip_prefix("@inline") {
-            if rest.is_empty() || rest.chars().next().map_or(true, |c| c.is_whitespace()) {
-                if count == index {
-                    return Some(line.to_string());
-                }
-                count += 1;
+        if let Some(rest) = trimmed.strip_prefix("@inline")
+            && (rest.is_empty() || rest.chars().next().is_none_or(|c| c.is_whitespace()))
+        {
+            if count == index {
+                return Some(line.to_string());
             }
+            count += 1;
         }
     }
     None
