@@ -129,42 +129,30 @@ pub fn verbatim_tag_with_embeds(
             ))
         })),
         [tag] if tag == "inline" => {
-            let framework = parameters
+            match parameters
                 .first()
                 .filter(|s| !s.is_empty())
                 .map(String::as_str)
-                .or(target_framework)
-                .unwrap_or("");
-
-            // CSS is not a framework — return early without entering framework validation
-            if framework == "css" {
-                return Ok(Some(VerbatimTagResult::css_only(content)));
-            }
-
-            if framework.is_empty() {
-                return Err(InlineParseErrorKind::MissingFramework);
-            }
-
-            if !INLINE_FRAMEWORKS.contains(&framework) {
-                return Err(InlineParseErrorKind::InvalidFramework {
-                    framework: framework.to_string(),
-                });
-            }
-
-            // Validate that the inline framework matches the target framework
-            if let Some(target) = target_framework
-                && framework != target
             {
-                return Err(InlineParseErrorKind::FrameworkMismatch {
-                    framework: framework.to_string(),
-                    target: target.to_string(),
-                });
+                Some("css") => Ok(Some(VerbatimTagResult::css_only(content))),
+                None => Err(InlineParseErrorKind::MissingFramework),
+                Some(fw) if !INLINE_FRAMEWORKS.contains(&fw) => {
+                    Err(InlineParseErrorKind::InvalidFramework {
+                        framework: fw.to_string(),
+                    })
+                }
+                Some(fw) if target_framework.is_some_and(|t| t != fw) => {
+                    Err(InlineParseErrorKind::FrameworkMismatch {
+                        framework: fw.to_string(),
+                        target: target_framework.unwrap().to_string(),
+                    })
+                }
+                Some(fw) => Ok(Some(VerbatimTagResult::inline_only(InlineComponent {
+                    index: 0,
+                    framework: fw.to_string(),
+                    code: content.to_string(),
+                }))),
             }
-            Ok(Some(VerbatimTagResult::inline_only(InlineComponent {
-                index: 0, // Set by caller
-                framework: framework.to_string(),
-                code: content.to_string(),
-            })))
         }
         [doc, meta] if doc == "document" && meta == "meta" => Ok(None),
         _ => Ok(Some(VerbatimTagResult::html_only(format!(
