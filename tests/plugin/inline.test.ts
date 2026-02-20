@@ -54,19 +54,19 @@ describe('@inline feature', () => {
 let x = 1;
 @end
 `;
-      expect(() => parseNorgWithFramework(content, 'svelte')).toThrow(/missing framework/i);
+      expect(() => parseNorgWithFramework(content, 'svelte')).toThrow(/missing language/i);
     });
 
-    it('should error on invalid framework', async () => {
+    it('should error on invalid language', async () => {
       const content = `
 @inline invalid
 some code
 @end
 `;
-      expect(() => parseNorgWithFramework(content, 'svelte')).toThrow(/invalid framework/i);
+      expect(() => parseNorgWithFramework(content, 'svelte')).toThrow(/invalid language/i);
     });
 
-    it('should error when inline framework mismatches target', async () => {
+    it('should error when inline language mismatches target', async () => {
       const content = `
 @inline vue
 <template><div>Hi</div></template>
@@ -79,7 +79,7 @@ some code
   });
 
   describe('without framework mode', () => {
-    it('should error on @inline tags when no framework specified', async () => {
+    it('should error on @inline tags when no language specified', async () => {
       const content = `
 @inline
 <script>
@@ -87,7 +87,7 @@ some code
 </script>
 @end
 `;
-      expect(() => parseNorgWithFramework(content, null)).toThrow(/missing framework/i);
+      expect(() => parseNorgWithFramework(content, null)).toThrow(/missing language/i);
     });
   });
 });

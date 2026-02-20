@@ -7,7 +7,7 @@ use itertools::Itertools;
 use rust_norg::{DelimitingModifier, DetachedModifierExtension, NorgASTFlat, TodoStatus};
 use textwrap::dedent;
 
-const INLINE_FRAMEWORKS: &[&str] = &["html", "svelte", "vue"];
+const INLINE_LANGUAGES: &[&str] = &["html", "svelte", "vue"];
 
 #[derive(Debug)]
 pub struct InlineParseError {
@@ -17,27 +17,27 @@ pub struct InlineParseError {
 
 #[derive(Debug)]
 pub enum InlineParseErrorKind {
-    MissingFramework,
-    InvalidFramework { framework: String },
-    FrameworkMismatch { framework: String, target: String },
+    MissingLanguage,
+    InvalidLanguage { language: String },
+    LanguageMismatch { language: String, target: String },
 }
 
 impl std::fmt::Display for InlineParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let n = self.index + 1;
-        let supported = INLINE_FRAMEWORKS.join(", ");
+        let supported = INLINE_LANGUAGES.join(", ");
         match &self.kind {
-            InlineParseErrorKind::MissingFramework => write!(
+            InlineParseErrorKind::MissingLanguage => write!(
                 f,
-                "Inline error (inline #{n}): missing framework. Supported frameworks: {supported}"
+                "Inline error (inline #{n}): missing language. Supported languages: {supported}"
             ),
-            InlineParseErrorKind::InvalidFramework { framework } => write!(
+            InlineParseErrorKind::InvalidLanguage { language } => write!(
                 f,
-                "Inline error (inline #{n}): invalid framework \"{framework}\". Supported frameworks: {supported}"
+                "Inline error (inline #{n}): invalid language \"{language}\". Supported languages: {supported}"
             ),
-            InlineParseErrorKind::FrameworkMismatch { framework, target } => write!(
+            InlineParseErrorKind::LanguageMismatch { language, target } => write!(
                 f,
-                "Inline error (inline #{n}): @inline {framework} cannot be used in a {target} project"
+                "Inline error (inline #{n}): @inline {language} cannot be used in a {target} project"
             ),
         }
     }
@@ -135,21 +135,21 @@ pub fn verbatim_tag_with_embeds(
                 .map(String::as_str)
             {
                 Some("css") => Ok(Some(VerbatimTagResult::css_only(content))),
-                None => Err(InlineParseErrorKind::MissingFramework),
-                Some(fw) if !INLINE_FRAMEWORKS.contains(&fw) => {
-                    Err(InlineParseErrorKind::InvalidFramework {
-                        framework: fw.to_string(),
+                None => Err(InlineParseErrorKind::MissingLanguage),
+                Some(lang) if !INLINE_LANGUAGES.contains(&lang) => {
+                    Err(InlineParseErrorKind::InvalidLanguage {
+                        language: lang.to_string(),
                     })
                 }
-                Some(fw) if target_framework.is_some_and(|t| t != fw) => {
-                    Err(InlineParseErrorKind::FrameworkMismatch {
-                        framework: fw.to_string(),
+                Some(lang) if target_framework.is_some_and(|t| t != lang) => {
+                    Err(InlineParseErrorKind::LanguageMismatch {
+                        language: lang.to_string(),
                         target: target_framework.unwrap().to_string(),
                     })
                 }
-                Some(fw) => Ok(Some(VerbatimTagResult::inline_only(InlineComponent {
+                Some(lang) => Ok(Some(VerbatimTagResult::inline_only(InlineComponent {
                     index: 0,
-                    framework: fw.to_string(),
+                    framework: lang.to_string(),
                     code: content.to_string(),
                 }))),
             }
