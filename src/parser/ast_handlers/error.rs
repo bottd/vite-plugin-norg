@@ -46,3 +46,5 @@ impl std::fmt::Display for InlineParseError {
         }
     }
 }
+
+impl std::error::Error for InlineParseError {}
