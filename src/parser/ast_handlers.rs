@@ -80,7 +80,7 @@ pub fn nestable_modifier(
     match text {
         NorgASTFlat::Paragraph(segments) => {
             let content = convert_segments(segments);
-            (!content.trim().is_empty()).then(|| format_list_item(&content, extensions))
+            (!content.trim().is_empty()).then(|| format_nestable(&content, extensions))
         }
         _ => None,
     }
@@ -181,31 +181,31 @@ pub fn delimiter(delim: &DelimitingModifier) -> &'static str {
     }
 }
 
-fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> String {
+fn format_nestable(content: &str, extensions: &[DetachedModifierExtension]) -> String {
     let mut classes: Vec<String> = Vec::new();
     let mut attrs: Vec<String> = Vec::new();
-    let mut prefixes: Vec<&str> = Vec::new();
+    let mut prefix: Vec<&str> = Vec::new();
 
-    for ext in extensions {
-        match ext {
+    for extension in extensions {
+        match extension {
             DetachedModifierExtension::Todo(status) => {
                 if matches!(status, TodoStatus::Recurring(_)) {
                     classes.push("todo-recurring".into());
                 }
-                prefixes.push(todo_html(status));
+                prefix.push(todo_html(status));
             }
-            DetachedModifierExtension::Priority(p) => {
-                classes.push(format!("priority-{}", into_slug(p)));
-                attrs.push(format!(r#"data-priority="{}""#, encode_minimal(p)));
+            DetachedModifierExtension::Priority(priority) => {
+                classes.push(format!("priority-{}", into_slug(priority)));
+                attrs.push(format!(r#"data-priority="{}""#, encode_minimal(priority)));
             }
-            DetachedModifierExtension::Timestamp(ts) => {
-                attrs.push(format!(r#"data-timestamp="{}""#, encode_minimal(ts)));
+            DetachedModifierExtension::Timestamp(timestamp) => {
+                attrs.push(format!(r#"data-timestamp="{}""#, encode_minimal(timestamp)));
             }
-            DetachedModifierExtension::DueDate(d) => {
-                attrs.push(format!(r#"data-due="{}""#, encode_minimal(d)));
+            DetachedModifierExtension::DueDate(date) => {
+                attrs.push(format!(r#"data-due="{}""#, encode_minimal(date)));
             }
-            DetachedModifierExtension::StartDate(d) => {
-                attrs.push(format!(r#"data-start="{}""#, encode_minimal(d)));
+            DetachedModifierExtension::StartDate(date) => {
+                attrs.push(format!(r#"data-start="{}""#, encode_minimal(date)));
             }
         }
     }
@@ -220,10 +220,10 @@ fn format_list_item(content: &str, extensions: &[DetachedModifierExtension]) -> 
     } else {
         format!(" {}", attrs.join(" "))
     };
-    let prefix_html = if prefixes.is_empty() {
+    let prefix_html = if prefix.is_empty() {
         String::new()
     } else {
-        format!("{} ", prefixes.join(" "))
+        format!("{} ", prefix.join(" "))
     };
 
     format!("<li{class_attr}{data_attrs}>{prefix_html}{content}</li>")
@@ -248,6 +248,8 @@ fn todo_html(status: &TodoStatus) -> &'static str {
     }
 }
 
+/// Wraps each of highlighted HTML in `<span class="line">`
+/// This enables per-line styling such as line numbers or highlighting specific lines
 fn wrap_lines(html: &str) -> String {
     html.lines()
         .map(|line| format!(r#"<span class="line">{line}</span>"#))
