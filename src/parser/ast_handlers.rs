@@ -7,7 +7,7 @@ use itertools::Itertools;
 use rust_norg::{DelimitingModifier, DetachedModifierExtension, NorgASTFlat, TodoStatus};
 use textwrap::dedent;
 
-const INLINE_LANGUAGES: &[&str] = &["html", "svelte", "vue"];
+const INLINE_LANGUAGES: &[&str] = &["html", "svelte", "vue", "react"];
 
 #[derive(Debug)]
 pub struct InlineParseError {

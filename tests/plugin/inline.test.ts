@@ -9,6 +9,15 @@ const __dirname = dirname(__filename);
 const fixturesDir = join(__dirname, '../fixtures');
 const componentsDir = join(fixturesDir, 'components');
 
+async function createPlugin(opts: Parameters<typeof norgPlugin>[0]) {
+  const plugin = norgPlugin(opts);
+  const hook = plugin.buildStart;
+  if (typeof hook === 'function') {
+    await (hook as () => Promise<void>)();
+  }
+  return plugin;
+}
+
 describe('@inline feature', () => {
   describe('with framework mode', () => {
     it('should parse @inline tags and collect inlines', async () => {
@@ -84,6 +93,36 @@ some code
         /cannot be used in a svelte project/i
       );
     });
+
+    it('should parse @inline react tags in react mode', async () => {
+      const content = `
+* Test
+
+@inline react
+<button onClick={() => setCount(c => c + 1)}>Click me</button>
+@end
+
+* Another heading
+`;
+      const result = parseNorgWithFramework(content, 'react');
+
+      expect(result.inlineComponents).toHaveLength(1);
+      expect(result.inlineComponents[0].index).toBe(0);
+      expect(result.inlineComponents[0].framework).toBe('react');
+      expect(result.inlineComponents[0].code).toContain('onClick');
+      expect(result.htmlParts).toHaveLength(2);
+    });
+
+    it('should error when @inline react is used in svelte mode', async () => {
+      const content = `
+@inline react
+<button>Click</button>
+@end
+`;
+      expect(() => parseNorgWithFramework(content, 'svelte')).toThrow(
+        /cannot be used in a svelte project/i
+      );
+    });
   });
 
   describe('without framework mode', () => {
@@ -99,17 +138,34 @@ some code
     });
   });
 
+  describe('react inline modules', () => {
+    const reactFixture = join(fixturesDir, 'inline-react.norg');
+
+    it('should wrap react inline code as JSX component', async () => {
+      const plugin = await createPlugin({ mode: 'react', include: ['**/*.norg'] });
+      const result = await plugin.load(`${reactFixture}.jsx?inline=0`);
+
+      expect(result).toContain('export default () => <>');
+      expect(result).toContain('onClick');
+      expect(result).toContain('</>;');
+    });
+
+    it('should inject component imports into react inline modules', async () => {
+      const plugin = await createPlugin({
+        mode: 'react',
+        include: ['**/*.norg'],
+        componentDir: componentsDir,
+      });
+      const result = await plugin.load(`${reactFixture}.jsx?inline=0`);
+
+      expect(result).toContain("import Badge from '");
+      expect(result).toContain("import Counter from '");
+      expect(result).toContain('export default () => <>');
+    });
+  });
+
   describe('componentDir', () => {
     const inlineFixture = join(fixturesDir, 'inline.norg');
-
-    async function createPlugin(opts: Parameters<typeof norgPlugin>[0]) {
-      const plugin = norgPlugin(opts);
-      const hook = plugin.buildStart;
-      if (typeof hook === 'function') {
-        await (hook as () => Promise<void>)();
-      }
-      return plugin;
-    }
 
     it('should inject component imports into inline modules with existing <script>', async () => {
       const plugin = await createPlugin({
@@ -117,8 +173,6 @@ some code
         include: ['**/*.norg'],
         componentDir: componentsDir,
       });
-
-      // Load inline=0 which has a <script> tag
       const result = await plugin.load(`${inlineFixture}.svelte?inline=0`);
 
       expect(result).toContain("import Badge from '");
@@ -132,8 +186,6 @@ some code
         include: ['**/*.norg'],
         componentDir: componentsDir,
       });
-
-      // Load inline=1 which is just <div>Hello from Svelte!</div> (no script tag)
       const result = await plugin.load(`${inlineFixture}.svelte?inline=1`);
 
       expect(result).toContain("import Badge from '");
@@ -143,11 +195,7 @@ some code
     });
 
     it('should not inject imports when no componentDir is set', async () => {
-      const plugin = await createPlugin({
-        mode: 'svelte',
-        include: ['**/*.norg'],
-      });
-
+      const plugin = await createPlugin({ mode: 'svelte', include: ['**/*.norg'] });
       const result = await plugin.load(`${inlineFixture}.svelte?inline=1`);
 
       expect(result).not.toContain('import Badge');
@@ -160,7 +208,6 @@ some code
         include: ['**/*.norg'],
         componentDir: componentsDir,
       });
-
       const result = await plugin.load(inlineFixture);
 
       expect(result).not.toContain(`import Badge from '${componentsDir}`);

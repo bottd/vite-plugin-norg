@@ -2,9 +2,6 @@ import type { NorgParseResult, InlineComponent } from '@parser';
 
 export type GeneratorMode = 'html' | 'svelte' | 'react' | 'vue' | 'metadata';
 
-/**
- * Generate output for the specified framework mode
- */
 export function generateOutput(
   mode: GeneratorMode,
   result: NorgParseResult,
@@ -55,7 +52,6 @@ function generateSvelte(
     '</script>',
   ];
 
-  // Only add script block if it has content
   const scriptContent: string[] = [];
   if (css) scriptContent.push('  import "virtual:norg-arborium.css";');
   if (inlineCss && filePath) scriptContent.push(`  import 'virtual:norg-css:${filePath}';`);
@@ -65,7 +61,6 @@ function generateSvelte(
     lines.push('<script lang="ts">', ...scriptContent, '</script>');
   }
 
-  // Interleave HTML parts with inline components
   interleaveHtmlAndInlines(
     lines,
     htmlParts,
@@ -78,25 +73,47 @@ function generateSvelte(
 }
 
 function generateReact(
-  { htmlParts, metadata, toc, inlineCss = '' }: NorgParseResult,
+  { htmlParts, metadata, toc, inlineComponents = [], inlineCss = '' }: NorgParseResult,
   css: string,
   filePath?: string
 ): string {
-  const html = htmlParts.join('');
   const lines: string[] = ['import React from "react";'];
   if (css) lines.push('import "virtual:norg-arborium.css";');
   if (inlineCss && filePath) lines.push(`import 'virtual:norg-css:${filePath}';`);
+  addInlineImports(lines, inlineComponents, filePath);
 
   lines.push(
     '',
     `export const metadata = ${JSON.stringify(metadata ?? {})};`,
     `export const toc = ${JSON.stringify(toc ?? [])};`,
-    '',
-    `const htmlContent = ${JSON.stringify(html)};`,
-    '',
-    'export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });',
-    'export default Component;'
+    ''
   );
+
+  if (inlineComponents.length > 0) {
+    const children: string[] = [];
+    for (let i = 0; i < htmlParts.length; i++) {
+      if (htmlParts[i]) {
+        children.push(
+          `React.createElement("div", { dangerouslySetInnerHTML: { __html: ${JSON.stringify(htmlParts[i])} } })`
+        );
+      }
+      if (i < inlineComponents.length) {
+        children.push(`React.createElement(Inline${i})`);
+      }
+    }
+    lines.push(
+      `export const Component = () => React.createElement(React.Fragment, null, ${children.join(', ')});`,
+      'export default Component;'
+    );
+  } else {
+    const html = htmlParts.join('');
+    lines.push(
+      `const htmlContent = ${JSON.stringify(html)};`,
+      '',
+      'export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });',
+      'export default Component;'
+    );
+  }
 
   return lines.join('\n');
 }
@@ -106,7 +123,6 @@ function generateVue(
   css: string,
   filePath?: string
 ): string {
-  // Separate <script> block for module exports (script setup vars aren't exports)
   const lines: string[] = [
     '<script lang="ts">',
     `export const metadata = ${JSON.stringify(metadata ?? {})};`,
@@ -145,12 +161,12 @@ function generateVue(
   return lines.join('\n');
 }
 
-function generateMetadata({ metadata }: NorgParseResult): string {
-  const lines: string[] = [
+function generateMetadata({ metadata, toc }: NorgParseResult): string {
+  return [
     `export const metadata = ${JSON.stringify(metadata ?? {})};`,
-    `export default { metadata };`,
-  ];
-  return lines.join('\n');
+    `export const toc = ${JSON.stringify(toc ?? [])};`,
+    `export default { metadata, toc };`,
+  ].join('\n');
 }
 
 function addInlineImports(
@@ -159,18 +175,15 @@ function addInlineImports(
   filePath?: string,
   indent = ''
 ): void {
-  for (let i = 0; i < inlineComponents.length; i++) {
-    lines.push(`${indent}import Inline${i} from '${filePath}?inline=${i}';`);
-  }
+  lines.push(
+    ...inlineComponents.map((_, i) => `${indent}import Inline${i} from '${filePath}?inline=${i}';`)
+  );
 }
 
 function embedInlines(htmlParts: string[], inlineComponents: InlineComponent[]): string {
-  const parts: string[] = [];
-  for (let i = 0; i < htmlParts.length; i++) {
-    parts.push(htmlParts[i]);
-    if (i < inlineComponents.length) parts.push(inlineComponents[i].code);
-  }
-  return parts.join('');
+  return htmlParts
+    .flatMap((part, i) => (i < inlineComponents.length ? [part, inlineComponents[i].code] : [part]))
+    .join('');
 }
 
 function interleaveHtmlAndInlines(

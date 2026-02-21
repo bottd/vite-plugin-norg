@@ -1,0 +1,31 @@
+@document.meta
+title: Inline React Test
+@end
+
+* Testing React Inlines
+
+This is a counter component:
+
+@inline react
+<button onClick={() => setCount(c => c + 1)}>
+  Count: {count}
+</button>
+@end
+
+* Multiple Inlines
+
+First inline:
+
+@inline react
+<div>Hello from React!</div>
+@end
+
+Second inline:
+
+@inline react
+<span>Goodbye from React!</span>
+@end
+
+* Content After Inlines
+
+This text comes after the inlines.

@@ -58,13 +58,13 @@ describe('Metadata Generator', () => {
   });
 
   describe('output format', () => {
-    it('should not contain html, toc, or CSS imports', async () => {
+    it('should not contain html or CSS imports, but should contain toc', async () => {
       const fixturePath = join(__dirname, '../fixtures/basic.norg');
       const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
       const result = await plugin.load(fixturePath);
 
       expect(result).not.toContain('export const html');
-      expect(result).not.toContain('export const toc');
+      expect(result).toContain('export const toc');
       expect(result).not.toContain('virtual:norg-arborium.css');
     });
 
@@ -86,7 +86,7 @@ describe('Metadata Generator', () => {
 
       expect(result).toContain('export const metadata');
       expect(result).not.toContain('export const html');
-      expect(result).not.toContain('export const toc');
+      expect(result).toContain('export const toc');
     });
   });
 });

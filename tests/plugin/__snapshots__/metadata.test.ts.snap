@@ -2,50 +2,60 @@
 
 exports[`Metadata Generator mode: metadata should generate correct metadata module for basic.norg 1`] = `
 "export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
-export default { metadata };"
+export const toc = [{"level":1,"title":"Main Title","id":"main-title"},{"level":2,"title":"Lists","id":"lists"},{"level":2,"title":"Link","id":"link"}];
+export default { metadata, toc };"
 `;
 
 exports[`Metadata Generator mode: metadata should generate correct metadata module for code-blocks.norg 1`] = `
 "export const metadata = {"title":"\\"Code Test\\""};
-export default { metadata };"
+export const toc = [{"level":1,"title":"Code Blocks","id":"code-blocks"},{"level":2,"title":"JavaScript","id":"javascript"},{"level":2,"title":"Python ","id":"python"},{"level":2,"title":"Plain","id":"plain"}];
+export default { metadata, toc };"
 `;
 
 exports[`Metadata Generator mode: metadata should generate correct metadata module for headings.norg 1`] = `
 "export const metadata = {"title":"\\"Headings\\""};
-export default { metadata };"
+export const toc = [{"level":1,"title":"H1","id":"h1"},{"level":2,"title":"H2","id":"h2"},{"level":3,"title":"H3","id":"h3"},{"level":4,"title":"H4","id":"h4"},{"level":5,"title":"H5","id":"h5"},{"level":6,"title":"H6","id":"h6"}];
+export default { metadata, toc };"
 `;
 
 exports[`Metadata Generator mode: metadata should generate correct metadata module for images.norg 1`] = `
 "export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
-export default { metadata };"
+export const toc = [{"level":1,"title":"Images","id":"images"}];
+export default { metadata, toc };"
 `;
 
 exports[`Metadata Generator mode: metadata should generate correct metadata module for links.norg 1`] = `
 "export const metadata = {"author":"Drake Bott","title":"Link Test"};
-export default { metadata };"
+export const toc = [{"level":1,"title":"Link Types","id":"link-types"},{"level":2,"title":"URL Links","id":"url-links"},{"level":2,"title":"File Links","id":"file-links"},{"level":2,"title":"Heading Links","id":"heading-links"},{"level":2,"title":"Mixed Content","id":"mixed-content"}];
+export default { metadata, toc };"
 `;
 
 exports[`Metadata Generator ?metadata query should generate correct metadata module for basic.norg via ?metadata query 1`] = `
 "export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
-export default { metadata };"
+export const toc = [{"level":1,"title":"Main Title","id":"main-title"},{"level":2,"title":"Lists","id":"lists"},{"level":2,"title":"Link","id":"link"}];
+export default { metadata, toc };"
 `;
 
 exports[`Metadata Generator ?metadata query should generate correct metadata module for code-blocks.norg via ?metadata query 1`] = `
 "export const metadata = {"title":"\\"Code Test\\""};
-export default { metadata };"
+export const toc = [{"level":1,"title":"Code Blocks","id":"code-blocks"},{"level":2,"title":"JavaScript","id":"javascript"},{"level":2,"title":"Python ","id":"python"},{"level":2,"title":"Plain","id":"plain"}];
+export default { metadata, toc };"
 `;
 
 exports[`Metadata Generator ?metadata query should generate correct metadata module for headings.norg via ?metadata query 1`] = `
 "export const metadata = {"title":"\\"Headings\\""};
-export default { metadata };"
+export const toc = [{"level":1,"title":"H1","id":"h1"},{"level":2,"title":"H2","id":"h2"},{"level":3,"title":"H3","id":"h3"},{"level":4,"title":"H4","id":"h4"},{"level":5,"title":"H5","id":"h5"},{"level":6,"title":"H6","id":"h6"}];
+export default { metadata, toc };"
 `;
 
 exports[`Metadata Generator ?metadata query should generate correct metadata module for images.norg via ?metadata query 1`] = `
 "export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
-export default { metadata };"
+export const toc = [{"level":1,"title":"Images","id":"images"}];
+export default { metadata, toc };"
 `;
 
 exports[`Metadata Generator ?metadata query should generate correct metadata module for links.norg via ?metadata query 1`] = `
 "export const metadata = {"author":"Drake Bott","title":"Link Test"};
-export default { metadata };"
+export const toc = [{"level":1,"title":"Link Types","id":"link-types"},{"level":2,"title":"URL Links","id":"url-links"},{"level":2,"title":"File Links","id":"file-links"},{"level":2,"title":"Heading Links","id":"heading-links"},{"level":2,"title":"Mixed Content","id":"mixed-content"}];
+export default { metadata, toc };"
 `;

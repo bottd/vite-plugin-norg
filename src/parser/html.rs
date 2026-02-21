@@ -21,6 +21,7 @@ impl TransformState<'_> {
 
     fn push_html(&mut self, html: &str) {
         self.current_html.push_str(html);
+        self.current_html.push('\n');
     }
 
     fn apply_verbatim(&mut self, result: VerbatimTagResult) {

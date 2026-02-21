@@ -4,7 +4,7 @@
 [![build status](https://img.shields.io/github/actions/workflow/status/bottd/vite-plugin-norg/release.yml)](https://github.com/bottd/vite-plugin-norg/actions)
 [![license](https://img.shields.io/npm/l/vite-plugin-norg.svg)](LICENSE)
 
-**Neorg processor for Vite** - Transform `.norg` files into HTML, React, or Svelte with full TypeScript support.
+**Neorg processor for Vite** - Transform `.norg` files into HTML, React, Svelte, or Vue with full TypeScript support.
 
 > **Built for [Neorg](https://github.com/nvim-neorg/neorg) users, powered by [rust-norg](https://github.com/nvim-neorg/rust-norg)**
 
@@ -39,6 +39,9 @@ Add a type reference to `app.d.ts` based on your output target:
 
 // For React
 /// <reference types="vite-plugin-norg/react" />
+
+// For Vue
+/// <reference types="vite-plugin-norg/vue" />
 
 // For HTML
 /// <reference types="vite-plugin-norg/html" />
@@ -83,17 +86,31 @@ export default function App() {
 <Document />
 ```
 
+### Vue Output
+
+```vue
+<script setup>
+import Document, { metadata } from './document.norg';
+</script>
+
+<template>
+  <h1>{{ metadata.title }}</h1>
+  <Document />
+</template>
+```
+
 ### Metadata Output
 
 ```javascript
-import { metadata } from './document.norg';
+import { metadata, toc } from './document.norg';
 console.log(metadata.title); // "My Document"
+console.log(toc); // [{ title: "Section 1", level: 1 }, ...]
 ```
 
 You can also append `?metadata` to any import to get metadata-only output regardless of mode:
 
 ```javascript
-import { metadata } from './document.norg?metadata';
+import { metadata, toc } from './document.norg?metadata';
 ```
 
 ## Configuration Reference
@@ -102,9 +119,10 @@ import { metadata } from './document.norg?metadata';
 import type { FilterPattern } from 'vite';
 
 interface NorgPluginOptions {
-  mode: 'html' | 'react' | 'svelte' | 'metadata';
+  mode: 'html' | 'react' | 'svelte' | 'vue' | 'metadata';
   include?: FilterPattern;
   exclude?: FilterPattern;
+
   arboriumConfig?: {
     // Single theme
     theme?: string;
@@ -114,7 +132,28 @@ interface NorgPluginOptions {
       dark: string;
     };
   };
+
+  // Directory to scan for framework components
+  componentDir?: string;
+
+  // (takes precedence over componentDir)
+  // { Component: "import-path" }
+  components?: Record<string, string>;
 }
+```
+
+### Component Registration
+
+Register framework components for use in inline norg blocks. `componentDir` will auto-import any referenced components within the specified directory. `components` is for creating your own explicit import path mappings.
+
+```typescript
+norgPlugin({
+  mode: 'react',
+  componentDir: './src/components',
+  components: {
+    Chart: './src/lib/Chart.jsx',
+  },
+});
 ```
 
 ## Code Syntax Highlighting

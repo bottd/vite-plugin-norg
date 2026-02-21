@@ -15,6 +15,7 @@ export interface NorgPluginOptions {
   exclude?: FilterPattern;
   arboriumConfig?: ArboriumConfig;
   componentDir?: string;
+  components?: Record<string, string>;
 }
 
 const optionsSchema = z.object({
@@ -28,6 +29,7 @@ const optionsSchema = z.object({
     ])
     .optional(),
   componentDir: z.string().optional(),
+  components: z.record(z.string(), z.string()).optional(),
 });
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
@@ -35,6 +37,12 @@ const RESOLVED_VIRTUAL_CSS_ID = '\0' + VIRTUAL_CSS_ID;
 
 const VIRTUAL_DOC_CSS_PREFIX = 'virtual:norg-css:';
 const RESOLVED_VIRTUAL_DOC_CSS_PREFIX = '\0' + VIRTUAL_DOC_CSS_PREFIX;
+
+const FRAMEWORK_EXTENSIONS: Partial<Record<GeneratorMode, string>> = {
+  svelte: '.svelte',
+  vue: '.vue',
+  react: '.jsx',
+};
 
 function buildCss(config?: ArboriumConfig): string {
   if (!config) return '';
@@ -53,50 +61,32 @@ function buildCss(config?: ArboriumConfig): string {
   return '';
 }
 
-/**
- * Get the framework file extension for inline component module IDs.
- * Framework plugins (vite-plugin-svelte, @vitejs/plugin-vue) identify files
- * to compile by extension, so inline modules need a matching extension.
- */
-function frameworkExtension(mode: GeneratorMode): '.svelte' | '.vue' | null {
-  switch (mode) {
-    case 'svelte':
-      return '.svelte';
-    case 'vue':
-      return '.vue';
-    default:
-      return null;
-  }
+function frameworkExtension(mode: GeneratorMode): string | null {
+  return FRAMEWORK_EXTENSIONS[mode] ?? null;
 }
 
-/**
- * Parse the ?inline=N query parameter from a module ID.
- * Handles format: /path/file.norg.svelte?inline=0 or /path/file.norg.vue?inline=0
- * Tolerates extra Vite query params (e.g., ?inline=0&t=123456)
- */
+const INLINE_EXT_PATTERN = Object.values(FRAMEWORK_EXTENSIONS)
+  .map(e => e.slice(1))
+  .join('|');
+const INLINE_QUERY_RE = new RegExp(
+  `^(.+\\.norg)\\.(?:${INLINE_EXT_PATTERN})\\?inline=(\\d+)(?:&|$)`
+);
+
 function parseInlineQuery(id: string): { basePath: string; index: number } | null {
-  const match = id.match(/^(.+\.norg)\.(?:svelte|vue)\?inline=(\d+)(?:&|$)/);
+  const match = id.match(INLINE_QUERY_RE);
   if (!match) return null;
-  return {
-    basePath: match[1],
-    index: parseInt(match[2], 10),
-  };
+  return { basePath: match[1], index: parseInt(match[2], 10) };
 }
 
-/**
- * Scan a directory for framework component files and return a name→path map.
- * e.g., Counter.svelte → Map { "Counter" => "/abs/path/Counter.svelte" }
- */
 async function scanComponentDir(dir: string, mode: GeneratorMode): Promise<Map<string, string>> {
   const ext = frameworkExtension(mode);
   if (!ext) return new Map();
 
-  const entries = await readdir(dir);
+  const entries = await readdir(dir).catch(() => [] as string[]);
   const components = new Map<string, string>();
   for (const entry of entries) {
     if (entry.endsWith(ext)) {
-      const name = basename(entry, ext);
-      components.set(name, resolve(dir, entry));
+      components.set(basename(entry, ext), resolve(dir, entry));
     }
   }
   return components;
@@ -109,11 +99,6 @@ function injectAfterTag(code: string, pattern: RegExp, content: string): string 
   return code.slice(0, pos) + '\n' + content + '\n' + code.slice(pos);
 }
 
-/**
- * Inject component import statements into inline module code.
- * For Svelte: injects into existing <script> or prepends a new one.
- * For Vue: injects into existing <script setup> or prepends a new one.
- */
 function injectComponentImports(
   code: string,
   components: Map<string, string>,
@@ -121,7 +106,7 @@ function injectComponentImports(
 ): string {
   if (components.size === 0) return code;
 
-  const imports = Array.from(components.entries())
+  const imports = [...components]
     .map(([name, path]) => `import ${name} from '${path}';`)
     .join('\n');
 
@@ -139,11 +124,11 @@ function injectComponentImports(
     );
   }
 
-  return code;
-}
+  if (mode === 'react') {
+    return imports + '\n' + code;
+  }
 
-function parse(content: string, mode: GeneratorMode) {
-  return parseNorgWithFramework(content, mode);
+  return code;
 }
 
 export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
@@ -151,12 +136,19 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
   if (!parsed.success) {
     throw new Error(`[vite-plugin-norg] Invalid options: ${parsed.error.message}`);
   }
-  const { include, exclude, mode, arboriumConfig, componentDir } = parsed.data;
+  const {
+    include,
+    exclude,
+    mode,
+    arboriumConfig,
+    componentDir,
+    components: explicitComponents,
+  } = parsed.data;
   const filter = createFilter(include, exclude);
   const css = buildCss(arboriumConfig);
   const resolvedComponentDir = componentDir ? resolve(componentDir) : undefined;
 
-  const parseCache = new Map<string, ReturnType<typeof parse>>();
+  const parseCache = new Map<string, ReturnType<typeof parseNorgWithFramework>>();
   const inlineModuleIds = new Map<string, Set<string>>();
   let components = new Map<string, string>();
 
@@ -173,7 +165,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
     let result = parseCache.get(filePath);
     if (!result) {
       const content = await readFile(filePath, 'utf-8');
-      result = parse(content, mode);
+      result = parseNorgWithFramework(content, mode);
       parseCache.set(filePath, result);
     }
     return result;
@@ -202,6 +194,9 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       if (resolvedComponentDir) {
         components = await scanComponentDir(resolvedComponentDir, mode);
       }
+      for (const [name, importPath] of Object.entries(explicitComponents ?? {})) {
+        components.set(name, resolve(importPath));
+      }
     },
 
     configureServer(server) {
@@ -219,7 +214,6 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return '\0' + id;
       }
 
-      // Handle relative inline imports (e.g., './foo.norg?inline=0')
       if (id.includes('.norg?inline=') && importer) {
         const ext = frameworkExtension(mode);
         if (!ext) return;
@@ -234,7 +228,6 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return css;
       }
 
-      // Handle per-document CSS virtual module
       if (id.startsWith(RESOLVED_VIRTUAL_DOC_CSS_PREFIX)) {
         const filePath = id.slice(RESOLVED_VIRTUAL_DOC_CSS_PREFIX.length);
         trackModule(filePath, id);
@@ -242,7 +235,6 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return result.inlineCss ?? '';
       }
 
-      // Check for inline component request
       const inlineQuery = parseInlineQuery(id);
       if (inlineQuery) {
         const { basePath, index } = inlineQuery;
@@ -254,28 +246,30 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
           throw new Error(`Inline component ${index} not found in ${basePath}`);
         }
 
-        return injectComponentImports(inline.code, components, mode);
+        let code = inline.code;
+        if (mode === 'react') {
+          code = `export default () => <>${code}</>;`;
+        }
+
+        return injectComponentImports(code, components, mode);
       }
 
-      // Handle ?metadata query on any mode
       const [filepath, query] = id.split('?', 2);
       if (query === 'metadata' && filepath.endsWith('.norg') && filter(filepath)) {
         const result = await cachedParse(filepath);
         return generateOutput('metadata', result, css, filepath);
       }
 
-      // Handle main .norg file
       if (!id.endsWith('.norg') || !filter(id)) return;
 
       const content = await readFile(id, 'utf-8');
-      const result = parse(content, mode);
+      const result = parseNorgWithFramework(content, mode);
       parseCache.set(id, result);
 
       return generateOutput(mode, result, css, id);
     },
 
     async handleHotUpdate(ctx: HmrContext) {
-      // If a file in componentDir changed, re-scan and invalidate all inline modules
       if (resolvedComponentDir && ctx.file.startsWith(resolvedComponentDir + '/')) {
         components = await scanComponentDir(resolvedComponentDir, mode);
 
@@ -287,14 +281,12 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return;
       }
 
-      // Invalidate cache on file change
       if (ctx.file.endsWith('.norg')) {
         parseCache.delete(ctx.file);
       }
 
       if (!filter(ctx.file) || !ctx.file.endsWith('.norg')) return;
 
-      // Invalidate inline component modules derived from this .norg file
       const trackedIds = inlineModuleIds.get(ctx.file);
       if (trackedIds) {
         const invalidated = invalidateModules(ctx, trackedIds);
