@@ -57,4 +57,3 @@ pub struct InlineComponent {
     /// Raw component code (user writes full component with imports)
     pub code: String,
 }
-

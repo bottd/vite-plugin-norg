@@ -1,15 +1,16 @@
 use crate::ast_handlers::*;
 use crate::types::{InlineComponent, OutputMode};
+use arborium::Highlighter;
 use itertools::Itertools;
 use rust_norg::{NestableDetachedModifier, NorgAST};
 
-#[derive(Default)]
 struct TransformState {
     parts: Vec<String>,
     current_html: String,
     inline_components: Vec<InlineComponent>,
     css_blocks: Vec<String>,
     mode: Option<OutputMode>,
+    highlighter: Highlighter,
 }
 
 impl TransformState {
@@ -48,8 +49,12 @@ pub fn transform(
     mode: Option<OutputMode>,
 ) -> Result<(Vec<String>, Vec<InlineComponent>, String), InlineParseError> {
     let mut state = TransformState {
+        parts: Vec::new(),
+        current_html: String::new(),
+        inline_components: Vec::new(),
+        css_blocks: Vec::new(),
         mode,
-        ..Default::default()
+        highlighter: Highlighter::new(),
     };
     transform_nodes(ast, &mut state)?;
     Ok(state.finalize())
@@ -103,12 +108,17 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Inli
             content,
             ..
         } => {
-            if let Some(result) = verbatim_tag_with_embeds(name, parameters, content, state.mode)
-                .map_err(|kind| InlineParseError {
-                    index: state.inline_components.len(),
-                    kind,
-                })?
-            {
+            if let Some(result) = verbatim_tag_with_embeds(
+                name,
+                parameters,
+                content,
+                state.mode,
+                &mut state.highlighter,
+            )
+            .map_err(|kind| InlineParseError {
+                index: state.inline_components.len(),
+                kind,
+            })? {
                 state.apply_verbatim(result);
             }
         }

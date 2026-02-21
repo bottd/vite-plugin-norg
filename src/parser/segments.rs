@@ -146,6 +146,7 @@ fn convert_link(
             | LinkTarget::Generic(_)
             | LinkTarget::Extendable(_)
             | LinkTarget::Wiki(_),
-        ) | None => String::new(),
+        )
+        | None => String::new(),
     }
 }

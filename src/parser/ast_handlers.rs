@@ -91,6 +91,7 @@ pub fn verbatim_tag_with_embeds(
     parameters: &[String],
     content: &str,
     mode: Option<OutputMode>,
+    highlighter: &mut Highlighter,
 ) -> Result<Option<VerbatimTagResult>, InlineParseErrorKind> {
     match name {
         [tag] if tag == "code" => {
@@ -101,7 +102,7 @@ pub fn verbatim_tag_with_embeds(
                 .map(String::as_str)
                 .unwrap_or("text");
 
-            let highlighted = Highlighter::new().highlight(lang, &code);
+            let highlighted = highlighter.highlight(lang, &code);
             let html = match highlighted {
                 Ok(h) => format!(
                     r#"<pre class="arborium lang-{lang}"><code>{}</code></pre>"#,
