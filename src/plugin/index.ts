@@ -1,5 +1,5 @@
 export { norgPlugin, type ArboriumConfig, type NorgPluginOptions } from './plugin';
-export type { NorgParseResult, NorgMetadataResult, TocEntry, InlineComponent } from '@parser';
+export type { NorgParseResult, TocEntry, InlineComponent } from '@parser';
 export type { HtmlModule } from './generators/html';
 export type { SvelteModule } from './generators/svelte';
 export type { ReactModule } from './generators/react';

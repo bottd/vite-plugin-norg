@@ -9,7 +9,7 @@ mod utils;
 pub use html::transform;
 pub use metadata::extract_metadata;
 pub use toc::extract_toc;
-pub use types::{InlineComponent, ParsedNorg, TocEntry};
+pub use types::{InlineComponent, OutputMode, TocEntry};
 pub use utils::into_slug;
 
 use arborium::theme::builtin;
@@ -27,20 +27,12 @@ pub struct NorgParseResult {
 }
 
 #[napi]
-pub fn parse_norg(content: String) -> Result<NorgParseResult> {
-    parse_norg_with_framework(content, Option::<String>::None)
-}
-
-#[napi]
-pub fn parse_norg_with_framework(
-    content: String,
-    framework: Option<String>,
-) -> Result<NorgParseResult> {
+pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResult> {
     let ast = rust_norg::parse_tree(&content)
         .map_err(|e| Error::from_reason(format!("Parse error: {e:?}")))?;
 
-    let target_framework = framework.as_deref();
-    let (html_parts, inline_components, inline_css) = transform(&ast, target_framework)
+    let output_mode = mode.as_deref().and_then(OutputMode::from_str);
+    let (html_parts, inline_components, inline_css) = transform(&ast, output_mode)
         .map_err(|err| Error::from_reason(format_inline_error(&content, &err)))?;
     let toc = extract_toc(&ast);
     let metadata = extract_metadata(&ast);
@@ -52,19 +44,6 @@ pub fn parse_norg_with_framework(
         inline_components,
         inline_css,
     })
-}
-
-#[napi(object)]
-pub struct NorgMetadataResult {
-    pub metadata: Map<String, serde_json::Value>,
-}
-
-#[napi]
-pub fn parse_norg_metadata(content: String) -> Result<NorgMetadataResult> {
-    let ast = rust_norg::parse_tree(&content)
-        .map_err(|e| Error::from_reason(format!("Parse error: {e:?}")))?;
-    let metadata = extract_metadata(&ast);
-    Ok(NorgMetadataResult { metadata })
 }
 
 fn format_inline_error(content: &str, err: &crate::ast_handlers::InlineParseError) -> String {

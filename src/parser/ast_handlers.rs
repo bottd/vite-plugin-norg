@@ -1,13 +1,11 @@
 use crate::segments::convert_segments;
-use crate::types::InlineComponent;
+use crate::types::{InlineComponent, OutputMode};
 use crate::utils::into_slug;
 use arborium::Highlighter;
 use htmlescape::encode_minimal;
 use itertools::Itertools;
 use rust_norg::{DelimitingModifier, DetachedModifierExtension, NorgASTFlat, TodoStatus};
 use textwrap::dedent;
-
-const INLINE_LANGUAGES: &[&str] = &["html", "svelte", "vue", "react"];
 
 #[derive(Debug)]
 pub struct InlineParseError {
@@ -19,13 +17,13 @@ pub struct InlineParseError {
 pub enum InlineParseErrorKind {
     MissingLanguage,
     InvalidLanguage { language: String },
-    LanguageMismatch { language: String, target: String },
+    LanguageMismatch { language: String, mode: OutputMode },
 }
 
 impl std::fmt::Display for InlineParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let n = self.index + 1;
-        let supported = INLINE_LANGUAGES.join(", ");
+        let supported = OutputMode::ALL.map(|m| m.as_str()).join(", ");
         match &self.kind {
             InlineParseErrorKind::MissingLanguage => write!(
                 f,
@@ -35,9 +33,9 @@ impl std::fmt::Display for InlineParseError {
                 f,
                 "Inline error (inline #{n}): invalid language \"{language}\". Supported languages: {supported}"
             ),
-            InlineParseErrorKind::LanguageMismatch { language, target } => write!(
+            InlineParseErrorKind::LanguageMismatch { language, mode } => write!(
                 f,
-                "Inline error (inline #{n}): @inline {language} cannot be used in a {target} project"
+                "Inline error (inline #{n}): @inline {language} cannot be used in {mode} mode"
             ),
         }
     }
@@ -92,7 +90,7 @@ pub fn verbatim_tag_with_embeds(
     name: &[String],
     parameters: &[String],
     content: &str,
-    target_framework: Option<&str>,
+    mode: Option<OutputMode>,
 ) -> Result<Option<VerbatimTagResult>, InlineParseErrorKind> {
     match name {
         [tag] if tag == "code" => {
@@ -129,29 +127,36 @@ pub fn verbatim_tag_with_embeds(
             ))
         })),
         [tag] if tag == "inline" => {
-            match parameters
+            let inline_lang = parameters
                 .first()
                 .filter(|s| !s.is_empty())
-                .map(String::as_str)
-            {
+                .map(String::as_str);
+
+            match inline_lang {
                 Some("css") => Ok(Some(VerbatimTagResult::css_only(content))),
                 None => Err(InlineParseErrorKind::MissingLanguage),
-                Some(lang) if !INLINE_LANGUAGES.contains(&lang) => {
-                    Err(InlineParseErrorKind::InvalidLanguage {
-                        language: lang.to_string(),
-                    })
+                Some(lang) => {
+                    let inline_mode = OutputMode::from_str(lang).ok_or_else(|| {
+                        InlineParseErrorKind::InvalidLanguage {
+                            language: lang.to_string(),
+                        }
+                    })?;
+
+                    match mode {
+                        None => Ok(None),
+                        Some(m) if m != inline_mode => {
+                            Err(InlineParseErrorKind::LanguageMismatch {
+                                language: lang.to_string(),
+                                mode: m,
+                            })
+                        }
+                        Some(_) => Ok(Some(VerbatimTagResult::inline_only(InlineComponent {
+                            index: 0,
+                            mode: inline_mode.to_string(),
+                            code: content.to_string(),
+                        }))),
+                    }
                 }
-                Some(lang) if target_framework.is_some_and(|t| t != lang) => {
-                    Err(InlineParseErrorKind::LanguageMismatch {
-                        language: lang.to_string(),
-                        target: target_framework.unwrap().to_string(),
-                    })
-                }
-                Some(lang) => Ok(Some(VerbatimTagResult::inline_only(InlineComponent {
-                    index: 0,
-                    framework: lang.to_string(),
-                    code: content.to_string(),
-                }))),
             }
         }
         [doc, meta] if doc == "document" && meta == "meta" => Ok(None),

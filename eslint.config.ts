@@ -1,7 +1,7 @@
-import js from '@eslint/js';
-import ts from 'typescript-eslint';
-import eslintConfigPrettier from 'eslint-config-prettier';
-import globals from 'globals';
+import js from "@eslint/js";
+import ts from "typescript-eslint";
+import eslintConfigPrettier from "eslint-config-prettier";
+import globals from "globals";
 
 export default ts.config(
   js.configs.recommended,
@@ -15,17 +15,22 @@ export default ts.config(
     },
   },
   {
+    rules: {
+      "@typescript-eslint/consistent-generic-constructors": "off",
+    },
+  },
+  {
     ignores: [
-      'dist/**',
-      'wasm/**',
-      'pkg/**',
-      'src/parser/target/**',
-      'src/parser/pkg/**',
-      'target/**',
-      'node_modules/**',
-      '*.tgz',
-      'package-lock.json',
+      "dist/**",
+      "wasm/**",
+      "pkg/**",
+      "src/parser/target/**",
+      "src/parser/pkg/**",
+      "target/**",
+      "node_modules/**",
+      "*.tgz",
+      "package-lock.json",
     ],
   },
-  eslintConfigPrettier
+  eslintConfigPrettier,
 );

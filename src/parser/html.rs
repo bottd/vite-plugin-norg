@@ -1,18 +1,18 @@
 use crate::ast_handlers::*;
-use crate::types::InlineComponent;
+use crate::types::{InlineComponent, OutputMode};
 use itertools::Itertools;
 use rust_norg::{NestableDetachedModifier, NorgAST};
 
 #[derive(Default)]
-struct TransformState<'a> {
+struct TransformState {
     parts: Vec<String>,
     current_html: String,
     inline_components: Vec<InlineComponent>,
     css_blocks: Vec<String>,
-    target_framework: Option<&'a str>,
+    mode: Option<OutputMode>,
 }
 
-impl TransformState<'_> {
+impl TransformState {
     fn push_inline(&mut self, mut inline: InlineComponent) {
         inline.index = self.inline_components.len() as u32;
         self.parts.push(std::mem::take(&mut self.current_html));
@@ -45,10 +45,10 @@ impl TransformState<'_> {
 
 pub fn transform(
     ast: &[NorgAST],
-    target_framework: Option<&str>,
+    mode: Option<OutputMode>,
 ) -> Result<(Vec<String>, Vec<InlineComponent>, String), InlineParseError> {
     let mut state = TransformState {
-        target_framework,
+        mode,
         ..Default::default()
     };
     transform_nodes(ast, &mut state)?;
@@ -103,12 +103,11 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Inli
             content,
             ..
         } => {
-            if let Some(result) =
-                verbatim_tag_with_embeds(name, parameters, content, state.target_framework)
-                    .map_err(|kind| InlineParseError {
-                        index: state.inline_components.len(),
-                        kind,
-                    })?
+            if let Some(result) = verbatim_tag_with_embeds(name, parameters, content, state.mode)
+                .map_err(|kind| InlineParseError {
+                    index: state.inline_components.len(),
+                    kind,
+                })?
             {
                 state.apply_verbatim(result);
             }

@@ -1,19 +1,6 @@
-import { fileURLToPath } from 'node:url';
-import { join, dirname } from 'node:path';
+import { join } from 'node:path';
 import { norgPlugin } from '../../src/plugin/index.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const fixturesDir = join(__dirname, '../fixtures');
-
-const fixtures = [
-  'basic.norg',
-  'code-blocks.norg',
-  'headings.norg',
-  'images.norg',
-  'links.norg',
-  'inline-css.norg',
-];
+import { fixturesDir, fixtures } from './fixtures';
 
 describe('Vue Generator', () => {
   const plugin = norgPlugin({ mode: 'vue', include: ['**/*.norg'] });

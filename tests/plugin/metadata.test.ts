@@ -1,16 +1,13 @@
-import { fileURLToPath } from 'node:url';
-import { join, dirname } from 'node:path';
+import { join } from 'node:path';
 import { norgPlugin } from '../../src/plugin/index.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { fixturesDir } from './fixtures';
 
 const fixtures = ['basic.norg', 'code-blocks.norg', 'headings.norg', 'images.norg', 'links.norg'];
 
 describe('Metadata Generator', () => {
   describe('mode: metadata', () => {
     it.each(fixtures)('should generate correct metadata module for %s', async fixture => {
-      const fixturePath = join(__dirname, '../fixtures', fixture);
+      const fixturePath = join(fixturesDir, fixture);
       const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
       const result = await plugin.load(fixturePath);
       expect(result).toMatchSnapshot();
@@ -27,7 +24,7 @@ describe('Metadata Generator', () => {
     it.each(fixtures)(
       'should generate correct metadata module for %s via ?metadata query',
       async fixture => {
-        const fixturePath = join(__dirname, '../fixtures', fixture);
+        const fixturePath = join(fixturesDir, fixture);
         const plugin = norgPlugin({ mode: 'html', include: ['**/*.norg'] });
         const result = await plugin.load(`${fixturePath}?metadata`);
         expect(result).toMatchSnapshot();
@@ -45,7 +42,7 @@ describe('Metadata Generator', () => {
     it.each(fixtures)(
       'mode: metadata and ?metadata produce identical output for %s',
       async fixture => {
-        const fixturePath = join(__dirname, '../fixtures', fixture);
+        const fixturePath = join(fixturesDir, fixture);
         const metadataPlugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
         const htmlPlugin = norgPlugin({ mode: 'html', include: ['**/*.norg'] });
 
@@ -59,7 +56,7 @@ describe('Metadata Generator', () => {
 
   describe('output format', () => {
     it('should not contain html or CSS imports, but should contain toc', async () => {
-      const fixturePath = join(__dirname, '../fixtures/basic.norg');
+      const fixturePath = join(fixturesDir, 'basic.norg');
       const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
       const result = await plugin.load(fixturePath);
 
@@ -69,7 +66,7 @@ describe('Metadata Generator', () => {
     });
 
     it('should contain metadata export and default export', async () => {
-      const fixturePath = join(__dirname, '../fixtures/basic.norg');
+      const fixturePath = join(fixturesDir, 'basic.norg');
       const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
       const result = await plugin.load(fixturePath);
 
@@ -80,7 +77,7 @@ describe('Metadata Generator', () => {
 
   describe('?metadata on different modes', () => {
     it.each(['html', 'svelte', 'react'] as const)('?metadata works on %s mode', async mode => {
-      const fixturePath = join(__dirname, '../fixtures/basic.norg');
+      const fixturePath = join(fixturesDir, 'basic.norg');
       const plugin = norgPlugin({ mode, include: ['**/*.norg'] });
       const result = await plugin.load(`${fixturePath}?metadata`);
 

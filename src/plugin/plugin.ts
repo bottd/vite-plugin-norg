@@ -2,7 +2,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import { createFilter, type FilterPattern, type HmrContext, type Plugin } from 'vite';
 import { z } from 'zod';
-import { parseNorgWithFramework, getThemeCss } from '@parser';
+import { parseNorg, getThemeCss } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
 
 export type ArboriumConfig =
@@ -38,7 +38,7 @@ const RESOLVED_VIRTUAL_CSS_ID = '\0' + VIRTUAL_CSS_ID;
 const VIRTUAL_DOC_CSS_PREFIX = 'virtual:norg-css:';
 const RESOLVED_VIRTUAL_DOC_CSS_PREFIX = '\0' + VIRTUAL_DOC_CSS_PREFIX;
 
-const FRAMEWORK_EXTENSIONS: Partial<Record<GeneratorMode, string>> = {
+const MODE_EXTENSIONS: Partial<Record<GeneratorMode, string>> = {
   svelte: '.svelte',
   vue: '.vue',
   react: '.jsx',
@@ -61,25 +61,12 @@ function buildCss(config?: ArboriumConfig): string {
   return '';
 }
 
-function frameworkExtension(mode: GeneratorMode): string | null {
-  return FRAMEWORK_EXTENSIONS[mode] ?? null;
-}
-
-const INLINE_EXT_PATTERN = Object.values(FRAMEWORK_EXTENSIONS)
-  .map(e => e.slice(1))
-  .join('|');
-const INLINE_QUERY_RE = new RegExp(
-  `^(.+\\.norg)\\.(?:${INLINE_EXT_PATTERN})\\?inline=(\\d+)(?:&|$)`
-);
-
-function parseInlineQuery(id: string): { basePath: string; index: number } | null {
-  const match = id.match(INLINE_QUERY_RE);
-  if (!match) return null;
-  return { basePath: match[1], index: parseInt(match[2], 10) };
+function modeExtension(mode: GeneratorMode): string | null {
+  return MODE_EXTENSIONS[mode] ?? null;
 }
 
 async function scanComponentDir(dir: string, mode: GeneratorMode): Promise<Map<string, string>> {
-  const ext = frameworkExtension(mode);
+  const ext = modeExtension(mode);
   if (!ext) return new Map();
 
   const entries = await readdir(dir).catch(() => [] as string[]);
@@ -148,24 +135,22 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
   const css = buildCss(arboriumConfig);
   const resolvedComponentDir = componentDir ? resolve(componentDir) : undefined;
 
-  const parseCache = new Map<string, ReturnType<typeof parseNorgWithFramework>>();
+  const parseCache = new Map<string, ReturnType<typeof parseNorg>>();
   const inlineModuleIds = new Map<string, Set<string>>();
+  const inlineModules = new Map<string, { basePath: string; index: number }>();
   let components = new Map<string, string>();
 
   function trackModule(filePath: string, moduleId: string) {
-    let ids = inlineModuleIds.get(filePath);
-    if (!ids) {
-      ids = new Set();
-      inlineModuleIds.set(filePath, ids);
-    }
+    const ids = inlineModuleIds.get(filePath) ?? new Set<string>();
     ids.add(moduleId);
+    inlineModuleIds.set(filePath, ids);
   }
 
   async function cachedParse(filePath: string) {
     let result = parseCache.get(filePath);
     if (!result) {
       const content = await readFile(filePath, 'utf-8');
-      result = parseNorgWithFramework(content, mode);
+      result = parseNorg(content, mode);
       parseCache.set(filePath, result);
     }
     return result;
@@ -215,11 +200,15 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       }
 
       if (id.includes('.norg?inline=') && importer) {
-        const ext = frameworkExtension(mode);
+        const ext = modeExtension(mode);
         if (!ext) return;
         const [relativePath, query] = id.split('?');
-        const absolutePath = resolve(dirname(importer), relativePath);
-        return `${absolutePath}${ext}?${query}`;
+        const basePath = resolve(dirname(importer), relativePath);
+        const index = parseInt(new URLSearchParams(query).get('inline') ?? '', 10);
+        if (Number.isNaN(index)) return;
+        const resolvedId = `${basePath}${ext}?${query}`;
+        inlineModules.set(resolvedId, { basePath, index });
+        return resolvedId;
       }
     },
 
@@ -235,9 +224,9 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return result.inlineCss ?? '';
       }
 
-      const inlineQuery = parseInlineQuery(id);
-      if (inlineQuery) {
-        const { basePath, index } = inlineQuery;
+      const inlineInfo = inlineModules.get(id);
+      if (inlineInfo) {
+        const { basePath, index } = inlineInfo;
         trackModule(basePath, id);
         const result = await cachedParse(basePath);
 
@@ -262,11 +251,15 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
 
       if (!id.endsWith('.norg') || !filter(id)) return;
 
-      const content = await readFile(id, 'utf-8');
-      const result = parseNorgWithFramework(content, mode);
-      parseCache.set(id, result);
+      try {
+        const content = await readFile(id, 'utf-8');
+        const result = parseNorg(content, mode);
+        parseCache.set(id, result);
 
-      return generateOutput(mode, result, css, id);
+        return generateOutput(mode, result, css, id);
+      } catch (error) {
+        this.error(`Failed to parse norg file ${id}: ${error}`);
+      }
     },
 
     async handleHotUpdate(ctx: HmrContext) {

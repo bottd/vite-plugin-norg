@@ -138,34 +138,14 @@ fn convert_link(
                 encode_minimal(display_text)
             )
         }
-        Some(LinkTarget::Footnote(name)) => {
-            eprintln!("Warning: Footnote links not yet implemented: {name:?}");
-            String::new()
-        }
-        Some(LinkTarget::Definition(name)) => {
-            eprintln!("Warning: Definition links not yet implemented: {name:?}");
-            String::new()
-        }
-        Some(LinkTarget::Path(_)) => {
-            eprintln!("Warning: Path links not yet implemented");
-            String::new()
-        }
-        Some(LinkTarget::Timestamp(_)) => {
-            eprintln!("Warning: Timestamp links not yet implemented");
-            String::new()
-        }
-        Some(LinkTarget::Generic(_)) => {
-            eprintln!("Warning: Generic links not yet implemented");
-            String::new()
-        }
-        Some(LinkTarget::Extendable(_)) => {
-            eprintln!("Warning: Extendable links not yet implemented");
-            String::new()
-        }
-        Some(LinkTarget::Wiki(_)) => {
-            eprintln!("Warning: Wiki links not yet implemented");
-            String::new()
-        }
-        None => String::new(),
+        Some(
+            LinkTarget::Footnote(_)
+            | LinkTarget::Definition(_)
+            | LinkTarget::Path(_)
+            | LinkTarget::Timestamp(_)
+            | LinkTarget::Generic(_)
+            | LinkTarget::Extendable(_)
+            | LinkTarget::Wiki(_),
+        ) | None => String::new(),
     }
 }
