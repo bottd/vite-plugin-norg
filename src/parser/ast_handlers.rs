@@ -8,32 +8,45 @@ use rust_norg::{DelimitingModifier, DetachedModifierExtension, NorgASTFlat, Todo
 use textwrap::dedent;
 
 #[derive(Debug)]
-pub struct InlineParseError {
-    pub index: usize,
-    pub kind: InlineParseErrorKind,
+pub enum InlineParseError {
+    MissingLanguage {
+        index: usize,
+    },
+    InvalidLanguage {
+        index: usize,
+        language: String,
+    },
+    LanguageMismatch {
+        index: usize,
+        language: String,
+        mode: OutputMode,
+    },
 }
 
-#[derive(Debug)]
-pub enum InlineParseErrorKind {
-    MissingLanguage,
-    InvalidLanguage { language: String },
-    LanguageMismatch { language: String, mode: OutputMode },
+impl InlineParseError {
+    pub fn index(&self) -> usize {
+        match self {
+            Self::MissingLanguage { index }
+            | Self::InvalidLanguage { index, .. }
+            | Self::LanguageMismatch { index, .. } => *index,
+        }
+    }
 }
 
 impl std::fmt::Display for InlineParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let n = self.index + 1;
+        let n = self.index() + 1;
         let supported = OutputMode::ALL.map(|m| m.as_str()).join(", ");
-        match &self.kind {
-            InlineParseErrorKind::MissingLanguage => write!(
+        match self {
+            Self::MissingLanguage { .. } => write!(
                 f,
                 "Inline error (inline #{n}): missing language. Supported languages: {supported}"
             ),
-            InlineParseErrorKind::InvalidLanguage { language } => write!(
+            Self::InvalidLanguage { language, .. } => write!(
                 f,
                 "Inline error (inline #{n}): invalid language \"{language}\". Supported languages: {supported}"
             ),
-            InlineParseErrorKind::LanguageMismatch { language, mode } => write!(
+            Self::LanguageMismatch { language, mode, .. } => write!(
                 f,
                 "Inline error (inline #{n}): @inline {language} cannot be used in {mode} mode"
             ),
@@ -41,36 +54,10 @@ impl std::fmt::Display for InlineParseError {
     }
 }
 
-pub struct VerbatimTagResult {
-    pub html: Option<String>,
-    pub inline: Option<InlineComponent>,
-    pub css: Option<String>,
-}
-
-impl VerbatimTagResult {
-    fn html_only(html: impl Into<String>) -> Self {
-        Self {
-            html: Some(html.into()),
-            inline: None,
-            css: None,
-        }
-    }
-
-    fn inline_only(inline: InlineComponent) -> Self {
-        Self {
-            html: None,
-            inline: Some(inline),
-            css: None,
-        }
-    }
-
-    fn css_only(css: impl Into<String>) -> Self {
-        Self {
-            html: None,
-            inline: None,
-            css: Some(css.into()),
-        }
-    }
+pub enum VerbatimTagResult {
+    Html(String),
+    Css(String),
+    Inline(InlineComponent),
 }
 
 pub fn nestable_modifier(
@@ -86,15 +73,36 @@ pub fn nestable_modifier(
     }
 }
 
-pub fn verbatim_tag_with_embeds(
+pub enum VerbatimTag {
+    Code,
+    Image,
+    Inline,
+    DocumentMeta,
+    Unknown,
+}
+
+impl VerbatimTag {
+    pub fn from_name(name: &[String]) -> Self {
+        match name {
+            [tag] if tag == "code" => Self::Code,
+            [tag] if tag == "image" => Self::Image,
+            [tag] if tag == "inline" => Self::Inline,
+            [doc, meta] if doc == "document" && meta == "meta" => Self::DocumentMeta,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+pub fn verbatim_tag(
     name: &[String],
     parameters: &[String],
     content: &str,
     mode: Option<OutputMode>,
     highlighter: &mut Highlighter,
-) -> Result<Option<VerbatimTagResult>, InlineParseErrorKind> {
-    match name {
-        [tag] if tag == "code" => {
+    inline_index: usize,
+) -> Result<Option<VerbatimTagResult>, InlineParseError> {
+    match VerbatimTag::from_name(name) {
+        VerbatimTag::Code => {
             let code = dedent(content);
             let lang = parameters
                 .first()
@@ -113,45 +121,47 @@ pub fn verbatim_tag_with_embeds(
                     wrap_lines(&encode_minimal(&code))
                 ),
             };
-            Ok(Some(VerbatimTagResult::html_only(html)))
+            Ok(Some(VerbatimTagResult::Html(html)))
         }
-        [tag] if tag == "image" => Ok(parameters.first().filter(|s| !s.is_empty()).map(|path| {
+        VerbatimTag::Image => Ok(parameters.first().filter(|s| !s.is_empty()).map(|path| {
             let src = if path.starts_with('/') || path.starts_with("http") {
                 path.clone()
             } else {
                 format!("./{path}")
             };
-            VerbatimTagResult::html_only(format!(
+            VerbatimTagResult::Html(format!(
                 r#"<img src="{}" alt="{}" />"#,
                 encode_minimal(&src),
                 encode_minimal(content.trim())
             ))
         })),
-        [tag] if tag == "inline" => {
+        VerbatimTag::Inline => {
             let inline_lang = parameters
                 .first()
                 .filter(|s| !s.is_empty())
                 .map(String::as_str);
 
             match inline_lang {
-                Some("css") => Ok(Some(VerbatimTagResult::css_only(content))),
-                None => Err(InlineParseErrorKind::MissingLanguage),
+                Some("css") => Ok(Some(VerbatimTagResult::Css(content.to_string()))),
+                None => Err(InlineParseError::MissingLanguage {
+                    index: inline_index,
+                }),
                 Some(lang) => {
                     let inline_mode = lang.parse::<OutputMode>().map_err(|_| {
-                        InlineParseErrorKind::InvalidLanguage {
+                        InlineParseError::InvalidLanguage {
+                            index: inline_index,
                             language: lang.to_string(),
                         }
                     })?;
 
                     match mode {
                         None => Ok(None),
-                        Some(m) if m != inline_mode => {
-                            Err(InlineParseErrorKind::LanguageMismatch {
-                                language: lang.to_string(),
-                                mode: m,
-                            })
-                        }
-                        Some(_) => Ok(Some(VerbatimTagResult::inline_only(InlineComponent {
+                        Some(m) if m != inline_mode => Err(InlineParseError::LanguageMismatch {
+                            index: inline_index,
+                            language: lang.to_string(),
+                            mode: m,
+                        }),
+                        Some(_) => Ok(Some(VerbatimTagResult::Inline(InlineComponent {
                             index: 0,
                             mode: inline_mode.to_string(),
                             code: content.to_string(),
@@ -160,8 +170,8 @@ pub fn verbatim_tag_with_embeds(
                 }
             }
         }
-        [doc, meta] if doc == "document" && meta == "meta" => Ok(None),
-        _ => Ok(Some(VerbatimTagResult::html_only(format!(
+        VerbatimTag::DocumentMeta => Ok(None),
+        VerbatimTag::Unknown => Ok(Some(VerbatimTagResult::Html(format!(
             r#"<div class="verbatim">{}</div>"#,
             encode_minimal(content)
         )))),

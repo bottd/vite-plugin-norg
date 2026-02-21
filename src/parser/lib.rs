@@ -48,7 +48,7 @@ pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResu
 
 fn format_inline_error(content: &str, err: &crate::ast_handlers::InlineParseError) -> String {
     let base = err.to_string();
-    if let Some(line) = find_inline_line(content, err.index) {
+    if let Some(line) = find_inline_line(content, err.index()) {
         format!("{base}. Offending line: {line}")
     } else {
         base

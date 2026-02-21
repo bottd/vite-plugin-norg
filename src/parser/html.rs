@@ -26,14 +26,10 @@ impl TransformState {
     }
 
     fn apply_verbatim(&mut self, result: VerbatimTagResult) {
-        if let Some(inline) = result.inline {
-            self.push_inline(inline);
-        }
-        if let Some(html) = result.html {
-            self.push_html(&html);
-        }
-        if let Some(css) = result.css {
-            self.css_blocks.push(css);
+        match result {
+            VerbatimTagResult::Html(html) => self.push_html(&html),
+            VerbatimTagResult::Css(css) => self.css_blocks.push(css),
+            VerbatimTagResult::Inline(inline) => self.push_inline(inline),
         }
     }
 
@@ -108,17 +104,14 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Inli
             content,
             ..
         } => {
-            if let Some(result) = verbatim_tag_with_embeds(
+            if let Some(result) = verbatim_tag(
                 name,
                 parameters,
                 content,
                 state.mode,
                 &mut state.highlighter,
-            )
-            .map_err(|kind| InlineParseError {
-                index: state.inline_components.len(),
-                kind,
-            })? {
+                state.inline_components.len(),
+            )? {
                 state.apply_verbatim(result);
             }
         }
