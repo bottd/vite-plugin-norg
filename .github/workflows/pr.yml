@@ -15,23 +15,14 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Check formatting
-        run: nix fmt -- --fail-on-change
-
       - name: Run Nix flake checks
         run: nix flake check
 
       - name: Build plugin
         run: bun run build
 
-      - name: Run clippy
-        run: cargo clippy
-
       - name: Run eslint
         run: bun run lint
-
-      - name: Run Rust tests
-        run: cargo test
 
       - name: Run JavaScript tests
         run: bun test

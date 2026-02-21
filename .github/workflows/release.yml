@@ -101,20 +101,11 @@ jobs:
       - name: Build JavaScript
         run: bun run build:js
 
-      - name: Check formatting
-        run: nix fmt -- --fail-on-change
-
       - name: Run Nix flake checks
         run: nix flake check
 
-      - name: Run clippy
-        run: cargo clippy
-
       - name: Run eslint
         run: bun run lint
-
-      - name: Run Rust tests
-        run: cargo test
 
       - name: Run JavaScript tests
         run: bun test
