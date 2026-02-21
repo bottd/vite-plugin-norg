@@ -1,3 +1,20 @@
+# [3.0.0](https://github.com/bottd/vite-plugin-norg/compare/v2.3.5...v3.0.0) (2026-02-21)
+
+
+* feat!: add support for inline components and styles ([6bf9424](https://github.com/bottd/vite-plugin-norg/commit/6bf94249922fdbbdaed984f6b828cb353e5f5efa))
+
+
+### Features
+
+* cross-platform compilation ([c955efc](https://github.com/bottd/vite-plugin-norg/commit/c955efc7cc589adbc2986d48f8181b19758351c1))
+
+
+### BREAKING CHANGES
+
+* add support for inline components and styles
+
+update
+
 ## [2.3.5](https://github.com/bottd/vite-plugin-norg/compare/v2.3.4...v2.3.5) (2026-02-19)
 
 ## [2.3.4](https://github.com/bottd/vite-plugin-norg/compare/v2.3.3...v2.3.4) (2026-02-17)
