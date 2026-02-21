@@ -71,11 +71,9 @@ async function scanComponentDir(dir: string, mode: GeneratorMode): Promise<Map<s
 
   const entries = await readdir(dir).catch(() => [] as string[]);
   const components = new Map<string, string>();
-  for (const entry of entries) {
-    if (entry.endsWith(ext)) {
-      components.set(basename(entry, ext), resolve(dir, entry));
-    }
-  }
+  entries
+    .filter(entry => entry.endsWith(ext))
+    .forEach(entry => components.set(basename(entry, ext), resolve(dir, entry)));
   return components;
 }
 
@@ -179,9 +177,9 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       if (resolvedComponentDir) {
         components = await scanComponentDir(resolvedComponentDir, mode);
       }
-      for (const [name, importPath] of Object.entries(explicitComponents ?? {})) {
-        components.set(name, resolve(importPath));
-      }
+      Object.entries(explicitComponents ?? {}).forEach(([name, importPath]) =>
+        components.set(name, resolve(importPath))
+      );
     },
 
     configureServer(server) {
@@ -249,7 +247,8 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return generateOutput('metadata', result, css, filepath);
       }
 
-      if (!id.endsWith('.norg') || !filter(id)) return;
+      const [basePath] = id.split('?', 2);
+      if (!basePath.endsWith('.norg') || !filter(basePath)) return;
 
       try {
         const content = await readFile(id, 'utf-8');
@@ -280,6 +279,8 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
 
       if (!filter(ctx.file) || !ctx.file.endsWith('.norg')) return;
 
+      ctx.modules.forEach(mod => ctx.server.moduleGraph.invalidateModule(mod));
+
       const trackedIds = inlineModuleIds.get(ctx.file);
       if (trackedIds) {
         const invalidated = invalidateModules(ctx, trackedIds);
@@ -287,6 +288,8 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
           return [...ctx.modules, ...invalidated];
         }
       }
+
+      return ctx.modules;
     },
   } satisfies Plugin;
 }
