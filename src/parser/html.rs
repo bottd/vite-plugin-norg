@@ -104,8 +104,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Inli
             content,
             ..
         } => {
-            if let Some(result) = verbatim_tag(
-                name,
+            if let Some(result) = VerbatimTag::from(name.as_slice()).render(
                 parameters,
                 content,
                 state.mode,
