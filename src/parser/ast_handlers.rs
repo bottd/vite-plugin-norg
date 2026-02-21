@@ -137,7 +137,7 @@ pub fn verbatim_tag_with_embeds(
                 Some("css") => Ok(Some(VerbatimTagResult::css_only(content))),
                 None => Err(InlineParseErrorKind::MissingLanguage),
                 Some(lang) => {
-                    let inline_mode = OutputMode::from_str(lang).ok_or_else(|| {
+                    let inline_mode = lang.parse::<OutputMode>().map_err(|_| {
                         InlineParseErrorKind::InvalidLanguage {
                             language: lang.to_string(),
                         }

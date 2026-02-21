@@ -12,22 +12,26 @@ pub enum OutputMode {
 impl OutputMode {
     pub const ALL: [Self; 4] = [Self::Html, Self::Svelte, Self::Vue, Self::React];
 
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "html" => Some(Self::Html),
-            "svelte" => Some(Self::Svelte),
-            "vue" => Some(Self::Vue),
-            "react" => Some(Self::React),
-            _ => None,
-        }
-    }
-
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Html => "html",
             Self::Svelte => "svelte",
             Self::Vue => "vue",
             Self::React => "react",
+        }
+    }
+}
+
+impl std::str::FromStr for OutputMode {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "html" => Ok(Self::Html),
+            "svelte" => Ok(Self::Svelte),
+            "vue" => Ok(Self::Vue),
+            "react" => Ok(Self::React),
+            _ => Err(()),
         }
     }
 }

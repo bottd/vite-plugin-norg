@@ -31,7 +31,7 @@ pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResu
     let ast = rust_norg::parse_tree(&content)
         .map_err(|e| Error::from_reason(format!("Parse error: {e:?}")))?;
 
-    let output_mode = mode.as_deref().and_then(OutputMode::from_str);
+    let output_mode = mode.as_deref().and_then(|s| s.parse().ok());
     let (html_parts, inline_components, inline_css) = transform(&ast, output_mode)
         .map_err(|err| Error::from_reason(format_inline_error(&content, &err)))?;
     let toc = extract_toc(&ast);
