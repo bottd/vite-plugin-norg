@@ -1,3 +1,11 @@
+## [3.0.1](https://github.com/bottd/vite-plugin-norg/compare/v3.0.0...v3.0.1) (2026-02-22)
+
+
+### Bug Fixes
+
+* import css with individual component, not globally ([1e05eee](https://github.com/bottd/vite-plugin-norg/commit/1e05eee6feabba1fcffbf397a032d01b2cd4d06a))
+* import css with individual component, not globally ([485d713](https://github.com/bottd/vite-plugin-norg/commit/485d71306d210d8175a880ec57060709777ac4d7))
+
 # [3.0.0](https://github.com/bottd/vite-plugin-norg/compare/v2.3.5...v3.0.0) (2026-02-21)
 
 
