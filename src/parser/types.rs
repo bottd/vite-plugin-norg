@@ -1,23 +1,25 @@
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 
+#[napi(string_enum)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
 pub enum OutputMode {
-    Html,
-    Svelte,
-    Vue,
-    React,
+    html,
+    svelte,
+    vue,
+    react,
 }
 
 impl OutputMode {
-    pub const ALL: [Self; 4] = [Self::Html, Self::Svelte, Self::Vue, Self::React];
+    pub const ALL: [Self; 4] = [Self::html, Self::svelte, Self::vue, Self::react];
 
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Html => "html",
-            Self::Svelte => "svelte",
-            Self::Vue => "vue",
-            Self::React => "react",
+            Self::html => "html",
+            Self::svelte => "svelte",
+            Self::vue => "vue",
+            Self::react => "react",
         }
     }
 }
@@ -27,10 +29,10 @@ impl std::str::FromStr for OutputMode {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "html" => Ok(Self::Html),
-            "svelte" => Ok(Self::Svelte),
-            "vue" => Ok(Self::Vue),
-            "react" => Ok(Self::React),
+            "html" => Ok(Self::html),
+            "svelte" => Ok(Self::svelte),
+            "vue" => Ok(Self::vue),
+            "react" => Ok(Self::react),
             _ => Err(()),
         }
     }
