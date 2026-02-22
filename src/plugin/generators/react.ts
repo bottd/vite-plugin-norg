@@ -8,17 +8,12 @@ export function generateReact(
 ): string {
   const children = htmlParts
     .flatMap((part, i) => [
-      ...(part
-        ? [
-            `React.createElement("div", { dangerouslySetInnerHTML: { __html: ${JSON.stringify(part)} } })`,
-          ]
-        : []),
-      ...(i < inlineComponents.length ? [`React.createElement(Inline${i})`] : []),
+      ...(part ? [`<div dangerouslySetInnerHTML={{ __html: ${JSON.stringify(part)} }} />`] : []),
+      ...(i < inlineComponents.length ? [`<Inline${i} />`] : []),
     ])
-    .join(', ');
+    .join('\n    ');
 
   return dedent`
-    import React from "react";
     ${css ? 'import "virtual:norg-arborium.css";' : null}
     ${inlineCss && filePath ? `import 'virtual:norg-css:${filePath}';` : null}
     ${addInlineImports(inlineComponents, filePath)}
@@ -26,18 +21,9 @@ export function generateReact(
     export const metadata = ${JSON.stringify(metadata ?? {})};
     export const toc = ${JSON.stringify(toc ?? [])};
 
-    ${
-      inlineComponents.length > 0
-        ? dedent`
-        export const Component = () => React.createElement(React.Fragment, null, ${children});
-        export default Component;
-      `
-        : dedent`
-        const htmlContent = ${JSON.stringify(htmlParts.join(''))};
-
-        export const Component = () => React.createElement("div", { dangerouslySetInnerHTML: { __html: htmlContent } });
-        export default Component;
-      `
+    export function Component() {
+      return <>${children}</>;
     }
+    export default Component;
   `;
 }

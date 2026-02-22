@@ -137,9 +137,9 @@ some code
       const resolved = plugin.resolveId(`${reactFixture}?inline=0`, reactFixture) as string;
       const result = await plugin.load(resolved);
 
-      expect(result).toContain('export default () => <>');
+      expect(result).toContain('export default function NorgInline() { return <>');
       expect(result).toContain('onClick');
-      expect(result).toContain('</>;');
+      expect(result).toContain('</>; }');
     });
 
     it('should inject component imports into react inline modules', async () => {
@@ -153,7 +153,7 @@ some code
 
       expect(result).toContain("import Badge from '");
       expect(result).toContain("import Counter from '");
-      expect(result).toContain('export default () => <>');
+      expect(result).toContain('export default function NorgInline() { return <>');
     });
   });
 
