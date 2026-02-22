@@ -2,7 +2,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import { createFilter, type FilterPattern, type HmrContext, type Plugin } from 'vite';
 import { z } from 'zod';
-import { parseNorg, getThemeCss } from '@parser';
+import { parseNorg, getThemeCss, OutputMode } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
 
 export type ArboriumConfig =
@@ -19,7 +19,7 @@ export interface NorgPluginOptions {
 }
 
 const optionsSchema = z.object({
-  mode: z.enum(['html', 'svelte', 'react', 'vue', 'metadata']),
+  mode: z.enum([OutputMode.html, OutputMode.svelte, OutputMode.react, OutputMode.vue, 'metadata']),
   include: z.any().optional(),
   exclude: z.any().optional(),
   arboriumConfig: z
@@ -38,10 +38,12 @@ const RESOLVED_VIRTUAL_CSS_ID = '\0' + VIRTUAL_CSS_ID;
 const VIRTUAL_DOC_CSS_PREFIX = 'virtual:norg-css:';
 const RESOLVED_VIRTUAL_DOC_CSS_PREFIX = '\0' + VIRTUAL_DOC_CSS_PREFIX;
 
-const MODE_EXTENSIONS: Partial<Record<GeneratorMode, string>> = {
-  svelte: '.svelte',
-  vue: '.vue',
-  react: '.jsx',
+const modeExtensions: Record<GeneratorMode, string | null> = {
+  [OutputMode.html]: null,
+  [OutputMode.svelte]: '.svelte',
+  [OutputMode.vue]: '.vue',
+  [OutputMode.react]: '.jsx',
+  metadata: null,
 };
 
 function buildCss(config?: ArboriumConfig): string {
@@ -61,12 +63,8 @@ function buildCss(config?: ArboriumConfig): string {
   return '';
 }
 
-function modeExtension(mode: GeneratorMode): string | null {
-  return MODE_EXTENSIONS[mode] ?? null;
-}
-
 async function scanComponentDir(dir: string, mode: GeneratorMode): Promise<Map<string, string>> {
-  const ext = modeExtension(mode);
+  const ext = modeExtensions[mode];
   if (!ext) return new Map();
 
   const entries = await readdir(dir).catch(() => [] as string[]);
@@ -95,21 +93,22 @@ function injectComponentImports(
     .map(([name, path]) => `import ${name} from '${path}';`)
     .join('\n');
 
-  if (mode === 'svelte') {
+  if (mode === OutputMode.svelte) {
     return (
       injectAfterTag(code, /<script(?![^>]*\b(?:module|context\s*=))[^>]*>/, imports) ??
       `<script>\n${imports}\n</script>\n${code}`
     );
   }
 
-  if (mode === 'vue') {
+  if (mode === OutputMode.vue) {
+    const wrapped = /<template[\s>]/.test(code) ? code : `<template>\n${code}\n</template>`;
     return (
-      injectAfterTag(code, /<script\s+setup[^>]*>/, imports) ??
-      `<script setup>\n${imports}\n</script>\n${code}`
+      injectAfterTag(wrapped, /<script\s+setup[^>]*>/, imports) ??
+      `<script setup>\n${imports}\n</script>\n${wrapped}`
     );
   }
 
-  if (mode === 'react') {
+  if (mode === OutputMode.react) {
     return imports + '\n' + code;
   }
 
@@ -198,7 +197,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       }
 
       if (id.includes('.norg?inline=') && importer) {
-        const ext = modeExtension(mode);
+        const ext = modeExtensions[mode];
         if (!ext) return;
         const [relativePath, query] = id.split('?');
         const basePath = resolve(dirname(importer), relativePath);
@@ -207,6 +206,21 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         const resolvedId = `${basePath}${ext}?${query}`;
         inlineModules.set(resolvedId, { basePath, index });
         return resolvedId;
+      }
+
+      // Rewrite .norg → .norg.{vue,svelte,jsx} so framework plugins process them.
+      const ext = modeExtensions[mode];
+      if (!ext || !id.endsWith('.norg') || id.includes('?')) return;
+
+      let basePath: string | undefined;
+      if (id.startsWith('/')) {
+        basePath = id;
+      } else if (importer) {
+        basePath = resolve(dirname(importer), id);
+      }
+
+      if (basePath && filter(basePath)) {
+        return `${basePath}${ext}`;
       }
     },
 
@@ -234,29 +248,34 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         }
 
         let code = inline.code;
-        if (mode === 'react') {
-          code = `export default () => <>${code}</>;`;
+        if (mode === OutputMode.react) {
+          code = `export default function NorgInline() { return <>${code}</>; }`;
         }
 
         return injectComponentImports(code, components, mode);
       }
 
-      const [basePath, query] = id.split('?', 2);
-      if (!basePath.endsWith('.norg') || !filter(basePath)) return;
+      const fwExt = modeExtensions[mode];
+      let norgPath: string | undefined;
+      let outputMode: GeneratorMode = mode;
 
-      if (query === 'metadata') {
-        const result = await cachedParse(basePath);
-        return generateOutput('metadata', result, css, basePath);
+      if (fwExt && id.endsWith(`.norg${fwExt}`) && !id.includes('?')) {
+        norgPath = id.slice(0, -fwExt.length);
+      } else {
+        const [basePath, query] = id.split('?', 2);
+        if (basePath.endsWith('.norg') && filter(basePath)) {
+          norgPath = basePath;
+          if (query === 'metadata') outputMode = 'metadata';
+        }
       }
 
-      try {
-        const content = await readFile(basePath, 'utf-8');
-        const result = parseNorg(content, mode);
-        parseCache.set(basePath, result);
+      if (!norgPath) return;
 
-        return generateOutput(mode, result, css, basePath);
+      try {
+        const result = await cachedParse(norgPath);
+        return generateOutput(outputMode, result, css, norgPath);
       } catch (error) {
-        this.error(`Failed to parse norg file ${id}: ${error}`);
+        this.error(`Failed to parse norg file ${norgPath}: ${error}`);
       }
     },
 
