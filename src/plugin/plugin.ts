@@ -194,7 +194,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       }
 
       if (id.startsWith(VIRTUAL_DOC_CSS_PREFIX)) {
-        return '\0' + id;
+        return '\0' + id + '.css';
       }
 
       if (id.includes('.norg?inline=') && importer) {
@@ -215,8 +215,8 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return css;
       }
 
-      if (id.startsWith(RESOLVED_VIRTUAL_DOC_CSS_PREFIX)) {
-        const filePath = id.slice(RESOLVED_VIRTUAL_DOC_CSS_PREFIX.length);
+      if (id.startsWith(RESOLVED_VIRTUAL_DOC_CSS_PREFIX) && id.endsWith('.css')) {
+        const filePath = id.slice(RESOLVED_VIRTUAL_DOC_CSS_PREFIX.length, -4);
         trackModule(filePath, id);
         const result = await cachedParse(filePath);
         return result.inlineCss ?? '';
@@ -241,21 +241,20 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return injectComponentImports(code, components, mode);
       }
 
-      const [filepath, query] = id.split('?', 2);
-      if (query === 'metadata' && filepath.endsWith('.norg') && filter(filepath)) {
-        const result = await cachedParse(filepath);
-        return generateOutput('metadata', result, css, filepath);
-      }
-
-      const [basePath] = id.split('?', 2);
+      const [basePath, query] = id.split('?', 2);
       if (!basePath.endsWith('.norg') || !filter(basePath)) return;
 
-      try {
-        const content = await readFile(id, 'utf-8');
-        const result = parseNorg(content, mode);
-        parseCache.set(id, result);
+      if (query === 'metadata') {
+        const result = await cachedParse(basePath);
+        return generateOutput('metadata', result, css, basePath);
+      }
 
-        return generateOutput(mode, result, css, id);
+      try {
+        const content = await readFile(basePath, 'utf-8');
+        const result = parseNorg(content, mode);
+        parseCache.set(basePath, result);
+
+        return generateOutput(mode, result, css, basePath);
       } catch (error) {
         this.error(`Failed to parse norg file ${id}: ${error}`);
       }
