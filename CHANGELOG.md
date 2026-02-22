@@ -1,3 +1,10 @@
+## [3.0.2](https://github.com/bottd/vite-plugin-norg/compare/v3.0.1...v3.0.2) (2026-02-22)
+
+
+### Bug Fixes
+
+* add framework extensions to vite modules ([fc5371b](https://github.com/bottd/vite-plugin-norg/commit/fc5371b9c711629fd63cde9fafdd02fefc1e5783))
+
 ## [3.0.1](https://github.com/bottd/vite-plugin-norg/compare/v3.0.0...v3.0.1) (2026-02-22)
 
 
