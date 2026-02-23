@@ -142,16 +142,27 @@ interface NorgPluginOptions {
 }
 ```
 
-### Component Registration
+### Inline Components
 
-Register framework components for use in inline norg blocks. `componentDir` will auto-import any referenced components within the specified directory. `components` is for creating your own explicit import path mappings.
+Inline components can be referenced within `.norg` documents using `@inline`:
+
+```norg
+* Example document
+With some regular text
+
+@inline svelte
+<Chart variant="bar" />
+@end
+```
+
+To configure components for usage inline, set either `componentDir` or map imports directly with `components`.
 
 ```typescript
 norgPlugin({
-  mode: 'react',
+  mode: 'svelte',
   componentDir: './src/components',
   components: {
-    Chart: './src/lib/Chart.jsx',
+    Chart: './src/lib/Chart.svelte',
   },
 });
 ```
