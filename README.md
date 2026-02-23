@@ -17,13 +17,13 @@ npm install -D vite-plugin-norg
 ## Setup
 
 ```typescript
-import { defineConfig } from 'vite';
-import { norgPlugin } from 'vite-plugin-norg';
+import { defineConfig } from "vite";
+import { norgPlugin } from "vite-plugin-norg";
 
 export default defineConfig({
   plugins: [
     norgPlugin({
-      mode: 'html',
+      mode: "html",
     }),
   ],
 });
@@ -55,7 +55,7 @@ This provides type checking for `.norg` modules
 ### HTML Output
 
 ```javascript
-import { metadata, html } from './document.norg';
+import { metadata, html } from "./document.norg";
 console.log(metadata.title); // "My Document"
 document.body.innerHTML = html;
 ```
@@ -63,7 +63,7 @@ document.body.innerHTML = html;
 ### React Output
 
 ```jsx
-import { metadata, Component } from './document.norg';
+import { metadata, Component } from "./document.norg";
 
 export default function App() {
   return (
@@ -90,7 +90,7 @@ export default function App() {
 
 ```vue
 <script setup>
-import Document, { metadata } from './document.norg';
+import Document, { metadata } from "./document.norg";
 </script>
 
 <template>
@@ -102,7 +102,7 @@ import Document, { metadata } from './document.norg';
 ### Metadata Output
 
 ```javascript
-import { metadata, toc } from './document.norg';
+import { metadata, toc } from "./document.norg";
 console.log(metadata.title); // "My Document"
 console.log(toc); // [{ title: "Section 1", level: 1 }, ...]
 ```
@@ -110,16 +110,16 @@ console.log(toc); // [{ title: "Section 1", level: 1 }, ...]
 You can also append `?metadata` to any import to get metadata-only output regardless of mode:
 
 ```javascript
-import { metadata, toc } from './document.norg?metadata';
+import { metadata, toc } from "./document.norg?metadata";
 ```
 
 ## Configuration Reference
 
 ```typescript
-import type { FilterPattern } from 'vite';
+import type { FilterPattern } from "vite";
 
 interface NorgPluginOptions {
-  mode: 'html' | 'react' | 'svelte' | 'vue' | 'metadata';
+  mode: "html" | "react" | "svelte" | "vue" | "metadata";
   include?: FilterPattern;
   exclude?: FilterPattern;
 
@@ -142,7 +142,20 @@ interface NorgPluginOptions {
 }
 ```
 
-### Inline Components
+## Code Syntax Highlighting
+
+Code blocks are highlighted using [arborium](https://arborium.bearcove.eu/), which generates highlights via tree-sitter. Set a theme to include highlights:
+
+```typescript
+norgPlugin({
+  mode: "html",
+  arboriumConfig: { theme: "github-dark" },
+});
+```
+
+See the [arborium themes](https://github.com/bearcove/arborium?tab=readme-ov-file#themes) for available options.
+
+## Inline Components
 
 Inline components can be referenced within `.norg` documents using `@inline`:
 
@@ -159,26 +172,28 @@ To configure components for usage inline, set either `componentDir` or map impor
 
 ```typescript
 norgPlugin({
-  mode: 'svelte',
-  componentDir: './src/components',
+  mode: "svelte",
+  componentDir: "./src/components",
   components: {
-    Chart: './src/lib/Chart.svelte',
+    Chart: "./src/lib/Chart.svelte",
   },
 });
 ```
 
-## Code Syntax Highlighting
+## Inline Styles
 
-Code blocks are highlighted using [arborium](https://arborium.bearcove.eu/), which generates highlights via tree-sitter. Set a theme to include highlights:
+Document styles can be inlined as well using `@inline css`. All frameworks will import inlined styles when rendering the document.
 
-```typescript
-norgPlugin({
-  mode: 'html',
-  arboriumConfig: { theme: 'github-dark' },
-});
+```norg
+* Example document
+With some regular text
+
+@inline css
+  h2 {
+    color: red;
+  }
+@end
 ```
-
-See the [arborium themes](https://github.com/bearcove/arborium?tab=readme-ov-file#themes) for available options.
 
 **Requirements:**
 
