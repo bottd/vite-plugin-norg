@@ -189,7 +189,7 @@ Document styles can be inlined as well using `@inline css`. All frameworks will 
 With some regular text
 
 @inline css
-  h2 {
+  h1 {
     color: red;
   }
 @end
