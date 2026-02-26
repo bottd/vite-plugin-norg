@@ -26,3 +26,10 @@ jobs:
 
       - name: Run JavaScript tests
         run: bun test
+
+      - name: Build examples
+        run: |
+          for dir in examples/svelte examples/vue examples/react examples/html site; do
+            echo "Building $dir..."
+            cd $dir && bun run build && cd ../..
+          done
