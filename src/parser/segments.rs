@@ -96,17 +96,10 @@ fn convert_link(
             } else if url.starts_with("http") {
                 url.as_str()
             } else if let Some(base) = url.strip_suffix(".norg") {
-                return if url.starts_with("http") && filepath.is_none() {
-                    format!(
-                        r#"<a href="{base}.html" target="_blank">{}</a>"#,
-                        encode_minimal(display_text)
-                    )
-                } else {
-                    format!(
-                        r#"<a href="{base}.html">{}</a>"#,
-                        encode_minimal(display_text)
-                    )
-                };
+                return format!(
+                    r#"<a href="{base}.html">{}</a>"#,
+                    encode_minimal(display_text)
+                );
             } else {
                 url.as_str()
             };

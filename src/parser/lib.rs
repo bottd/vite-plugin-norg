@@ -9,7 +9,7 @@ mod utils;
 pub use html::transform;
 pub use metadata::extract_metadata;
 pub use toc::extract_toc;
-pub use types::{InlineComponent, OutputMode, TocEntry};
+pub use types::{EmbedComponent, OutputMode, TocEntry};
 pub use utils::into_slug;
 
 use arborium::theme::builtin;
@@ -22,8 +22,8 @@ pub struct NorgParseResult {
     pub metadata: Map<String, serde_json::Value>,
     pub html_parts: Vec<String>,
     pub toc: Vec<TocEntry>,
-    pub inline_components: Vec<InlineComponent>,
-    pub inline_css: String,
+    pub embed_components: Vec<EmbedComponent>,
+    pub embed_css: String,
 }
 
 #[napi]
@@ -32,8 +32,8 @@ pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResu
         .map_err(|e| Error::from_reason(format!("Parse error: {e:?}")))?;
 
     let output_mode = mode.as_deref().and_then(|s| s.parse().ok());
-    let (html_parts, inline_components, inline_css) = transform(&ast, output_mode)
-        .map_err(|err| Error::from_reason(format_inline_error(&content, &err)))?;
+    let (html_parts, embed_components, embed_css) = transform(&ast, output_mode)
+        .map_err(|err| Error::from_reason(format_embed_error(&content, &err)))?;
     let toc = extract_toc(&ast);
     let metadata = extract_metadata(&ast);
 
@@ -41,25 +41,25 @@ pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResu
         metadata,
         html_parts,
         toc,
-        inline_components,
-        inline_css,
+        embed_components,
+        embed_css,
     })
 }
 
-fn format_inline_error(content: &str, err: &crate::ast_handlers::InlineParseError) -> String {
+fn format_embed_error(content: &str, err: &crate::ast_handlers::EmbedParseError) -> String {
     let base = err.to_string();
-    if let Some(line) = find_inline_line(content, err.index()) {
+    if let Some(line) = find_embed_line(content, err.index()) {
         format!("{base}. Offending line: {line}")
     } else {
         base
     }
 }
 
-fn find_inline_line(content: &str, index: usize) -> Option<String> {
+fn find_embed_line(content: &str, index: usize) -> Option<String> {
     let mut count = 0;
     for line in content.lines() {
         let trimmed = line.trim_start();
-        if let Some(rest) = trimmed.strip_prefix("@inline")
+        if let Some(rest) = trimmed.strip_prefix("@embed")
             && (rest.is_empty() || rest.chars().next().is_none_or(|c| c.is_whitespace()))
         {
             if count == index {

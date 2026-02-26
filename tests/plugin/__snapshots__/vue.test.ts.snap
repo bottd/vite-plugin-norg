@@ -80,9 +80,9 @@ defineExpose({ metadata, toc });
 </template>"
 `;
 
-exports[`Vue Generator generates correct output for inline-css.norg 1`] = `
+exports[`Vue Generator generates correct output for embed-css.norg 1`] = `
 "<script lang="ts">
-export const metadata = {"title":"Inline CSS Test"};
+export const metadata = {"title":"Embed CSS Test"};
 export const toc = [{"level":1,"title":"Styled Content","id":"styled-content"},{"level":1,"title":"More Styled Content","id":"more-styled-content"}];
 </script>
 <script setup lang="ts">
@@ -94,7 +94,6 @@ defineExpose({ metadata, toc });
 <template>
   <div v-html="htmlContent"></div>
 </template>
-
 <style>.styled-heading {
   color: blue;
   font-size: 2rem;

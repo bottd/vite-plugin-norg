@@ -52,11 +52,11 @@ pub struct TocEntry {
     pub id: String,
 }
 
-/// An inline block extracted from an @inline tag
+/// An embed block extracted from an @embed tag
 #[napi(object)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InlineComponent {
-    /// Position of this inline component in the document (0-indexed)
+pub struct EmbedComponent {
+    /// Position of this embed component in the document (0-indexed)
     pub index: u32,
     /// Target mode ("html" | "svelte" | "vue" | "react")
     pub mode: String,

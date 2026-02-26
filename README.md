@@ -155,20 +155,20 @@ norgPlugin({
 
 See the [arborium themes](https://github.com/bearcove/arborium?tab=readme-ov-file#themes) for available options.
 
-## Inline Components
+## Embed Components
 
-Inline components can be referenced within `.norg` documents using `@inline`:
+Embed components can be referenced within `.norg` documents using `@embed`:
 
 ```norg
 * Example document
 With some regular text
 
-@inline svelte
+@embed svelte
 <Chart variant="bar" />
 @end
 ```
 
-To configure components for usage inline, set either `componentDir` or map imports directly with `components`.
+To configure components for usage with embeds, set either `componentDir` or map imports directly with `components`.
 
 ```typescript
 norgPlugin({
@@ -180,16 +180,16 @@ norgPlugin({
 });
 ```
 
-## Inline Styles
+## Embed Styles
 
-Document styles can be inlined as well using `@inline css`. All frameworks will import inlined styles when rendering the document.
+Document styles can be embedded as well using `@embed css`. All frameworks will import embedded styles when rendering the document.
 
 ```norg
 * Example document
 With some regular text
 
-@inline css
-  h1 {
+@embed css
+  h2 {
     color: red;
   }
 @end

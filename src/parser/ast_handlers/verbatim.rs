@@ -1,5 +1,5 @@
-use super::error::InlineParseError;
-use crate::types::{InlineComponent, OutputMode};
+use super::error::EmbedParseError;
+use crate::types::{EmbedComponent, OutputMode};
 use arborium::Highlighter;
 use htmlescape::encode_minimal;
 use itertools::Itertools;
@@ -8,13 +8,13 @@ use textwrap::dedent;
 pub enum VerbatimTagResult {
     Html(String),
     Css(String),
-    Inline(InlineComponent),
+    Embed(EmbedComponent),
 }
 
 pub enum VerbatimTag {
     Code,
     Image,
-    Inline,
+    Embed,
     DocumentMeta,
     Unknown,
 }
@@ -24,7 +24,7 @@ impl From<&[String]> for VerbatimTag {
         match name {
             [tag] if tag == "code" => Self::Code,
             [tag] if tag == "image" => Self::Image,
-            [tag] if tag == "inline" => Self::Inline,
+            [tag] if tag == "embed" => Self::Embed,
             [doc, meta] if doc == "document" && meta == "meta" => Self::DocumentMeta,
             _ => Self::Unknown,
         }
@@ -38,8 +38,8 @@ impl VerbatimTag {
         content: &str,
         mode: Option<OutputMode>,
         highlighter: &mut Highlighter,
-        inline_index: usize,
-    ) -> Result<Option<VerbatimTagResult>, InlineParseError> {
+        embed_index: usize,
+    ) -> Result<Option<VerbatimTagResult>, EmbedParseError> {
         match self {
             Self::Code => {
                 let code = dedent(content);
@@ -74,37 +74,33 @@ impl VerbatimTag {
                     encode_minimal(content.trim())
                 ))
             })),
-            Self::Inline => {
-                let inline_lang = parameters
+            Self::Embed => {
+                let embed_lang = parameters
                     .first()
                     .filter(|s| !s.is_empty())
                     .map(String::as_str);
 
-                match inline_lang {
+                match embed_lang {
                     Some("css") => Ok(Some(VerbatimTagResult::Css(content.to_string()))),
-                    None => Err(InlineParseError::MissingLanguage {
-                        index: inline_index,
-                    }),
+                    None => Err(EmbedParseError::MissingLanguage { index: embed_index }),
                     Some(lang) => {
-                        let inline_mode = lang.parse::<OutputMode>().map_err(|_| {
-                            InlineParseError::InvalidLanguage {
-                                index: inline_index,
+                        let embed_mode = lang.parse::<OutputMode>().map_err(|_| {
+                            EmbedParseError::InvalidLanguage {
+                                index: embed_index,
                                 language: lang.to_string(),
                             }
                         })?;
 
                         match mode {
                             None => Ok(None),
-                            Some(m) if m != inline_mode => {
-                                Err(InlineParseError::LanguageMismatch {
-                                    index: inline_index,
-                                    language: lang.to_string(),
-                                    mode: m,
-                                })
-                            }
-                            Some(_) => Ok(Some(VerbatimTagResult::Inline(InlineComponent {
+                            Some(m) if m != embed_mode => Err(EmbedParseError::LanguageMismatch {
+                                index: embed_index,
+                                language: lang.to_string(),
+                                mode: m,
+                            }),
+                            Some(_) => Ok(Some(VerbatimTagResult::Embed(EmbedComponent {
                                 index: 0,
-                                mode: inline_mode.to_string(),
+                                mode: embed_mode.to_string(),
                                 code: content.to_string(),
                             }))),
                         }

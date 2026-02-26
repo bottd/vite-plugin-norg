@@ -40,9 +40,9 @@ exports[`Svelte Generator generates correct output for links.norg 1`] = `
 {@html "<h1 id=\\"link-types\\">Link Types</h1>\\n<h2 id=\\"url-links\\">URL Links</h2>\\n<p><a href=\\"https://example.com\\" target=\\"_blank\\">https://example.com</a> <a href=\\"https://github.com/nvim-neorg\\" target=\\"_blank\\">Neorg GitHub</a></p>\\n<h2 id=\\"file-links\\">File Links</h2>\\n<h2 id=\\"heading-links\\">Heading Links</h2>\\n<p><a href=\\"#token-text-main-token-whitespace-token-text-heading\\">Token(Text(&quot;Main&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-sub-token-whitespace-token-text-heading\\">Token(Text(&quot;Sub&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-introduction\\">Custom link text</a></p>\\n<h2 id=\\"mixed-content\\">Mixed Content</h2>\\n<p>This paragraph has a <a href=\\"https://rust-lang.org\\" target=\\"_blank\\">Rust website</a> and .</p>\\n"}"
 `;
 
-exports[`Svelte Generator generates correct output for inline-css.norg 1`] = `
+exports[`Svelte Generator generates correct output for embed-css.norg 1`] = `
 "<script lang="ts" module>
-  export const metadata = {"title":"Inline CSS Test"};
+  export const metadata = {"title":"Embed CSS Test"};
   export const toc = [{"level":1,"title":"Styled Content","id":"styled-content"},{"level":1,"title":"More Styled Content","id":"more-styled-content"}];
 </script>
 {@html "<style>.styled-heading {\\n  color: blue;\\n  font-size: 2rem;\\n}\\n\\n.norg-content p {\\n  line-height: 1.6;\\n  margin-bottom: 1rem;\\n}\\n</style>"}
