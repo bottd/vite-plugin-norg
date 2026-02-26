@@ -1,0 +1,55 @@
+@document.meta
+title: Getting Started
+description: Set up vite-plugin-norg in your project
+@end
+
+* Getting Started
+
+  Get up and running with vite-plugin-norg in under 5 minutes.
+
+** Installation
+
+   @code bash
+   bun add -D vite-plugin-norg
+   @end
+
+** Vite Configuration
+
+   @code typescript
+   import { svelte } from '@sveltejs/vite-plugin-svelte';
+   import { norgPlugin } from 'vite-plugin-norg';
+   import { defineConfig } from 'vite';
+
+   export default defineConfig({
+     plugins: [
+       norgPlugin({
+         mode: 'svelte',
+         arboriumConfig: { theme: 'github-dark' }
+       }),
+       svelte()
+     ]
+   });
+   @end
+
+** TypeScript Setup
+
+   Add a type reference in your `env.d.ts`:
+
+   @code typescript
+   /// <reference types="vite-plugin-norg/svelte" />
+   @end
+
+** Your First Import
+
+   Import a `.norg` file in any Svelte component:
+
+   @code svelte
+   <script lang="ts">
+     import Content, { metadata, toc } from './content/page.norg';
+   </script>
+
+   <h1>{metadata.title}</h1>
+   <Content />
+   @end
+
+   The plugin parses the Norg file and generates a Svelte component with exported `metadata` and `toc`.
