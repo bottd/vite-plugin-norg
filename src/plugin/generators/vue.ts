@@ -1,18 +1,18 @@
 import type { NorgParseResult } from '@parser';
-import { dedent, addInlineImports } from './helpers';
+import { dedent, addEmbedImports } from './helpers';
 
 export function generateVue(
-  { htmlParts, metadata, toc, inlineComponents = [], inlineCss = '' }: NorgParseResult,
+  { htmlParts, metadata, toc, embedComponents = [], embedCss = '' }: NorgParseResult,
   css: string,
   filePath?: string
 ): string {
   const templateContent =
-    inlineComponents.length === 0
+    embedComponents.length === 0
       ? '<div v-html="htmlContent"></div>'
       : `<div>\n${htmlParts
           .flatMap((part, i) => [
-            ...(part ? [`  <div v-html="htmlParts[${i}]"></div>`] : []),
-            ...(i < inlineComponents.length ? [`  <Inline${i} />`] : []),
+            `  <div v-html="htmlParts[${i}]"></div>`,
+            ...(i < embedComponents.length ? [`  <Embed${i} />`] : []),
           ])
           .join('\n')}\n</div>`;
 
@@ -23,9 +23,9 @@ export function generateVue(
     </script>
     <script setup lang="ts">
     ${css ? 'import "virtual:norg-arborium.css";' : null}
-    ${addInlineImports(inlineComponents, filePath)}
+    ${addEmbedImports(embedComponents, filePath)}
     ${
-      inlineComponents.length > 0
+      embedComponents.length > 0
         ? `const htmlParts = ${JSON.stringify(htmlParts)};`
         : `const htmlContent = ${JSON.stringify(htmlParts.join(''))};`
     }
@@ -36,7 +36,6 @@ export function generateVue(
     <template>
       ${templateContent}
     </template>
-    ${inlineCss ? '' : null}
-    ${inlineCss ? `<style>${inlineCss}</style>` : null}
+    ${embedCss ? `<style>${embedCss}</style>` : null}
   `;
 }

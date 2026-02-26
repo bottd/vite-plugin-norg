@@ -1,4 +1,4 @@
-import type { InlineComponent } from '@parser';
+import type { EmbedComponent } from '@parser';
 import dedentBase from 'dedent';
 
 const SKIP = '\0';
@@ -13,12 +13,12 @@ export function dedent(strings: TemplateStringsArray, ...values: unknown[]): str
     .join('\n');
 }
 
-export function addInlineImports(
-  inlineComponents: InlineComponent[],
+export function addEmbedImports(
+  embedComponents: EmbedComponent[],
   filePath?: string
 ): string | null {
-  if (inlineComponents.length === 0) return null;
-  return inlineComponents
-    .map((_, i) => `import Inline${i} from '${filePath}?inline=${i}';`)
+  if (embedComponents.length === 0) return null;
+  return embedComponents
+    .map((_, i) => `import Embed${i} from '${filePath}?embed=${i}';`)
     .join('\n');
 }

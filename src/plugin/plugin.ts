@@ -133,14 +133,14 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
   const resolvedComponentDir = componentDir ? resolve(componentDir) : undefined;
 
   const parseCache = new Map<string, ReturnType<typeof parseNorg>>();
-  const inlineModuleIds = new Map<string, Set<string>>();
-  const inlineModules = new Map<string, { basePath: string; index: number }>();
+  const embedModuleIds = new Map<string, Set<string>>();
+  const embedModules = new Map<string, { basePath: string; index: number }>();
   let components = new Map<string, string>();
 
   function trackModule(filePath: string, moduleId: string) {
-    const ids = inlineModuleIds.get(filePath) ?? new Set<string>();
+    const ids = embedModuleIds.get(filePath) ?? new Set<string>();
     ids.add(moduleId);
-    inlineModuleIds.set(filePath, ids);
+    embedModuleIds.set(filePath, ids);
   }
 
   async function cachedParse(filePath: string) {
@@ -196,15 +196,15 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return '\0' + id + '.css';
       }
 
-      if (id.includes('.norg?inline=') && importer) {
+      if (id.includes('.norg?embed=') && importer) {
         const ext = modeExtensions[mode];
         if (!ext) return;
         const [relativePath, query] = id.split('?');
         const basePath = resolve(dirname(importer), relativePath);
-        const index = parseInt(new URLSearchParams(query).get('inline') ?? '', 10);
+        const index = parseInt(new URLSearchParams(query).get('embed') ?? '', 10);
         if (Number.isNaN(index)) return;
         const resolvedId = `${basePath}${ext}?${query}`;
-        inlineModules.set(resolvedId, { basePath, index });
+        embedModules.set(resolvedId, { basePath, index });
         return resolvedId;
       }
 
@@ -233,23 +233,23 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         const filePath = id.slice(RESOLVED_VIRTUAL_DOC_CSS_PREFIX.length, -4);
         trackModule(filePath, id);
         const result = await cachedParse(filePath);
-        return result.inlineCss ?? '';
+        return result.embedCss ?? '';
       }
 
-      const inlineInfo = inlineModules.get(id);
-      if (inlineInfo) {
-        const { basePath, index } = inlineInfo;
+      const embedInfo = embedModules.get(id);
+      if (embedInfo) {
+        const { basePath, index } = embedInfo;
         trackModule(basePath, id);
         const result = await cachedParse(basePath);
 
-        const inline = result.inlineComponents?.[index];
-        if (!inline) {
-          throw new Error(`Inline component ${index} not found in ${basePath}`);
+        const embed = result.embedComponents?.[index];
+        if (!embed) {
+          throw new Error(`Embed component ${index} not found in ${basePath}`);
         }
 
-        let code = inline.code;
+        let code = embed.code;
         if (mode === OutputMode.react) {
-          code = `export default function NorgInline() { return <>${code}</>; }`;
+          code = `export default function NorgEmbed() { return <>${code}</>; }`;
         }
 
         return injectComponentImports(code, components, mode);
@@ -283,7 +283,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       if (resolvedComponentDir && ctx.file.startsWith(resolvedComponentDir + '/')) {
         components = await scanComponentDir(resolvedComponentDir, mode);
 
-        const allIds = [...inlineModuleIds.values()].flatMap(ids => [...ids]);
+        const allIds = [...embedModuleIds.values()].flatMap(ids => [...ids]);
         const invalidated = invalidateModules(ctx, allIds);
         if (invalidated.length > 0) {
           return [...ctx.modules, ...invalidated];
@@ -299,7 +299,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
 
       ctx.modules.forEach(mod => ctx.server.moduleGraph.invalidateModule(mod));
 
-      const trackedIds = inlineModuleIds.get(ctx.file);
+      const trackedIds = embedModuleIds.get(ctx.file);
       if (trackedIds) {
         const invalidated = invalidateModules(ctx, trackedIds);
         if (invalidated.length > 0) {

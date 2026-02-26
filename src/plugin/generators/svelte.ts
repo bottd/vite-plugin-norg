@@ -1,16 +1,16 @@
 import type { NorgParseResult } from '@parser';
-import { dedent, addInlineImports } from './helpers';
+import { dedent, addEmbedImports } from './helpers';
 
 export function generateSvelte(
-  { htmlParts, metadata, toc, inlineComponents = [], inlineCss = '' }: NorgParseResult,
+  { htmlParts, metadata, toc, embedComponents = [], embedCss = '' }: NorgParseResult,
   css: string,
   filePath?: string
 ): string {
-  const hasImports = !!(css || inlineComponents.length);
+  const hasImports = !!(css || embedComponents.length);
   const body = htmlParts
     .flatMap((part, i) => [
-      ...(part ? [`{@html ${JSON.stringify(part)}}`] : []),
-      ...(i < inlineComponents.length ? [`<Inline${i} />`] : []),
+      `{@html ${JSON.stringify(part)}}`,
+      ...(i < embedComponents.length ? [`<Embed${i} />`] : []),
     ])
     .join('\n');
 
@@ -21,9 +21,9 @@ export function generateSvelte(
     </script>
     ${hasImports ? '<script lang="ts">' : null}
       ${css ? 'import "virtual:norg-arborium.css";' : null}
-      ${addInlineImports(inlineComponents, filePath)}
+      ${addEmbedImports(embedComponents, filePath)}
     ${hasImports ? '</script>' : null}
-    ${inlineCss ? `{@html ${JSON.stringify(`<style>${inlineCss}</style>`)}}` : null}
+    ${embedCss ? `{@html ${JSON.stringify(`<style>${embedCss}</style>`)}}` : null}
     ${body}
   `;
 }
