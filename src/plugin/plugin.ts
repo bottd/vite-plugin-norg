@@ -207,21 +207,6 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         embedModules.set(resolvedId, { basePath, index });
         return resolvedId;
       }
-
-      // Rewrite .norg → .norg.{vue,svelte,jsx} so framework plugins process them.
-      const ext = modeExtensions[mode];
-      if (!ext || !id.endsWith('.norg') || id.includes('?')) return;
-
-      let basePath: string | undefined;
-      if (id.startsWith('/')) {
-        basePath = id;
-      } else if (importer) {
-        basePath = resolve(dirname(importer), id);
-      }
-
-      if (basePath && filter(basePath)) {
-        return `${basePath}${ext}`;
-      }
     },
 
     async load(id: string) {
@@ -255,27 +240,16 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return injectComponentImports(code, components, mode);
       }
 
-      const fwExt = modeExtensions[mode];
-      let norgPath: string | undefined;
-      let outputMode: GeneratorMode = mode;
+      const [basePath, query] = id.split('?', 2);
+      if (!basePath.endsWith('.norg') || !filter(basePath)) return;
 
-      if (fwExt && id.endsWith(`.norg${fwExt}`) && !id.includes('?')) {
-        norgPath = id.slice(0, -fwExt.length);
-      } else {
-        const [basePath, query] = id.split('?', 2);
-        if (basePath.endsWith('.norg') && filter(basePath)) {
-          norgPath = basePath;
-          if (query === 'metadata') outputMode = 'metadata';
-        }
-      }
-
-      if (!norgPath) return;
+      const outputMode: GeneratorMode = query === 'metadata' ? 'metadata' : mode;
 
       try {
-        const result = await cachedParse(norgPath);
-        return generateOutput(outputMode, result, css, norgPath);
+        const result = await cachedParse(basePath);
+        return generateOutput(outputMode, result, css, basePath);
       } catch (error) {
-        this.error(`Failed to parse norg file ${norgPath}: ${error}`);
+        this.error(`Failed to parse norg file ${basePath}: ${error}`);
       }
     },
 
