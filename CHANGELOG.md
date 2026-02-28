@@ -1,3 +1,10 @@
+## [3.0.4](https://github.com/bottd/vite-plugin-norg/compare/v3.0.3...v3.0.4) (2026-02-28)
+
+
+### Bug Fixes
+
+* remove framework resolveId extension - caused issues with sveltekit ([afcae10](https://github.com/bottd/vite-plugin-norg/commit/afcae1066515e10f87212ddc759900ad42a603c7))
+
 ## [3.0.3](https://github.com/bottd/vite-plugin-norg/compare/v3.0.2...v3.0.3) (2026-02-26)
 
 ## [3.0.2](https://github.com/bottd/vite-plugin-norg/compare/v3.0.1...v3.0.2) (2026-02-22)
