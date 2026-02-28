@@ -1,6 +1,12 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
-import { createFilter, type FilterPattern, type HmrContext, type Plugin } from 'vite';
+import {
+  createFilter,
+  type FilterPattern,
+  type HmrContext,
+  type ModuleNode,
+  type Plugin,
+} from 'vite';
 import { z } from 'zod';
 import { parseNorg, getThemeCss, OutputMode } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
@@ -115,7 +121,7 @@ function injectComponentImports(
   return code;
 }
 
-export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
+export function norgPlugin(options: NorgPluginOptions): Plugin {
   const parsed = optionsSchema.safeParse(options);
   if (!parsed.success) {
     throw new Error(`[vite-plugin-norg] Invalid options: ${parsed.error.message}`);
@@ -153,11 +159,8 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
     return result;
   }
 
-  function invalidateModules(
-    ctx: HmrContext,
-    moduleIds: Iterable<string>
-  ): import('vite').ModuleNode[] {
-    const modules: import('vite').ModuleNode[] = [];
+  function invalidateModules(ctx: HmrContext, moduleIds: Iterable<string>): ModuleNode[] {
+    const modules: ModuleNode[] = [];
     for (const id of moduleIds) {
       const mod = ctx.server.moduleGraph.getModuleById(id);
       if (mod) {
@@ -199,7 +202,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       if (id.includes('.norg?embed=') && importer) {
         const ext = modeExtensions[mode];
         if (!ext) return;
-        const [relativePath, query] = id.split('?');
+        const [relativePath, query] = id.split('?', 2);
         const basePath = resolve(dirname(importer), relativePath);
         const index = parseInt(new URLSearchParams(query).get('embed') ?? '', 10);
         if (Number.isNaN(index)) return;
@@ -265,11 +268,10 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return;
       }
 
-      if (ctx.file.endsWith('.norg')) {
-        parseCache.delete(ctx.file);
-      }
+      if (!ctx.file.endsWith('.norg')) return;
+      parseCache.delete(ctx.file);
 
-      if (!filter(ctx.file) || !ctx.file.endsWith('.norg')) return;
+      if (!filter(ctx.file)) return;
 
       ctx.modules.forEach(mod => ctx.server.moduleGraph.invalidateModule(mod));
 
