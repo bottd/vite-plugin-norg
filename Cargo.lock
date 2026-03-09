@@ -46,9 +46,9 @@ dependencies = [
 
 [[package]]
 name = "arborium"
-version = "2.13.0"
+version = "2.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c7e6876037a5e3be1d34920a78bf31ca623fe559d56c2dbad3b67a9464c8870"
+checksum = "e599c01d3f3e6a0b7d28d527da35c78ea208f2cafb5671bae6da70db16873b7b"
 dependencies = [
  "arborium-ada",
  "arborium-agda",
