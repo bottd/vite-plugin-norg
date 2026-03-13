@@ -1,3 +1,10 @@
+## [3.0.11](https://github.com/bottd/vite-plugin-norg/compare/v3.0.10...v3.0.11) (2026-03-13)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate arborium to v2.16.0 ([#71](https://github.com/bottd/vite-plugin-norg/issues/71)) ([eb62b38](https://github.com/bottd/vite-plugin-norg/commit/eb62b389c4ac61ebd42419a272fab3fd487eee73))
+
 ## [3.0.10](https://github.com/bottd/vite-plugin-norg/compare/v3.0.9...v3.0.10) (2026-03-12)
 
 ## [3.0.9](https://github.com/bottd/vite-plugin-norg/compare/v3.0.8...v3.0.9) (2026-03-09)
