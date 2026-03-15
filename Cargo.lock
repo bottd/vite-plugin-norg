@@ -2335,7 +2335,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vite-plugin-norg-parser"
-version = "3.0.12"
+version = "4.0.0"
 dependencies = [
  "arborium",
  "htmlescape",

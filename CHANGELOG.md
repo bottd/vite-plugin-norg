@@ -1,3 +1,13 @@
+# [4.0.0](https://github.com/bottd/vite-plugin-norg/compare/v3.0.12...v4.0.0) (2026-03-15)
+
+
+* feat!: upgrade to vite v8.0.0 ([fa18ae3](https://github.com/bottd/vite-plugin-norg/commit/fa18ae3a885a99bb2960672064bebf7f25a32356))
+
+
+### BREAKING CHANGES
+
+* upgrade to vite v8.0.0
+
 ## [3.0.12](https://github.com/bottd/vite-plugin-norg/compare/v3.0.11...v3.0.12) (2026-03-15)
 
 ## [3.0.11](https://github.com/bottd/vite-plugin-norg/compare/v3.0.10...v3.0.11) (2026-03-13)
