@@ -1,5 +1,4 @@
 import { join } from 'node:path';
-import { describe, expect, it } from 'bun:test';
 import { parseNorg } from '@parser';
 import { norgPlugin } from '../../src/plugin/index.js';
 import { fixturesDir, componentsDir } from './fixtures';

@@ -1,6 +1,6 @@
-// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`Vue Generator generates correct output for basic.norg 1`] = `
+exports[`Vue Generator > generates correct output for basic.norg 1`] = `
 "<script lang="ts">
 export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
 export const toc = [{"level":1,"title":"Main Title","id":"main-title"},{"level":2,"title":"Lists","id":"lists"},{"level":2,"title":"Link","id":"link"}];
@@ -16,7 +16,7 @@ defineExpose({ metadata, toc });
 </template>"
 `;
 
-exports[`Vue Generator generates correct output for code-blocks.norg 1`] = `
+exports[`Vue Generator > generates correct output for code-blocks.norg 1`] = `
 "<script lang="ts">
 export const metadata = {"title":"\\"Code Test\\""};
 export const toc = [{"level":1,"title":"Code Blocks","id":"code-blocks"},{"level":2,"title":"JavaScript","id":"javascript"},{"level":2,"title":"Python ","id":"python"},{"level":2,"title":"Plain","id":"plain"}];
@@ -32,55 +32,7 @@ defineExpose({ metadata, toc });
 </template>"
 `;
 
-exports[`Vue Generator generates correct output for headings.norg 1`] = `
-"<script lang="ts">
-export const metadata = {"title":"\\"Headings\\""};
-export const toc = [{"level":1,"title":"H1","id":"h1"},{"level":2,"title":"H2","id":"h2"},{"level":3,"title":"H3","id":"h3"},{"level":4,"title":"H4","id":"h4"},{"level":5,"title":"H5","id":"h5"},{"level":6,"title":"H6","id":"h6"}];
-</script>
-<script setup lang="ts">
-const htmlContent = "<h1 id=\\"h1\\">H1</h1>\\n<p>Content 1</p>\\n<h2 id=\\"h2\\">H2</h2>\\n<p>Content 2</p>\\n<h3 id=\\"h3\\">H3</h3>\\n<p>Content 3</p>\\n<h4 id=\\"h4\\">H4</h4>\\n<p>Content 4</p>\\n<h5 id=\\"h5\\">H5</h5>\\n<p>Content 5</p>\\n<h6 id=\\"h6\\">H6</h6>\\n<p>Content 6</p>\\n";
-
-defineExpose({ metadata, toc });
-</script>
-
-<template>
-  <div v-html="htmlContent"></div>
-</template>"
-`;
-
-exports[`Vue Generator generates correct output for images.norg 1`] = `
-"<script lang="ts">
-export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
-export const toc = [{"level":1,"title":"Images","id":"images"}];
-</script>
-<script setup lang="ts">
-const htmlContent = "<h1 id=\\"images\\">Images</h1>\\n<p>Image test</p>\\n<img src=\\"./relative/image.png\\" alt=\\"with alt text\\" />\\n";
-
-defineExpose({ metadata, toc });
-</script>
-
-<template>
-  <div v-html="htmlContent"></div>
-</template>"
-`;
-
-exports[`Vue Generator generates correct output for links.norg 1`] = `
-"<script lang="ts">
-export const metadata = {"author":"Drake Bott","title":"Link Test"};
-export const toc = [{"level":1,"title":"Link Types","id":"link-types"},{"level":2,"title":"URL Links","id":"url-links"},{"level":2,"title":"File Links","id":"file-links"},{"level":2,"title":"Heading Links","id":"heading-links"},{"level":2,"title":"Mixed Content","id":"mixed-content"}];
-</script>
-<script setup lang="ts">
-const htmlContent = "<h1 id=\\"link-types\\">Link Types</h1>\\n<h2 id=\\"url-links\\">URL Links</h2>\\n<p><a href=\\"https://example.com\\" target=\\"_blank\\">https://example.com</a> <a href=\\"https://github.com/nvim-neorg\\" target=\\"_blank\\">Neorg GitHub</a></p>\\n<h2 id=\\"file-links\\">File Links</h2>\\n<p><a href=\\"docs/readme.html\\">docs/readme.norg</a> <a href=\\"path/to/file.html\\">File Description</a></p>\\n<h2 id=\\"heading-links\\">Heading Links</h2>\\n<p><a href=\\"#main-heading\\">Main Heading</a> <a href=\\"#sub-heading\\">Sub Heading</a> <a href=\\"#introduction\\">Custom link text</a></p>\\n<h2 id=\\"mixed-content\\">Mixed Content</h2>\\n<p>This paragraph has a <a href=\\"https://rust-lang.org\\" target=\\"_blank\\">Rust website</a> and <a href=\\"tutorial.html\\">tutorial file</a>.</p>\\n";
-
-defineExpose({ metadata, toc });
-</script>
-
-<template>
-  <div v-html="htmlContent"></div>
-</template>"
-`;
-
-exports[`Vue Generator generates correct output for embed-css.norg 1`] = `
+exports[`Vue Generator > generates correct output for embed-css.norg 1`] = `
 "<script lang="ts">
 export const metadata = {"title":"Embed CSS Test"};
 export const toc = [{"level":1,"title":"Styled Content","id":"styled-content"},{"level":1,"title":"More Styled Content","id":"more-styled-content"}];
@@ -104,4 +56,52 @@ defineExpose({ metadata, toc });
   margin-bottom: 1rem;
 }
 </style>"
+`;
+
+exports[`Vue Generator > generates correct output for headings.norg 1`] = `
+"<script lang="ts">
+export const metadata = {"title":"\\"Headings\\""};
+export const toc = [{"level":1,"title":"H1","id":"h1"},{"level":2,"title":"H2","id":"h2"},{"level":3,"title":"H3","id":"h3"},{"level":4,"title":"H4","id":"h4"},{"level":5,"title":"H5","id":"h5"},{"level":6,"title":"H6","id":"h6"}];
+</script>
+<script setup lang="ts">
+const htmlContent = "<h1 id=\\"h1\\">H1</h1>\\n<p>Content 1</p>\\n<h2 id=\\"h2\\">H2</h2>\\n<p>Content 2</p>\\n<h3 id=\\"h3\\">H3</h3>\\n<p>Content 3</p>\\n<h4 id=\\"h4\\">H4</h4>\\n<p>Content 4</p>\\n<h5 id=\\"h5\\">H5</h5>\\n<p>Content 5</p>\\n<h6 id=\\"h6\\">H6</h6>\\n<p>Content 6</p>\\n";
+
+defineExpose({ metadata, toc });
+</script>
+
+<template>
+  <div v-html="htmlContent"></div>
+</template>"
+`;
+
+exports[`Vue Generator > generates correct output for images.norg 1`] = `
+"<script lang="ts">
+export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
+export const toc = [{"level":1,"title":"Images","id":"images"}];
+</script>
+<script setup lang="ts">
+const htmlContent = "<h1 id=\\"images\\">Images</h1>\\n<p>Image test</p>\\n<img src=\\"./relative/image.png\\" alt=\\"with alt text\\" />\\n";
+
+defineExpose({ metadata, toc });
+</script>
+
+<template>
+  <div v-html="htmlContent"></div>
+</template>"
+`;
+
+exports[`Vue Generator > generates correct output for links.norg 1`] = `
+"<script lang="ts">
+export const metadata = {"author":"Drake Bott","title":"Link Test"};
+export const toc = [{"level":1,"title":"Link Types","id":"link-types"},{"level":2,"title":"URL Links","id":"url-links"},{"level":2,"title":"File Links","id":"file-links"},{"level":2,"title":"Heading Links","id":"heading-links"},{"level":2,"title":"Mixed Content","id":"mixed-content"}];
+</script>
+<script setup lang="ts">
+const htmlContent = "<h1 id=\\"link-types\\">Link Types</h1>\\n<h2 id=\\"url-links\\">URL Links</h2>\\n<p><a href=\\"https://example.com\\" target=\\"_blank\\">https://example.com</a> <a href=\\"https://github.com/nvim-neorg\\" target=\\"_blank\\">Neorg GitHub</a></p>\\n<h2 id=\\"file-links\\">File Links</h2>\\n<p><a href=\\"docs/readme.html\\">docs/readme.norg</a> <a href=\\"path/to/file.html\\">File Description</a></p>\\n<h2 id=\\"heading-links\\">Heading Links</h2>\\n<p><a href=\\"#main-heading\\">Main Heading</a> <a href=\\"#sub-heading\\">Sub Heading</a> <a href=\\"#introduction\\">Custom link text</a></p>\\n<h2 id=\\"mixed-content\\">Mixed Content</h2>\\n<p>This paragraph has a <a href=\\"https://rust-lang.org\\" target=\\"_blank\\">Rust website</a> and <a href=\\"tutorial.html\\">tutorial file</a>.</p>\\n";
+
+defineExpose({ metadata, toc });
+</script>
+
+<template>
+  <div v-html="htmlContent"></div>
+</template>"
 `;
