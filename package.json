@@ -29,9 +29,7 @@
       "types": "./dist/plugin/types/metadata.d.ts"
     }
   },
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "scripts": {
     "build": "npm run build:napi && npm run build:js",
     "build:napi": "napi build --release --platform --esm --output-dir dist/napi/",
@@ -96,7 +94,7 @@
     "svelte": "5.55.0",
     "typescript": "6.0.2",
     "typescript-eslint": "8.57.2",
-    "vite": "8.0.2",
+    "vite": "8.0.3",
     "vite-plugin-dts": "4.5.4",
     "vitest": "4.1.1"
   },
