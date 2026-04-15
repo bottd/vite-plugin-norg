@@ -2,6 +2,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import {
   createFilter,
+  transformWithOxc,
   type FilterPattern,
   type HmrContext,
   type ModuleNode,
@@ -39,10 +40,10 @@ const optionsSchema = z.object({
 });
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
-const RESOLVED_VIRTUAL_CSS_ID = '\0' + VIRTUAL_CSS_ID;
+const RESOLVED_VIRTUAL_CSS_ID = `\0${VIRTUAL_CSS_ID}`;
 
 const VIRTUAL_DOC_CSS_PREFIX = 'virtual:norg-css:';
-const RESOLVED_VIRTUAL_DOC_CSS_PREFIX = '\0' + VIRTUAL_DOC_CSS_PREFIX;
+const RESOLVED_VIRTUAL_DOC_CSS_PREFIX = `\0${VIRTUAL_DOC_CSS_PREFIX}`;
 
 const modeExtensions: Record<GeneratorMode, string | null> = {
   [OutputMode.html]: null,
@@ -198,13 +199,13 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
       }
 
       if (id.startsWith(VIRTUAL_DOC_CSS_PREFIX)) {
-        return '\0' + id + '.css';
+        return `\0${id}.css`;
       }
 
       if (ext && id.endsWith('.norg') && importer) {
         const basePath = resolve(dirname(importer), id);
         if (filter(basePath)) {
-          return basePath + ext;
+          return `\0${basePath}${ext}`;
         }
       }
 
@@ -213,7 +214,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
         const basePath = resolve(dirname(importer), relativePath);
         const index = parseInt(new URLSearchParams(query).get('embed') ?? '', 10);
         if (Number.isNaN(index)) return;
-        const resolvedId = `${basePath}${ext}?${query}`;
+        const resolvedId = `\0${basePath}${ext}?${query}`;
         embedModules.set(resolvedId, { basePath, index });
         return resolvedId;
       }
@@ -250,7 +251,8 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
         return injectComponentImports(code, components, mode);
       }
 
-      const [idWithoutQuery, query] = id.split('?', 2);
+      const rawId = id.startsWith('\0') ? id.slice(1) : id;
+      const [idWithoutQuery, query] = rawId.split('?', 2);
       if (query && query !== 'metadata') return;
       let basePath = idWithoutQuery;
       if (ext && norgWithExt && idWithoutQuery.endsWith(norgWithExt)) {
@@ -266,6 +268,15 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
       } catch (error) {
         this.error(`Failed to parse norg file ${basePath}: ${error}`);
       }
+    },
+
+    async transform(code, id) {
+      if (mode !== OutputMode.react) return;
+      if (!ext || !norgWithExt || !id.startsWith('\0') || !id.includes(norgWithExt)) return;
+      return transformWithOxc(code, id, {
+        lang: ext.slice(1) as 'jsx',
+        jsx: { runtime: 'automatic' },
+      });
     },
 
     async handleHotUpdate(ctx: HmrContext) {
