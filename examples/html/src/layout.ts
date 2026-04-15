@@ -8,7 +8,7 @@ const navItems = [
 ];
 
 export function renderNav() {
-  const nav = document.getElementById('nav')!;
+  const nav = document.getElementById('nav') as HTMLElement;
   nav.innerHTML = `
     <a href="/" class="logo">vite-plugin-norg</a>
     <ul>
@@ -18,7 +18,7 @@ export function renderNav() {
 }
 
 export function renderPage(html: string, toc: { title: string; level: number; id: string }[]) {
-  const content = document.getElementById('content')!;
+  const content = document.getElementById('content') as HTMLElement;
 
   if (toc.length > 0) {
     const tocHtml = `<aside class="toc"><h3>On this page</h3><ul>${toc
