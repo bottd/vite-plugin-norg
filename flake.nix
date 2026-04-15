@@ -56,6 +56,7 @@
             prettier = {
               enable = true;
               includes = [ "*.js" "*.ts" "*.json" "*.md" "*.yaml" "*.yml" ];
+              excludes = [ "pnpm-lock.yaml" ];
             };
             rustfmt = {
               enable = true;
