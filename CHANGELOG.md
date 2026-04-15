@@ -1,3 +1,10 @@
+## [4.0.6](https://github.com/bottd/vite-plugin-norg/compare/v4.0.5...v4.0.6) (2026-04-15)
+
+
+### Bug Fixes
+
+* transformWithOxc in react mode for JSX transform ([cd0e4cc](https://github.com/bottd/vite-plugin-norg/commit/cd0e4cc85a89014bef93e1d1911afc6f44ed056e))
+
 ## [4.0.5](https://github.com/bottd/vite-plugin-norg/compare/v4.0.4...v4.0.5) (2026-04-15)
 
 
