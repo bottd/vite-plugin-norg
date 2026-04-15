@@ -252,10 +252,10 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
 
       const [idWithoutQuery, query] = id.split('?', 2);
       if (query && query !== 'metadata') return;
-      const basePath =
-        ext && idWithoutQuery.endsWith(norgWithExt!)
-          ? idWithoutQuery.slice(0, -ext.length)
-          : idWithoutQuery;
+      let basePath = idWithoutQuery;
+      if (ext && norgWithExt && idWithoutQuery.endsWith(norgWithExt)) {
+        basePath = idWithoutQuery.slice(0, -ext.length);
+      }
       if (!basePath.endsWith('.norg') || !filter(basePath)) return;
 
       const outputMode: GeneratorMode = query === 'metadata' ? 'metadata' : mode;
