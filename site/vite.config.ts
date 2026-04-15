@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [
     norgPlugin({
       mode: 'svelte',
-      arboriumConfig: { theme: 'github-dark' }
+      arboriumConfig: { theme: 'github-dark' },
     }),
-    sveltekit()
-  ]
+    sveltekit(),
+  ],
 });

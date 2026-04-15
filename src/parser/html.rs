@@ -1,5 +1,5 @@
 use crate::ast_handlers::*;
-use crate::types::{InlineComponent, OutputMode};
+use crate::types::{EmbedComponent, OutputMode};
 use arborium::Highlighter;
 use itertools::Itertools;
 use rust_norg::{NestableDetachedModifier, NorgAST};
@@ -7,17 +7,17 @@ use rust_norg::{NestableDetachedModifier, NorgAST};
 struct TransformState {
     parts: Vec<String>,
     current_html: String,
-    inline_components: Vec<InlineComponent>,
+    embed_components: Vec<EmbedComponent>,
     css_blocks: Vec<String>,
     mode: Option<OutputMode>,
     highlighter: Highlighter,
 }
 
 impl TransformState {
-    fn push_inline(&mut self, mut inline: InlineComponent) {
-        inline.index = self.inline_components.len() as u32;
+    fn push_embed(&mut self, mut embed: EmbedComponent) {
+        embed.index = self.embed_components.len() as u32;
         self.parts.push(std::mem::take(&mut self.current_html));
-        self.inline_components.push(inline);
+        self.embed_components.push(embed);
     }
 
     fn push_html(&mut self, html: &str) {
@@ -29,25 +29,25 @@ impl TransformState {
         match result {
             VerbatimTagResult::Html(html) => self.push_html(&html),
             VerbatimTagResult::Css(css) => self.css_blocks.push(css),
-            VerbatimTagResult::Inline(inline) => self.push_inline(inline),
+            VerbatimTagResult::Embed(embed) => self.push_embed(embed),
         }
     }
 
-    fn finalize(mut self) -> (Vec<String>, Vec<InlineComponent>, String) {
+    fn finalize(mut self) -> (Vec<String>, Vec<EmbedComponent>, String) {
         self.parts.push(self.current_html);
-        let inline_css = self.css_blocks.join("\n");
-        (self.parts, self.inline_components, inline_css)
+        let embed_css = self.css_blocks.join("\n");
+        (self.parts, self.embed_components, embed_css)
     }
 }
 
 pub fn transform(
     ast: &[NorgAST],
     mode: Option<OutputMode>,
-) -> Result<(Vec<String>, Vec<InlineComponent>, String), InlineParseError> {
+) -> Result<(Vec<String>, Vec<EmbedComponent>, String), EmbedParseError> {
     let mut state = TransformState {
         parts: Vec::new(),
         current_html: String::new(),
-        inline_components: Vec::new(),
+        embed_components: Vec::new(),
         css_blocks: Vec::new(),
         mode,
         highlighter: Highlighter::new(),
@@ -56,7 +56,7 @@ pub fn transform(
     Ok(state.finalize())
 }
 
-fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), InlineParseError> {
+fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), EmbedParseError> {
     for (list_type, group) in nodes
         .iter()
         .chunk_by(|node| match node {
@@ -95,7 +95,7 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), 
     Ok(())
 }
 
-fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), InlineParseError> {
+fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), EmbedParseError> {
     match node {
         NorgAST::NestableDetachedModifier { .. } => {}
         NorgAST::VerbatimRangedTag {
@@ -109,7 +109,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Inli
                 content,
                 state.mode,
                 &mut state.highlighter,
-                state.inline_components.len(),
+                state.embed_components.len(),
             )? {
                 state.apply_verbatim(result);
             }

@@ -1,6 +1,12 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
-import { createFilter, type FilterPattern, type HmrContext, type Plugin } from 'vite';
+import {
+  createFilter,
+  type FilterPattern,
+  type HmrContext,
+  type ModuleNode,
+  type Plugin,
+} from 'vite';
 import { z } from 'zod';
 import { parseNorg, getThemeCss, OutputMode } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
@@ -115,7 +121,7 @@ function injectComponentImports(
   return code;
 }
 
-export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
+export function norgPlugin(options: NorgPluginOptions): Plugin {
   const parsed = optionsSchema.safeParse(options);
   if (!parsed.success) {
     throw new Error(`[vite-plugin-norg] Invalid options: ${parsed.error.message}`);
@@ -133,14 +139,14 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
   const resolvedComponentDir = componentDir ? resolve(componentDir) : undefined;
 
   const parseCache = new Map<string, ReturnType<typeof parseNorg>>();
-  const inlineModuleIds = new Map<string, Set<string>>();
-  const inlineModules = new Map<string, { basePath: string; index: number }>();
+  const embedModuleIds = new Map<string, Set<string>>();
+  const embedModules = new Map<string, { basePath: string; index: number }>();
   let components = new Map<string, string>();
 
   function trackModule(filePath: string, moduleId: string) {
-    const ids = inlineModuleIds.get(filePath) ?? new Set<string>();
+    const ids = embedModuleIds.get(filePath) ?? new Set<string>();
     ids.add(moduleId);
-    inlineModuleIds.set(filePath, ids);
+    embedModuleIds.set(filePath, ids);
   }
 
   async function cachedParse(filePath: string) {
@@ -153,11 +159,8 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
     return result;
   }
 
-  function invalidateModules(
-    ctx: HmrContext,
-    moduleIds: Iterable<string>
-  ): import('vite').ModuleNode[] {
-    const modules: import('vite').ModuleNode[] = [];
+  function invalidateModules(ctx: HmrContext, moduleIds: Iterable<string>): ModuleNode[] {
+    const modules: ModuleNode[] = [];
     for (const id of moduleIds) {
       const mod = ctx.server.moduleGraph.getModuleById(id);
       if (mod) {
@@ -196,31 +199,16 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return '\0' + id + '.css';
       }
 
-      if (id.includes('.norg?inline=') && importer) {
+      if (id.includes('.norg?embed=') && importer) {
         const ext = modeExtensions[mode];
         if (!ext) return;
-        const [relativePath, query] = id.split('?');
+        const [relativePath, query] = id.split('?', 2);
         const basePath = resolve(dirname(importer), relativePath);
-        const index = parseInt(new URLSearchParams(query).get('inline') ?? '', 10);
+        const index = parseInt(new URLSearchParams(query).get('embed') ?? '', 10);
         if (Number.isNaN(index)) return;
         const resolvedId = `${basePath}${ext}?${query}`;
-        inlineModules.set(resolvedId, { basePath, index });
+        embedModules.set(resolvedId, { basePath, index });
         return resolvedId;
-      }
-
-      // Rewrite .norg → .norg.{vue,svelte,jsx} so framework plugins process them.
-      const ext = modeExtensions[mode];
-      if (!ext || !id.endsWith('.norg') || id.includes('?')) return;
-
-      let basePath: string | undefined;
-      if (id.startsWith('/')) {
-        basePath = id;
-      } else if (importer) {
-        basePath = resolve(dirname(importer), id);
-      }
-
-      if (basePath && filter(basePath)) {
-        return `${basePath}${ext}`;
       }
     },
 
@@ -233,49 +221,38 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         const filePath = id.slice(RESOLVED_VIRTUAL_DOC_CSS_PREFIX.length, -4);
         trackModule(filePath, id);
         const result = await cachedParse(filePath);
-        return result.inlineCss ?? '';
+        return result.embedCss ?? '';
       }
 
-      const inlineInfo = inlineModules.get(id);
-      if (inlineInfo) {
-        const { basePath, index } = inlineInfo;
+      const embedInfo = embedModules.get(id);
+      if (embedInfo) {
+        const { basePath, index } = embedInfo;
         trackModule(basePath, id);
         const result = await cachedParse(basePath);
 
-        const inline = result.inlineComponents?.[index];
-        if (!inline) {
-          throw new Error(`Inline component ${index} not found in ${basePath}`);
+        const embed = result.embedComponents?.[index];
+        if (!embed) {
+          throw new Error(`Embed component ${index} not found in ${basePath}`);
         }
 
-        let code = inline.code;
+        let code = embed.code;
         if (mode === OutputMode.react) {
-          code = `export default function NorgInline() { return <>${code}</>; }`;
+          code = `export default function NorgEmbed() { return <>${code}</>; }`;
         }
 
         return injectComponentImports(code, components, mode);
       }
 
-      const fwExt = modeExtensions[mode];
-      let norgPath: string | undefined;
-      let outputMode: GeneratorMode = mode;
+      const [basePath, query] = id.split('?', 2);
+      if (!basePath.endsWith('.norg') || !filter(basePath)) return;
 
-      if (fwExt && id.endsWith(`.norg${fwExt}`) && !id.includes('?')) {
-        norgPath = id.slice(0, -fwExt.length);
-      } else {
-        const [basePath, query] = id.split('?', 2);
-        if (basePath.endsWith('.norg') && filter(basePath)) {
-          norgPath = basePath;
-          if (query === 'metadata') outputMode = 'metadata';
-        }
-      }
-
-      if (!norgPath) return;
+      const outputMode: GeneratorMode = query === 'metadata' ? 'metadata' : mode;
 
       try {
-        const result = await cachedParse(norgPath);
-        return generateOutput(outputMode, result, css, norgPath);
+        const result = await cachedParse(basePath);
+        return generateOutput(outputMode, result, css, basePath);
       } catch (error) {
-        this.error(`Failed to parse norg file ${norgPath}: ${error}`);
+        this.error(`Failed to parse norg file ${basePath}: ${error}`);
       }
     },
 
@@ -283,7 +260,7 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
       if (resolvedComponentDir && ctx.file.startsWith(resolvedComponentDir + '/')) {
         components = await scanComponentDir(resolvedComponentDir, mode);
 
-        const allIds = [...inlineModuleIds.values()].flatMap(ids => [...ids]);
+        const allIds = [...embedModuleIds.values()].flatMap(ids => [...ids]);
         const invalidated = invalidateModules(ctx, allIds);
         if (invalidated.length > 0) {
           return [...ctx.modules, ...invalidated];
@@ -291,15 +268,14 @@ export function norgPlugin(options: NorgPluginOptions): import('vite').Plugin {
         return;
       }
 
-      if (ctx.file.endsWith('.norg')) {
-        parseCache.delete(ctx.file);
-      }
+      if (!ctx.file.endsWith('.norg')) return;
+      parseCache.delete(ctx.file);
 
-      if (!filter(ctx.file) || !ctx.file.endsWith('.norg')) return;
+      if (!filter(ctx.file)) return;
 
       ctx.modules.forEach(mod => ctx.server.moduleGraph.invalidateModule(mod));
 
-      const trackedIds = inlineModuleIds.get(ctx.file);
+      const trackedIds = embedModuleIds.get(ctx.file);
       if (trackedIds) {
         const invalidated = invalidateModules(ctx, trackedIds);
         if (invalidated.length > 0) {

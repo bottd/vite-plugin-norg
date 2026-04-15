@@ -6,8 +6,6 @@
 
 **Neorg processor for Vite** - Transform `.norg` files into HTML, React, Svelte, or Vue with full TypeScript support.
 
-> **Built for [Neorg](https://github.com/nvim-neorg/neorg) users, powered by [rust-norg](https://github.com/nvim-neorg/rust-norg)**
-
 ## Installation
 
 ```bash
@@ -16,14 +14,42 @@ npm install -D vite-plugin-norg
 
 ## Setup
 
+### Configuration
+
 ```typescript
+import type { FilterPattern } from 'vite';
+
+interface NorgPluginOptions {
+  mode: 'html' | 'react' | 'svelte' | 'vue' | 'metadata';
+  include?: FilterPattern;
+  exclude?: FilterPattern;
+
+  arboriumConfig?: {
+    // Single theme
+    theme?: string;
+    // Or light/dark (uses prefers-color-scheme)
+    themes?: {
+      light: string;
+      dark: string;
+    };
+  };
+
+  // Directory to scan for framework components
+  componentDir?: string;
+
+  // (takes precedence over componentDir)
+  // { Component: "import-path" }
+  components?: Record<string, string>;
+}
+
+// vite.config.ts
 import { defineConfig } from 'vite';
 import { norgPlugin } from 'vite-plugin-norg';
 
 export default defineConfig({
   plugins: [
     norgPlugin({
-      mode: 'html',
+      mode: 'svelte',
     }),
   ],
 });
@@ -52,7 +78,7 @@ Add a type reference to `app.d.ts` based on your output target:
 
 This provides type checking for `.norg` modules
 
-### HTML Output
+### HTML Usage
 
 ```javascript
 import { metadata, html } from './document.norg';
@@ -60,7 +86,7 @@ console.log(metadata.title); // "My Document"
 document.body.innerHTML = html;
 ```
 
-### React Output
+### React Usage
 
 ```jsx
 import { metadata, Component } from './document.norg';
@@ -75,7 +101,7 @@ export default function App() {
 }
 ```
 
-### Svelte Output
+### Svelte Usage
 
 ```svelte
 <script>
@@ -86,7 +112,7 @@ export default function App() {
 <Document />
 ```
 
-### Vue Output
+### Vue Usage
 
 ```vue
 <script setup>
@@ -99,7 +125,7 @@ import Document, { metadata } from './document.norg';
 </template>
 ```
 
-### Metadata Output
+### Metadata Usage
 
 ```javascript
 import { metadata, toc } from './document.norg';
@@ -111,35 +137,6 @@ You can also append `?metadata` to any import to get metadata-only output regard
 
 ```javascript
 import { metadata, toc } from './document.norg?metadata';
-```
-
-## Configuration Reference
-
-```typescript
-import type { FilterPattern } from 'vite';
-
-interface NorgPluginOptions {
-  mode: 'html' | 'react' | 'svelte' | 'vue' | 'metadata';
-  include?: FilterPattern;
-  exclude?: FilterPattern;
-
-  arboriumConfig?: {
-    // Single theme
-    theme?: string;
-    // Or light/dark (uses prefers-color-scheme)
-    themes?: {
-      light: string;
-      dark: string;
-    };
-  };
-
-  // Directory to scan for framework components
-  componentDir?: string;
-
-  // (takes precedence over componentDir)
-  // { Component: "import-path" }
-  components?: Record<string, string>;
-}
 ```
 
 ## Code Syntax Highlighting
@@ -155,20 +152,20 @@ norgPlugin({
 
 See the [arborium themes](https://github.com/bearcove/arborium?tab=readme-ov-file#themes) for available options.
 
-## Inline Components
+## Embed Components
 
-Inline components can be referenced within `.norg` documents using `@inline`:
+Embed components can be referenced within `.norg` documents using `@embed`:
 
 ```norg
 * Example document
 With some regular text
 
-@inline svelte
+@embed svelte
 <Chart variant="bar" />
 @end
 ```
 
-To configure components for usage inline, set either `componentDir` or map imports directly with `components`.
+To configure components for usage with embeds, set either `componentDir` or map imports directly with `components`.
 
 ```typescript
 norgPlugin({
@@ -180,15 +177,15 @@ norgPlugin({
 });
 ```
 
-## Inline Styles
+## Embed Styles
 
-Document styles can be inlined as well using `@inline css`. All frameworks will import inlined styles when rendering the document.
+Document styles can be embedded as well using `@embed css`. All frameworks will import embedded styles when rendering the document.
 
 ```norg
 * Example document
 With some regular text
 
-@inline css
+@embed css
   h2 {
     color: red;
   }
@@ -200,6 +197,7 @@ With some regular text
 - Vite 7.0+
 - React 19+ (if using `mode: 'react'`)
 - Svelte 5+ (if using `mode: 'svelte'`)
+- Vue 3+ (if using `mode: 'vue'`)
 
 ## Development
 

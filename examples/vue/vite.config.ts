@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [
     norgPlugin({
       mode: 'vue',
-      arboriumConfig: { theme: 'github-dark' }
+      arboriumConfig: { theme: 'github-dark' },
     }),
-    vue()
-  ]
+    vue(),
+  ],
 });

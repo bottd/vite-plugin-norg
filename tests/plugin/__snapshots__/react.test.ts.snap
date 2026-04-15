@@ -1,6 +1,6 @@
-// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`React Generator generates correct output for basic.norg 1`] = `
+exports[`React Generator > generates correct output for basic.norg 1`] = `
 "
 export const metadata = {"author":"Drake Bott","tags":["\\"test\\", \\"basic\\""],"title":"Basic Norg"};
 export const toc = [{"level":1,"title":"Main Title","id":"main-title"},{"level":2,"title":"Lists","id":"lists"},{"level":2,"title":"Link","id":"link"}];
@@ -11,7 +11,7 @@ export function Component() {
 export default Component;"
 `;
 
-exports[`React Generator generates correct output for code-blocks.norg 1`] = `
+exports[`React Generator > generates correct output for code-blocks.norg 1`] = `
 "
 export const metadata = {"title":"\\"Code Test\\""};
 export const toc = [{"level":1,"title":"Code Blocks","id":"code-blocks"},{"level":2,"title":"JavaScript","id":"javascript"},{"level":2,"title":"Python ","id":"python"},{"level":2,"title":"Plain","id":"plain"}];
@@ -22,7 +22,19 @@ export function Component() {
 export default Component;"
 `;
 
-exports[`React Generator generates correct output for headings.norg 1`] = `
+exports[`React Generator > generates correct output for embed-css.norg 1`] = `
+"import 'virtual:norg-css:<fixtures>/embed-css.norg';
+
+export const metadata = {"title":"Embed CSS Test"};
+export const toc = [{"level":1,"title":"Styled Content","id":"styled-content"},{"level":1,"title":"More Styled Content","id":"more-styled-content"}];
+
+export function Component() {
+  return <><div dangerouslySetInnerHTML={{ __html: "<h1 id=\\"styled-content\\">Styled Content</h1>\\n<p>This content has document-scoped CSS.</p>\\n<h1 id=\\"more-styled-content\\">More Styled Content</h1>\\n<p>Another section with additional styles.</p>\\n" }} /></>;
+}
+export default Component;"
+`;
+
+exports[`React Generator > generates correct output for headings.norg 1`] = `
 "
 export const metadata = {"title":"\\"Headings\\""};
 export const toc = [{"level":1,"title":"H1","id":"h1"},{"level":2,"title":"H2","id":"h2"},{"level":3,"title":"H3","id":"h3"},{"level":4,"title":"H4","id":"h4"},{"level":5,"title":"H5","id":"h5"},{"level":6,"title":"H6","id":"h6"}];
@@ -33,7 +45,7 @@ export function Component() {
 export default Component;"
 `;
 
-exports[`React Generator generates correct output for images.norg 1`] = `
+exports[`React Generator > generates correct output for images.norg 1`] = `
 "
 export const metadata = {"authors":"Drake Bott","created":"2025-07-10T17:51:58-0600","title":"Images","updated":"2025-07-10T18:00:36-0600","version":"1.1.1"};
 export const toc = [{"level":1,"title":"Images","id":"images"}];
@@ -44,25 +56,13 @@ export function Component() {
 export default Component;"
 `;
 
-exports[`React Generator generates correct output for links.norg 1`] = `
+exports[`React Generator > generates correct output for links.norg 1`] = `
 "
 export const metadata = {"author":"Drake Bott","title":"Link Test"};
 export const toc = [{"level":1,"title":"Link Types","id":"link-types"},{"level":2,"title":"URL Links","id":"url-links"},{"level":2,"title":"File Links","id":"file-links"},{"level":2,"title":"Heading Links","id":"heading-links"},{"level":2,"title":"Mixed Content","id":"mixed-content"}];
 
 export function Component() {
-  return <><div dangerouslySetInnerHTML={{ __html: "<h1 id=\\"link-types\\">Link Types</h1>\\n<h2 id=\\"url-links\\">URL Links</h2>\\n<p><a href=\\"https://example.com\\" target=\\"_blank\\">https://example.com</a> <a href=\\"https://github.com/nvim-neorg\\" target=\\"_blank\\">Neorg GitHub</a></p>\\n<h2 id=\\"file-links\\">File Links</h2>\\n<h2 id=\\"heading-links\\">Heading Links</h2>\\n<p><a href=\\"#token-text-main-token-whitespace-token-text-heading\\">Token(Text(&quot;Main&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-sub-token-whitespace-token-text-heading\\">Token(Text(&quot;Sub&quot;))Token(Whitespace)Token(Text(&quot;Heading&quot;))</a> <a href=\\"#token-text-introduction\\">Custom link text</a></p>\\n<h2 id=\\"mixed-content\\">Mixed Content</h2>\\n<p>This paragraph has a <a href=\\"https://rust-lang.org\\" target=\\"_blank\\">Rust website</a> and .</p>\\n" }} /></>;
-}
-export default Component;"
-`;
-
-exports[`React Generator generates correct output for inline-css.norg 1`] = `
-"import 'virtual:norg-css:<fixtures>/inline-css.norg';
-
-export const metadata = {"title":"Inline CSS Test"};
-export const toc = [{"level":1,"title":"Styled Content","id":"styled-content"},{"level":1,"title":"More Styled Content","id":"more-styled-content"}];
-
-export function Component() {
-  return <><div dangerouslySetInnerHTML={{ __html: "<h1 id=\\"styled-content\\">Styled Content</h1>\\n<p>This content has document-scoped CSS.</p>\\n<h1 id=\\"more-styled-content\\">More Styled Content</h1>\\n<p>Another section with additional styles.</p>\\n" }} /></>;
+  return <><div dangerouslySetInnerHTML={{ __html: "<h1 id=\\"link-types\\">Link Types</h1>\\n<h2 id=\\"url-links\\">URL Links</h2>\\n<p><a href=\\"https://example.com\\" target=\\"_blank\\">https://example.com</a> <a href=\\"https://github.com/nvim-neorg\\" target=\\"_blank\\">Neorg GitHub</a></p>\\n<h2 id=\\"file-links\\">File Links</h2>\\n<p><a href=\\"docs/readme.html\\">docs/readme.norg</a> <a href=\\"path/to/file.html\\">File Description</a></p>\\n<h2 id=\\"heading-links\\">Heading Links</h2>\\n<p><a href=\\"#main-heading\\">Main Heading</a> <a href=\\"#sub-heading\\">Sub Heading</a> <a href=\\"#introduction\\">Custom link text</a></p>\\n<h2 id=\\"mixed-content\\">Mixed Content</h2>\\n<p>This paragraph has a <a href=\\"https://rust-lang.org\\" target=\\"_blank\\">Rust website</a> and <a href=\\"tutorial.html\\">tutorial file</a>.</p>\\n" }} /></>;
 }
 export default Component;"
 `;

@@ -1,31 +1,31 @@
 @document.meta
-title: Inline React Test
+title: Embed React Test
 @end
 
-* Testing React Inlines
+* Testing React Embeds
 
 This is a counter component:
 
-@inline react
+@embed react
 <button onClick={() => setCount(c => c + 1)}>
   Count: {count}
 </button>
 @end
 
-* Multiple Inlines
+* Multiple Embeds
 
-First inline:
+First embed:
 
-@inline react
+@embed react
 <div>Hello from React!</div>
 @end
 
-Second inline:
+Second embed:
 
-@inline react
+@embed react
 <span>Goodbye from React!</span>
 @end
 
-* Content After Inlines
+* Content After Embeds
 
-This text comes after the inlines.
+This text comes after the embeds.

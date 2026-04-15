@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [
     norgPlugin({
       mode: 'react',
-      arboriumConfig: { theme: 'github-dark' }
+      arboriumConfig: { theme: 'github-dark' },
     }),
-    react()
-  ]
+    react(),
+  ],
 });

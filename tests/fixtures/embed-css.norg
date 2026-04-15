@@ -1,12 +1,12 @@
 @document.meta
-title: Inline CSS Test
+title: Embed CSS Test
 @end
 
 * Styled Content
 
 This content has document-scoped CSS.
 
-@inline css
+@embed css
 .styled-heading {
   color: blue;
   font-size: 2rem;
@@ -17,7 +17,7 @@ This content has document-scoped CSS.
 
 Another section with additional styles.
 
-@inline css
+@embed css
 .norg-content p {
   line-height: 1.6;
   margin-bottom: 1rem;

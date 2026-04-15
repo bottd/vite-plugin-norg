@@ -96,17 +96,10 @@ fn convert_link(
             } else if url.starts_with("http") {
                 url.as_str()
             } else if let Some(base) = url.strip_suffix(".norg") {
-                return if url.starts_with("http") && filepath.is_none() {
-                    format!(
-                        r#"<a href="{base}.html" target="_blank">{}</a>"#,
-                        encode_minimal(display_text)
-                    )
-                } else {
-                    format!(
-                        r#"<a href="{base}.html">{}</a>"#,
-                        encode_minimal(display_text)
-                    )
-                };
+                return format!(
+                    r#"<a href="{base}.html">{}</a>"#,
+                    encode_minimal(display_text)
+                );
             } else {
                 url.as_str()
             };
@@ -126,27 +119,48 @@ fn convert_link(
             }
         }
         Some(LinkTarget::Heading { title, .. }) => {
-            let title_text = title
-                .iter()
-                .map(|segment| format!("{segment:?}"))
-                .collect::<String>();
-            let slug = into_slug(&title_text);
-            let display_text = text.as_deref().unwrap_or(&title_text);
+            let title_html = convert_segments(title);
+            let slug = into_slug(&title_html);
+            let display = match &text {
+                Some(t) => t.as_str(),
+                None => &title_html,
+            };
+            format!("<a href=\"#{}\">{display}</a>", encode_minimal(&slug),)
+        }
+        Some(LinkTarget::Path(path)) => {
+            let href = path
+                .strip_suffix(".norg")
+                .map(|base| format!("{base}.html"))
+                .unwrap_or_else(|| path.clone());
+            let display_text = text.as_deref().unwrap_or(path);
             format!(
-                "<a href=\"#{}\">{}</a>",
-                encode_minimal(&slug),
+                r#"<a href="{}">{}</a>"#,
+                encode_minimal(&href),
                 encode_minimal(display_text)
             )
         }
         Some(
             LinkTarget::Footnote(_)
             | LinkTarget::Definition(_)
-            | LinkTarget::Path(_)
             | LinkTarget::Timestamp(_)
             | LinkTarget::Generic(_)
             | LinkTarget::Extendable(_)
             | LinkTarget::Wiki(_),
-        )
-        | None => String::new(),
+        ) => String::new(),
+        None => match filepath {
+            Some(fp) => {
+                let href = fp
+                    .strip_suffix(".norg")
+                    .map(|base| format!("{base}.html"))
+                    .unwrap_or_else(|| fp.clone());
+                let display_text = text.as_deref().unwrap_or(fp.as_str());
+                format!(
+                    r#"<a href="{}">{}</a>"#,
+                    encode_minimal(&href),
+                    encode_minimal(display_text)
+                )
+            }
+            None => String::new(),
+        },
     }
 }

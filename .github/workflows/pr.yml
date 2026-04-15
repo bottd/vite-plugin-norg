@@ -19,17 +19,17 @@ jobs:
         run: nix flake check
 
       - name: Build plugin
-        run: bun run build
+        run: pnpm run build
 
       - name: Run eslint
-        run: bun run lint
+        run: pnpm run lint
 
       - name: Run JavaScript tests
-        run: bun test
+        run: pnpm test
 
       - name: Build examples
         run: |
           for dir in examples/svelte examples/vue examples/react examples/html site; do
             echo "Building $dir..."
-            cd $dir && bun run build && cd ../..
+            cd $dir && pnpm run build && cd ../..
           done

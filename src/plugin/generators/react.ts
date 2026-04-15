@@ -1,22 +1,22 @@
 import type { NorgParseResult } from '@parser';
-import { dedent, addInlineImports } from './helpers';
+import { dedent, addEmbedImports } from './helpers';
 
 export function generateReact(
-  { htmlParts, metadata, toc, inlineComponents = [], inlineCss = '' }: NorgParseResult,
+  { htmlParts, metadata, toc, embedComponents = [], embedCss = '' }: NorgParseResult,
   css: string,
   filePath?: string
 ): string {
   const children = htmlParts
     .flatMap((part, i) => [
-      ...(part ? [`<div dangerouslySetInnerHTML={{ __html: ${JSON.stringify(part)} }} />`] : []),
-      ...(i < inlineComponents.length ? [`<Inline${i} />`] : []),
+      `<div dangerouslySetInnerHTML={{ __html: ${JSON.stringify(part)} }} />`,
+      ...(i < embedComponents.length ? [`<Embed${i} />`] : []),
     ])
     .join('\n    ');
 
   return dedent`
     ${css ? 'import "virtual:norg-arborium.css";' : null}
-    ${inlineCss && filePath ? `import 'virtual:norg-css:${filePath}';` : null}
-    ${addInlineImports(inlineComponents, filePath)}
+    ${embedCss && filePath ? `import 'virtual:norg-css:${filePath}';` : null}
+    ${addEmbedImports(embedComponents, filePath)}
 
     export const metadata = ${JSON.stringify(metadata ?? {})};
     export const toc = ${JSON.stringify(toc ?? [])};

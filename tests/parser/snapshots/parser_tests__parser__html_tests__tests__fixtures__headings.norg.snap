@@ -1,6 +1,6 @@
 ---
 source: tests/parser/html_tests.rs
-expression: "(html, toc, metadata, inline_css)"
+expression: "(html, toc, metadata, embed_css)"
 ---
 - "<h1 id=\"h1\">H1</h1>\n<p>Content 1</p>\n<h2 id=\"h2\">H2</h2>\n<p>Content 2</p>\n<h3 id=\"h3\">H3</h3>\n<p>Content 3</p>\n<h4 id=\"h4\">H4</h4>\n<p>Content 4</p>\n<h5 id=\"h5\">H5</h5>\n<p>Content 5</p>\n<h6 id=\"h6\">H6</h6>\n<p>Content 6</p>\n"
 - - level: 1

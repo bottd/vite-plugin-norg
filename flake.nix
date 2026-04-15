@@ -88,7 +88,7 @@
           buildInputs = with pkgs; [
             # Node
             nodejs_24
-            bun
+            pnpm
 
             # Rust
             rustToolchain

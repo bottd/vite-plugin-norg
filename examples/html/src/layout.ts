@@ -4,7 +4,7 @@ const navItems = [
   { href: '/', label: 'Home' },
   { href: '/getting-started', label: 'Getting Started' },
   { href: '/configuration', label: 'Configuration' },
-  { href: '/embed-components', label: 'Embed Components' }
+  { href: '/embed-components', label: 'Embed Components' },
 ];
 
 export function renderNav() {
@@ -21,9 +21,12 @@ export function renderPage(html: string, toc: { title: string; level: number; id
   const content = document.getElementById('content')!;
 
   if (toc.length > 0) {
-    const tocHtml = `<aside class="toc"><h3>On this page</h3><ul>${toc.map(
-      (entry) => `<li style="padding-left: ${(entry.level - 1) * 0.75}rem"><a href="#${entry.id}">${entry.title}</a></li>`
-    ).join('')}</ul></aside>`;
+    const tocHtml = `<aside class="toc"><h3>On this page</h3><ul>${toc
+      .map(
+        entry =>
+          `<li style="padding-left: ${(entry.level - 1) * 0.75}rem"><a href="#${entry.id}">${entry.title}</a></li>`
+      )
+      .join('')}</ul></aside>`;
     content.innerHTML = `<div class="page-with-toc">${tocHtml}<article>${html}</article></div>`;
   } else {
     content.innerHTML = html;

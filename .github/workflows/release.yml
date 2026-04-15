@@ -17,9 +17,6 @@ jobs:
             host: macos-latest
           - target: aarch64-apple-darwin
             host: macos-latest
-          # Windows - native runner
-          - target: x86_64-pc-windows-msvc
-            host: windows-latest
           # Linux gnu - napi-cross
           - target: x86_64-unknown-linux-gnu
             host: ubuntu-latest
@@ -38,27 +35,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup (Nix)
-        if: runner.os != 'Windows'
+      - name: Setup
         uses: ./.github/actions/setup
-
-      - name: Setup (Windows)
-        if: runner.os == 'Windows'
-        uses: ./.github/actions/setup-windows
 
       - name: Setup (Linux Cross-Compilation)
         if: runner.os == 'Linux'
         uses: ./.github/actions/setup-linux
 
-      - name: Use clang-cl on Windows
-        if: runner.os == 'Windows'
-        shell: bash
-        run: echo "CC_x86_64_pc_windows_msvc=clang-cl" >> "$GITHUB_ENV"
-
       - name: Build native binding (${{ matrix.target }})
         shell: bash
         run: |
-          bunx napi build --release --platform --esm --strip \
+          pnpm exec napi build --release --platform --esm --strip \
             --output-dir dist/napi/ \
             --target "${{ matrix.target }}" ${{ matrix.extra-args }}
         env:
@@ -99,16 +86,16 @@ jobs:
           merge-multiple: true
 
       - name: Build JavaScript
-        run: bun run build:js
+        run: pnpm run build:js
 
       - name: Run Nix flake checks
         run: nix flake check
 
       - name: Run eslint
-        run: bun run lint
+        run: pnpm run lint
 
       - name: Run JavaScript tests
-        run: bun test
+        run: pnpm test
 
       - name: Build examples
         run: |
@@ -118,6 +105,6 @@ jobs:
           done
 
       - name: Semantic Release
-        run: bunx semantic-release
+        run: pnpm exec semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_FOR_UPDATES }}

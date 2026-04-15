@@ -5,8 +5,8 @@ export default defineConfig({
   plugins: [
     norgPlugin({
       mode: 'html',
-      arboriumConfig: { theme: 'github-dark' }
-    })
+      arboriumConfig: { theme: 'github-dark' },
+    }),
   ],
   build: {
     rollupOptions: {
@@ -14,8 +14,8 @@ export default defineConfig({
         main: 'index.html',
         'getting-started': 'getting-started.html',
         configuration: 'configuration.html',
-        'embed-components': 'embed-components.html'
-      }
-    }
-  }
+        'embed-components': 'embed-components.html',
+      },
+    },
+  },
 });

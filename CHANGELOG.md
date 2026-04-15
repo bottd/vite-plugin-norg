@@ -1,3 +1,51 @@
+## [4.0.4](https://github.com/bottd/vite-plugin-norg/compare/v4.0.3...v4.0.4) (2026-03-26)
+
+## [4.0.3](https://github.com/bottd/vite-plugin-norg/compare/v4.0.2...v4.0.3) (2026-03-22)
+
+## [4.0.2](https://github.com/bottd/vite-plugin-norg/compare/v4.0.1...v4.0.2) (2026-03-20)
+
+## [4.0.1](https://github.com/bottd/vite-plugin-norg/compare/v4.0.0...v4.0.1) (2026-03-18)
+
+# [4.0.0](https://github.com/bottd/vite-plugin-norg/compare/v3.0.12...v4.0.0) (2026-03-15)
+
+
+* feat!: upgrade to vite v8.0.0 ([fa18ae3](https://github.com/bottd/vite-plugin-norg/commit/fa18ae3a885a99bb2960672064bebf7f25a32356))
+
+
+### BREAKING CHANGES
+
+* upgrade to vite v8.0.0
+
+## [3.0.12](https://github.com/bottd/vite-plugin-norg/compare/v3.0.11...v3.0.12) (2026-03-15)
+
+## [3.0.11](https://github.com/bottd/vite-plugin-norg/compare/v3.0.10...v3.0.11) (2026-03-13)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate arborium to v2.16.0 ([#71](https://github.com/bottd/vite-plugin-norg/issues/71)) ([eb62b38](https://github.com/bottd/vite-plugin-norg/commit/eb62b389c4ac61ebd42419a272fab3fd487eee73))
+
+## [3.0.10](https://github.com/bottd/vite-plugin-norg/compare/v3.0.9...v3.0.10) (2026-03-12)
+
+## [3.0.9](https://github.com/bottd/vite-plugin-norg/compare/v3.0.8...v3.0.9) (2026-03-09)
+
+## [3.0.8](https://github.com/bottd/vite-plugin-norg/compare/v3.0.7...v3.0.8) (2026-03-08)
+
+## [3.0.7](https://github.com/bottd/vite-plugin-norg/compare/v3.0.6...v3.0.7) (2026-03-06)
+
+## [3.0.6](https://github.com/bottd/vite-plugin-norg/compare/v3.0.5...v3.0.6) (2026-03-04)
+
+## [3.0.5](https://github.com/bottd/vite-plugin-norg/compare/v3.0.4...v3.0.5) (2026-03-01)
+
+## [3.0.4](https://github.com/bottd/vite-plugin-norg/compare/v3.0.3...v3.0.4) (2026-02-28)
+
+
+### Bug Fixes
+
+* remove framework resolveId extension - caused issues with sveltekit ([afcae10](https://github.com/bottd/vite-plugin-norg/commit/afcae1066515e10f87212ddc759900ad42a603c7))
+
+## [3.0.3](https://github.com/bottd/vite-plugin-norg/compare/v3.0.2...v3.0.3) (2026-02-26)
+
 ## [3.0.2](https://github.com/bottd/vite-plugin-norg/compare/v3.0.1...v3.0.2) (2026-02-22)
 
 

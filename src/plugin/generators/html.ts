@@ -1,18 +1,18 @@
-import type { NorgParseResult, InlineComponent } from '@parser';
+import type { NorgParseResult, EmbedComponent } from '@parser';
 import { dedent } from './helpers';
 
-function embedInlines(htmlParts: string[], inlineComponents: InlineComponent[]): string {
+function mergeEmbeds(htmlParts: string[], embeds: EmbedComponent[]): string {
   return htmlParts
-    .flatMap((part, i) => (i < inlineComponents.length ? [part, inlineComponents[i].code] : [part]))
+    .flatMap((part, i) => (i < embeds.length ? [part, embeds[i].code] : [part]))
     .join('');
 }
 
 export function generateHtml(
-  { htmlParts, metadata, toc, inlineComponents = [], inlineCss = '' }: NorgParseResult,
+  { htmlParts, metadata, toc, embedComponents = [], embedCss = '' }: NorgParseResult,
   css: string
 ): string {
-  const raw = embedInlines(htmlParts, inlineComponents);
-  const html = inlineCss ? `<style>${inlineCss}</style>${raw}` : raw;
+  const raw = mergeEmbeds(htmlParts, embedComponents);
+  const html = embedCss ? `<style>${embedCss}</style>${raw}` : raw;
   return dedent`
     ${css ? 'import "virtual:norg-arborium.css";' : null}
 

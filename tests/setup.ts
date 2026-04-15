@@ -1,8 +1,10 @@
-import { mock } from 'bun:test';
-import { parseNorg, getThemeCss, OutputMode } from '../dist/napi/index.js';
+import { vi } from 'vitest';
 
-mock.module('@parser', () => ({
-  parseNorg,
-  getThemeCss,
-  OutputMode,
-}));
+vi.mock('@parser', async () => {
+  const mod = await import('../dist/napi/index.js');
+  return {
+    parseNorg: mod.parseNorg,
+    getThemeCss: mod.getThemeCss,
+    OutputMode: mod.OutputMode,
+  };
+});

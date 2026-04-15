@@ -3,7 +3,7 @@
   "license": "MIT",
   "homepage": "https://github.com/bottd/vite-plugin-norg#README",
   "name": "vite-plugin-norg",
-  "version": "3.0.2",
+  "version": "4.0.4",
   "type": "module",
   "workspaces": [
     "examples/*",
@@ -44,8 +44,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check": "tsc --noEmit",
-    "test": "bun test",
-    "build:examples": "bun run --filter '@examples/*' build && bun run --filter @vite-plugin-norg/site build"
+    "test": "vitest run",
+    "build:examples": "pnpm --filter '@examples/*' build && pnpm --filter @vite-plugin-norg/site build"
   },
   "keywords": [
     "vite",
@@ -60,7 +60,10 @@
     "vue"
   ],
   "peerDependencies": {
-    "vite": "^7.0.0"
+    "react": "^19.0.0",
+    "svelte": "^5.0.0",
+    "vite": "^8.0.0",
+    "vue": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "svelte": {
@@ -73,6 +76,10 @@
       "optional": true
     }
   },
+  "dependencies": {
+    "dedent": "1.7.2",
+    "zod": "4.3.6"
+  },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@napi-rs/cli": "3.5.1",
@@ -80,25 +87,23 @@
     "@semantic-release/changelog": "6.0.3",
     "@semantic-release/exec": "7.1.0",
     "@semantic-release/git": "10.0.1",
-    "@semantic-release/npm": "13.1.4",
-    "@types/node": "25.3.0",
+    "@semantic-release/npm": "13.1.5",
+    "@types/node": "25.5.0",
     "@types/react": "19.2.14",
-    "dedent": "1.7.1",
-    "eslint": "10.0.1",
+    "eslint": "10.1.0",
     "eslint-config-prettier": "10.1.8",
-    "globals": "17.3.0",
+    "globals": "17.4.0",
     "jiti": "2.6.1",
     "prettier": "3.8.1",
     "react": "19.2.4",
     "rimraf": "6.1.3",
     "semantic-release": "25.0.3",
-    "svelte": "5.53.2",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.56.0",
-    "vite": "7.3.1",
+    "svelte": "5.55.0",
+    "typescript": "6.0.2",
+    "typescript-eslint": "8.57.2",
+    "vite": "8.0.3",
     "vite-plugin-dts": "4.5.4",
-    "vite-tsconfig-paths": "6.1.1",
-    "zod": "4.3.6"
+    "vitest": "4.1.1"
   },
   "repository": {
     "type": "git",

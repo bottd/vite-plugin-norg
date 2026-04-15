@@ -11,5 +11,5 @@ export const fixtures = [
   'headings.norg',
   'images.norg',
   'links.norg',
-  'inline-css.norg',
+  'embed-css.norg',
 ];
