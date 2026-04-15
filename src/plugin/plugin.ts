@@ -137,6 +137,8 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
   const filter = createFilter(include, exclude);
   const css = buildCss(arboriumConfig);
   const resolvedComponentDir = componentDir ? resolve(componentDir) : undefined;
+  const ext = modeExtensions[mode];
+  const norgWithExt = ext ? `.norg${ext}` : null;
 
   const parseCache = new Map<string, ReturnType<typeof parseNorg>>();
   const embedModuleIds = new Map<string, Set<string>>();
@@ -199,9 +201,14 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
         return '\0' + id + '.css';
       }
 
-      if (id.includes('.norg?embed=') && importer) {
-        const ext = modeExtensions[mode];
-        if (!ext) return;
+      if (ext && id.endsWith('.norg') && importer) {
+        const basePath = resolve(dirname(importer), id);
+        if (filter(basePath)) {
+          return basePath + ext;
+        }
+      }
+
+      if (ext && id.includes('.norg?embed=') && importer) {
         const [relativePath, query] = id.split('?', 2);
         const basePath = resolve(dirname(importer), relativePath);
         const index = parseInt(new URLSearchParams(query).get('embed') ?? '', 10);
@@ -243,7 +250,12 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
         return injectComponentImports(code, components, mode);
       }
 
-      const [basePath, query] = id.split('?', 2);
+      const [idWithoutQuery, query] = id.split('?', 2);
+      if (query && query !== 'metadata') return;
+      const basePath =
+        ext && idWithoutQuery.endsWith(norgWithExt!)
+          ? idWithoutQuery.slice(0, -ext.length)
+          : idWithoutQuery;
       if (!basePath.endsWith('.norg') || !filter(basePath)) return;
 
       const outputMode: GeneratorMode = query === 'metadata' ? 'metadata' : mode;
