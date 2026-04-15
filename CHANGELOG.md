@@ -1,3 +1,12 @@
+## [4.0.5](https://github.com/bottd/vite-plugin-norg/compare/v4.0.4...v4.0.5) (2026-04-15)
+
+
+### Bug Fixes
+
+* exclude pnpm-lock.yaml from formatting ([4bebe35](https://github.com/bottd/vite-plugin-norg/commit/4bebe356f0c6da5eb52b53d23ea97060120b6e6a))
+* resolve .norg files with framework extension ([6940d27](https://github.com/bottd/vite-plugin-norg/commit/6940d278945eba056f33d2b3ff31ffde8d10f8cc))
+* resolve linter error ([605fcc5](https://github.com/bottd/vite-plugin-norg/commit/605fcc506fa6a5c48239e1269d33f7f79f64bb85))
+
 ## [4.0.4](https://github.com/bottd/vite-plugin-norg/compare/v4.0.3...v4.0.4) (2026-03-26)
 
 ## [4.0.3](https://github.com/bottd/vite-plugin-norg/compare/v4.0.2...v4.0.3) (2026-03-22)
