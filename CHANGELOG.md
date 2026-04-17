@@ -1,3 +1,10 @@
+## [4.0.8](https://github.com/bottd/vite-plugin-norg/compare/v4.0.7...v4.0.8) (2026-04-17)
+
+
+### Bug Fixes
+
+* return sourcemaps for files ([68c2bb0](https://github.com/bottd/vite-plugin-norg/commit/68c2bb0931dad0f18af5ce4a9caf75a2b7caa98f))
+
 ## [4.0.7](https://github.com/bottd/vite-plugin-norg/compare/v4.0.6...v4.0.7) (2026-04-17)
 
 ## [4.0.6](https://github.com/bottd/vite-plugin-norg/compare/v4.0.5...v4.0.6) (2026-04-15)
