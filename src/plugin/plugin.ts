@@ -264,7 +264,11 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
 
       try {
         const result = await cachedParse(basePath);
-        return generateOutput(outputMode, result, css, basePath);
+        const code = generateOutput(outputMode, result, css, basePath);
+        return {
+          code,
+          map: { version: 3, sources: [basePath], names: [], mappings: '' },
+        };
       } catch (error) {
         this.error(`Failed to parse norg file ${basePath}: ${error}`);
       }

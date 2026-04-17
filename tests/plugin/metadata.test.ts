@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { norgPlugin } from '../../src/plugin/index.js';
-import { fixturesDir } from './fixtures';
+import { fixturesDir, loadCode } from './fixtures';
 
 const fixtures = ['basic.norg', 'code-blocks.norg', 'headings.norg', 'images.norg', 'links.norg'];
 
@@ -9,14 +9,12 @@ describe('Metadata Generator', () => {
     it.each(fixtures)('should generate correct metadata module for %s', async fixture => {
       const fixturePath = join(fixturesDir, fixture);
       const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
-      const result = await plugin.load(fixturePath);
-      expect(result).toMatchSnapshot();
+      expect(await loadCode(plugin, fixturePath)).toMatchSnapshot();
     });
 
     it('should return undefined for non-norg files', async () => {
       const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
-      const result = await plugin.load('test.js');
-      expect(result).toBeUndefined();
+      expect(await loadCode(plugin, 'test.js')).toBeUndefined();
     });
   });
 
@@ -26,15 +24,13 @@ describe('Metadata Generator', () => {
       async fixture => {
         const fixturePath = join(fixturesDir, fixture);
         const plugin = norgPlugin({ mode: 'html', include: ['**/*.norg'] });
-        const result = await plugin.load(`${fixturePath}?metadata`);
-        expect(result).toMatchSnapshot();
+        expect(await loadCode(plugin, `${fixturePath}?metadata`)).toMatchSnapshot();
       }
     );
 
     it('should return undefined for non-norg files with ?metadata', async () => {
       const plugin = norgPlugin({ mode: 'html', include: ['**/*.norg'] });
-      const result = await plugin.load('test.js?metadata');
-      expect(result).toBeUndefined();
+      expect(await loadCode(plugin, 'test.js?metadata')).toBeUndefined();
     });
   });
 
@@ -46,10 +42,12 @@ describe('Metadata Generator', () => {
         const metadataPlugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
         const htmlPlugin = norgPlugin({ mode: 'html', include: ['**/*.norg'] });
 
-        const modeResult = await metadataPlugin.load(fixturePath);
-        const queryResult = await htmlPlugin.load(`${fixturePath}?metadata`);
+        const [modeCode, queryCode] = await Promise.all([
+          loadCode(metadataPlugin, fixturePath),
+          loadCode(htmlPlugin, `${fixturePath}?metadata`),
+        ]);
 
-        expect(modeResult).toBe(queryResult);
+        expect(modeCode).toBe(queryCode);
       }
     );
   });
@@ -58,20 +56,20 @@ describe('Metadata Generator', () => {
     it('should not contain html or CSS imports, but should contain toc', async () => {
       const fixturePath = join(fixturesDir, 'basic.norg');
       const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
-      const result = await plugin.load(fixturePath);
+      const code = await loadCode(plugin, fixturePath);
 
-      expect(result).not.toContain('export const html');
-      expect(result).toContain('export const toc');
-      expect(result).not.toContain('virtual:norg-arborium.css');
+      expect(code).not.toContain('export const html');
+      expect(code).toContain('export const toc');
+      expect(code).not.toContain('virtual:norg-arborium.css');
     });
 
     it('should contain metadata export and default export', async () => {
       const fixturePath = join(fixturesDir, 'basic.norg');
       const plugin = norgPlugin({ mode: 'metadata', include: ['**/*.norg'] });
-      const result = await plugin.load(fixturePath);
+      const code = await loadCode(plugin, fixturePath);
 
-      expect(result).toContain('export const metadata');
-      expect(result).toContain('export default');
+      expect(code).toContain('export const metadata');
+      expect(code).toContain('export default');
     });
   });
 
@@ -79,11 +77,11 @@ describe('Metadata Generator', () => {
     it.each(['html', 'svelte', 'react'] as const)('?metadata works on %s mode', async mode => {
       const fixturePath = join(fixturesDir, 'basic.norg');
       const plugin = norgPlugin({ mode, include: ['**/*.norg'] });
-      const result = await plugin.load(`${fixturePath}?metadata`);
+      const code = await loadCode(plugin, `${fixturePath}?metadata`);
 
-      expect(result).toContain('export const metadata');
-      expect(result).not.toContain('export const html');
-      expect(result).toContain('export const toc');
+      expect(code).toContain('export const metadata');
+      expect(code).not.toContain('export const html');
+      expect(code).toContain('export const toc');
     });
   });
 });

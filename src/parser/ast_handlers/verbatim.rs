@@ -121,5 +121,5 @@ impl VerbatimTag {
 fn wrap_lines(html: &str) -> String {
     html.lines()
         .map(|line| format!(r#"<span class="line">{line}</span>"#))
-        .join("")
+        .join("\n")
 }

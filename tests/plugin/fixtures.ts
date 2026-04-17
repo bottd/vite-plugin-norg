@@ -13,3 +13,12 @@ export const fixtures = [
   'links.norg',
   'embed-css.norg',
 ];
+
+export async function loadCode(
+  plugin: { load?: (id: string) => unknown | Promise<unknown> },
+  id: string
+): Promise<string | undefined> {
+  const result = await plugin.load?.(id);
+  if (result == null) return undefined;
+  return typeof result === 'string' ? result : (result as { code: string }).code;
+}
