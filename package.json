@@ -5,6 +5,10 @@
   "name": "vite-plugin-norg",
   "version": "4.0.10",
   "type": "module",
+  "workspaces": [
+    "examples/*",
+    "site"
+  ],
   "description": "A Vite plugin for rendering Norg files",
   "main": "dist/plugin/index.js",
   "types": "dist/plugin/index.d.ts",
@@ -40,7 +44,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:examples": "pnpm --filter '@examples/*' build && pnpm --filter @vite-plugin-norg/site build"
   },
   "keywords": [
     "vite",
