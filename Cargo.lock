@@ -2072,7 +2072,7 @@ dependencies = [
 [[package]]
 name = "rust-norg"
 version = "0.1.0"
-source = "git+https://github.com/nvim-neorg/rust-norg?rev=79673015447b62d021d57b92f80be1454fe5cf83#79673015447b62d021d57b92f80be1454fe5cf83"
+source = "git+https://github.com/nvim-neorg/rust-norg?rev=8e40d2443c39b4719e1c6637b93007fa64353e92#8e40d2443c39b4719e1c6637b93007fa64353e92"
 dependencies = [
  "chumsky",
  "itertools 0.13.0",
