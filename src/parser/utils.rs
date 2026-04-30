@@ -1,12 +1,18 @@
+/// Slugifies arbitrary text: lowercase alphanumerics joined by single dashes,
+/// with no leading or trailing dash. Single-pass, no intermediate allocations.
 pub fn into_slug(text: &str) -> String {
-    text.to_lowercase()
-        .chars()
-        .map(|c| if c.is_alphanumeric() { c } else { '-' })
-        .collect::<String>()
-        .split('-')
-        .filter(|segment| !segment.is_empty())
-        .collect::<Vec<_>>()
-        .join("-")
+    let mut slug = String::with_capacity(text.len());
+    for c in text.chars().flat_map(char::to_lowercase) {
+        if c.is_alphanumeric() {
+            slug.push(c);
+        } else if !slug.is_empty() && !slug.ends_with('-') {
+            slug.push('-');
+        }
+    }
+    if slug.ends_with('-') {
+        slug.pop();
+    }
+    slug
 }
 
 #[cfg(test)]

@@ -2,45 +2,50 @@ use crate::segments::convert_segments;
 use crate::utils::into_slug;
 use htmlescape::encode_minimal;
 use rust_norg::{DetachedModifierExtension, NorgASTFlat, TodoStatus};
+use std::fmt::Write;
 
 pub fn nestable_modifier(
     text: &NorgASTFlat,
     extensions: &[DetachedModifierExtension],
 ) -> Option<String> {
-    match text {
-        NorgASTFlat::Paragraph(segments) => {
-            let content = convert_segments(segments);
-            (!content.trim().is_empty()).then(|| format_nestable(&content, extensions))
-        }
-        _ => None,
+    let NorgASTFlat::Paragraph(segments) = text else {
+        return None;
+    };
+    let content = convert_segments(segments);
+    if content.trim().is_empty() {
+        return None;
     }
+    Some(format_nestable(&content, extensions))
 }
 
 fn format_nestable(content: &str, extensions: &[DetachedModifierExtension]) -> String {
-    let mut classes: Vec<String> = Vec::new();
-    let mut attrs: Vec<String> = Vec::new();
-    let mut prefix: Vec<&str> = Vec::new();
+    let mut classes = String::new();
+    let mut attrs = String::new();
+    let mut prefix = String::new();
 
     for extension in extensions {
         match extension {
             DetachedModifierExtension::Todo(status) => {
                 if matches!(status, TodoStatus::Recurring(_)) {
-                    classes.push("todo-recurring".into());
+                    push_class(&mut classes, "todo-recurring");
                 }
-                prefix.push(todo_html(status));
+                if !prefix.is_empty() {
+                    prefix.push(' ');
+                }
+                prefix.push_str(todo_html(status));
             }
             DetachedModifierExtension::Priority(priority) => {
-                classes.push(format!("priority-{}", into_slug(priority)));
-                attrs.push(format!(r#"data-priority="{}""#, encode_minimal(priority)));
+                push_class(&mut classes, &format!("priority-{}", into_slug(priority)));
+                push_attr(&mut attrs, "data-priority", priority);
             }
             DetachedModifierExtension::Timestamp(timestamp) => {
-                attrs.push(format!(r#"data-timestamp="{}""#, encode_minimal(timestamp)));
+                push_attr(&mut attrs, "data-timestamp", timestamp);
             }
             DetachedModifierExtension::DueDate(date) => {
-                attrs.push(format!(r#"data-due="{}""#, encode_minimal(date)));
+                push_attr(&mut attrs, "data-due", date);
             }
             DetachedModifierExtension::StartDate(date) => {
-                attrs.push(format!(r#"data-start="{}""#, encode_minimal(date)));
+                push_attr(&mut attrs, "data-start", date);
             }
         }
     }
@@ -48,20 +53,26 @@ fn format_nestable(content: &str, extensions: &[DetachedModifierExtension]) -> S
     let class_attr = if classes.is_empty() {
         String::new()
     } else {
-        format!(r#" class="{}""#, classes.join(" "))
-    };
-    let data_attrs = if attrs.is_empty() {
-        String::new()
-    } else {
-        format!(" {}", attrs.join(" "))
+        format!(r#" class="{classes}""#)
     };
     let prefix_html = if prefix.is_empty() {
         String::new()
     } else {
-        format!("{} ", prefix.join(" "))
+        format!("{prefix} ")
     };
 
-    format!("<li{class_attr}{data_attrs}>{prefix_html}{content}</li>")
+    format!("<li{class_attr}{attrs}>{prefix_html}{content}</li>")
+}
+
+fn push_class(buf: &mut String, class: &str) {
+    if !buf.is_empty() {
+        buf.push(' ');
+    }
+    buf.push_str(class);
+}
+
+fn push_attr(buf: &mut String, name: &str, value: &str) {
+    let _ = write!(buf, r#" {name}="{}""#, encode_minimal(value));
 }
 
 fn todo_html(status: &TodoStatus) -> &'static str {

@@ -1,14 +1,13 @@
 use super::error::EmbedParseError;
-use crate::types::{EmbedComponent, OutputMode};
+use crate::types::OutputMode;
 use arborium::Highlighter;
 use htmlescape::encode_minimal;
-use itertools::Itertools;
 use textwrap::dedent;
 
 pub enum VerbatimTagResult {
     Html(String),
     Css(String),
-    Embed(EmbedComponent),
+    Embed { mode: String, code: String },
 }
 
 pub enum VerbatimTag {
@@ -40,31 +39,33 @@ impl VerbatimTag {
         highlighter: &mut Highlighter,
         embed_index: usize,
     ) -> Result<Option<VerbatimTagResult>, EmbedParseError> {
+        let first_param = || {
+            parameters
+                .first()
+                .filter(|s| !s.is_empty())
+                .map(String::as_str)
+        };
+
         match self {
             Self::Code => {
                 let code = dedent(content);
-                let lang = parameters
-                    .first()
-                    .filter(|s| !s.is_empty())
-                    .map(String::as_str)
-                    .unwrap_or("text");
-
-                let highlighted = highlighter.highlight(lang, &code);
-                let html = match highlighted {
-                    Ok(h) => format!(
+                let lang = first_param().unwrap_or("text");
+                let body = match highlighter.highlight(lang, &code) {
+                    Ok(highlighted) => format!(
                         r#"<pre class="arborium lang-{lang}"><code>{}</code></pre>"#,
-                        wrap_lines(&h)
+                        wrap_lines(&highlighted)
                     ),
                     Err(_) => format!(
                         r#"<pre><code>{}</code></pre>"#,
                         wrap_lines(&encode_minimal(&code))
                     ),
                 };
-                Ok(Some(VerbatimTagResult::Html(html)))
+                Ok(Some(VerbatimTagResult::Html(body)))
             }
-            Self::Image => Ok(parameters.first().filter(|s| !s.is_empty()).map(|path| {
+
+            Self::Image => Ok(first_param().map(|path| {
                 let src = if path.starts_with('/') || path.starts_with("http") {
-                    path.clone()
+                    path.to_string()
                 } else {
                     format!("./{path}")
                 };
@@ -74,40 +75,11 @@ impl VerbatimTag {
                     encode_minimal(content.trim())
                 ))
             })),
-            Self::Embed => {
-                let embed_lang = parameters
-                    .first()
-                    .filter(|s| !s.is_empty())
-                    .map(String::as_str);
 
-                match embed_lang {
-                    Some("css") => Ok(Some(VerbatimTagResult::Css(content.to_string()))),
-                    None => Err(EmbedParseError::MissingLanguage { index: embed_index }),
-                    Some(lang) => {
-                        let embed_mode = lang.parse::<OutputMode>().map_err(|_| {
-                            EmbedParseError::InvalidLanguage {
-                                index: embed_index,
-                                language: lang.to_string(),
-                            }
-                        })?;
+            Self::Embed => render_embed(first_param(), content, mode, embed_index),
 
-                        match mode {
-                            None => Ok(None),
-                            Some(m) if m != embed_mode => Err(EmbedParseError::LanguageMismatch {
-                                index: embed_index,
-                                language: lang.to_string(),
-                                mode: m,
-                            }),
-                            Some(_) => Ok(Some(VerbatimTagResult::Embed(EmbedComponent {
-                                index: 0,
-                                mode: embed_mode.to_string(),
-                                code: content.to_string(),
-                            }))),
-                        }
-                    }
-                }
-            }
             Self::DocumentMeta => Ok(None),
+
             Self::Unknown => Ok(Some(VerbatimTagResult::Html(format!(
                 r#"<div class="verbatim">{}</div>"#,
                 encode_minimal(content)
@@ -116,10 +88,52 @@ impl VerbatimTag {
     }
 }
 
-/// Wraps each of highlighted HTML in `<span class="line">`
-/// This enables per-line styling such as line numbers or highlighting specific lines
+fn render_embed(
+    lang: Option<&str>,
+    content: &str,
+    mode: Option<OutputMode>,
+    index: usize,
+) -> Result<Option<VerbatimTagResult>, EmbedParseError> {
+    let Some(lang) = lang else {
+        return Err(EmbedParseError::MissingLanguage { index });
+    };
+
+    if lang == "css" {
+        return Ok(Some(VerbatimTagResult::Css(content.to_string())));
+    }
+
+    let embed_mode = lang
+        .parse::<OutputMode>()
+        .map_err(|_| EmbedParseError::InvalidLanguage {
+            index,
+            language: lang.to_string(),
+        })?;
+
+    match mode {
+        None => Ok(None),
+        Some(m) if m != embed_mode => Err(EmbedParseError::LanguageMismatch {
+            index,
+            language: lang.to_string(),
+            mode: m,
+        }),
+        Some(_) => Ok(Some(VerbatimTagResult::Embed {
+            mode: embed_mode.to_string(),
+            code: content.to_string(),
+        })),
+    }
+}
+
+/// Wraps each line of highlighted HTML in `<span class="line">` so consumers
+/// can attach per-line styling (line numbers, highlights, etc.).
 fn wrap_lines(html: &str) -> String {
-    html.lines()
-        .map(|line| format!(r#"<span class="line">{line}</span>"#))
-        .join("\n")
+    let mut out = String::with_capacity(html.len() + 64);
+    for (i, line) in html.lines().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        out.push_str(r#"<span class="line">"#);
+        out.push_str(line);
+        out.push_str("</span>");
+    }
+    out
 }
