@@ -46,9 +46,9 @@ dependencies = [
 
 [[package]]
 name = "arborium"
-version = "2.16.0"
+version = "2.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db65328fda517795f476b9d1b0794199cce180077e204629946a0705f0093093"
+checksum = "66464d43ce8ad5a81f59a9dac02d33dfe384e8fe9cd334fc607a0b81699d2594"
 dependencies = [
  "arborium-ada",
  "arborium-agda",
@@ -81,6 +81,7 @@ dependencies = [
  "arborium-erlang",
  "arborium-fish",
  "arborium-fsharp",
+ "arborium-gitattributes",
  "arborium-gleam",
  "arborium-glsl",
  "arborium-go",
@@ -97,11 +98,16 @@ dependencies = [
  "arborium-javascript",
  "arborium-jinja2",
  "arborium-jq",
+ "arborium-jsdoc",
  "arborium-json",
  "arborium-julia",
+ "arborium-just",
+ "arborium-kconfig",
+ "arborium-kdl",
  "arborium-kotlin",
  "arborium-lean",
  "arborium-lua",
+ "arborium-make",
  "arborium-markdown",
  "arborium-matlab",
  "arborium-meson",
@@ -110,14 +116,17 @@ dependencies = [
  "arborium-nix",
  "arborium-objc",
  "arborium-ocaml",
+ "arborium-odin",
  "arborium-perl",
  "arborium-php",
  "arborium-postscript",
  "arborium-powershell",
  "arborium-prolog",
+ "arborium-proto",
  "arborium-python",
  "arborium-query",
  "arborium-r",
+ "arborium-regex",
  "arborium-rego",
  "arborium-rescript",
  "arborium-ron",
@@ -502,6 +511,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "arborium-gitattributes"
+version = "2.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54b1229c84c3383ffbb91a830cbfb83f146d9db763ea290edeeaef9d4debc3da"
+dependencies = [
+ "arborium-sysroot",
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "arborium-gleam"
 version = "2.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -716,6 +736,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "arborium-just"
+version = "2.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c24c6a736b4e3ff20ce1264a4fdb6244d88dc41005bc02b3b2c1dc7cb1831be5"
+dependencies = [
+ "arborium-sysroot",
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "arborium-kconfig"
+version = "2.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e948572fec4b102aea630092bcde0c794ea0f5ee2bdb79e285530eb92925567e"
+dependencies = [
+ "arborium-sysroot",
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "arborium-kdl"
+version = "2.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9da9b626c0db70f168af8265ace916cce767d1cbbec4300222b9b5ea1a12b05"
+dependencies = [
+ "arborium-sysroot",
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "arborium-kotlin"
 version = "2.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -742,6 +795,17 @@ name = "arborium-lua"
 version = "2.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b5c1ba339d3467249dc944c6527369314124ef9f5e5b8c062844e258f24397a"
+dependencies = [
+ "arborium-sysroot",
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "arborium-make"
+version = "2.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be667280f5a4f3e15c6f82a7a5bda3b5757be0c3fb8bb7123f5cedc3ab2bd6e3"
 dependencies = [
  "arborium-sysroot",
  "cc",
@@ -841,6 +905,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "arborium-odin"
+version = "2.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "921873ed3530903ef2083ebc74da40ebcf0a6521a7399e23d24247d56e35fa37"
+dependencies = [
+ "arborium-sysroot",
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "arborium-perl"
 version = "2.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -896,6 +971,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "arborium-proto"
+version = "2.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6baa119055026b4b06e55ed3ed91568833c602be67127f72160f00a46ec738d2"
+dependencies = [
+ "arborium-sysroot",
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "arborium-python"
 version = "2.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -922,6 +1008,17 @@ name = "arborium-r"
 version = "2.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a5550e4b2b0360271a8ef8fb69f618dfee674a179d16ba07266e6bf0acb034a"
+dependencies = [
+ "arborium-sysroot",
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "arborium-regex"
+version = "2.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d71897b990c959b68fbac36438a6d168173fe134583622aeb447da9e319d2622"
 dependencies = [
  "arborium-sysroot",
  "cc",
@@ -1442,9 +1539,9 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "0.11.1"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "400a21f1014a968ec518c7ccdf9b4a4ed0cac8c56ccb6d604f8b91f00110501e"
+checksum = "378f0974ae2468eaf63aa036dbe9c926b0dc7ea64c156f2ea618bc2f75b934f0"
 
 [[package]]
 name = "dlmalloc"
@@ -1768,9 +1865,9 @@ checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
 
 [[package]]
 name = "napi"
-version = "3.8.6"
+version = "3.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e55037284865448ecf329baa86a4d05401f647ebde99f5747b640d32c2c5226"
+checksum = "f1d395473824516f38dd1071a1a37bc57daa7be65b293ebba4ead5f7abb017a2"
 dependencies = [
  "bitflags",
  "ctor",
@@ -1785,15 +1882,15 @@ dependencies = [
 
 [[package]]
 name = "napi-build"
-version = "2.3.1"
+version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d376940fd5b723c6893cd1ee3f33abbfd86acb1cd1ec079f3ab04a2a3bc4d3b1"
+checksum = "c9c366d2c8c60b86fa632df75f745509b52f9128f91a6bad4c796e44abb505e1"
 
 [[package]]
 name = "napi-derive"
-version = "3.5.5"
+version = "3.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4ba740fe4c9524d86fd90798fd8ccdb23402b3eef7e7c30897a8a369b529fcf"
+checksum = "89b3f766e04667e6da0e181e2da4f85475d5a6513b7cf6a80bea184e224a5b42"
 dependencies = [
  "convert_case",
  "ctor",

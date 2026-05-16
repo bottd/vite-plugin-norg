@@ -15,13 +15,13 @@ path = "src/parser/lib.rs"
 
 
 [dependencies]
-napi = { version = "=3.8.6", features = ["serde-json"] }
-napi-derive = { version = "=3.5.5", features = ["type-def"] }
+napi = { version = "=3.9.0", features = ["serde-json"] }
+napi-derive = { version = "=3.5.6", features = ["type-def"] }
 serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.149"
 htmlescape = "=0.3.1"
 rust-norg = { git = "https://github.com/nvim-neorg/rust-norg", rev = "79673015447b62d021d57b92f80be1454fe5cf83" }
-arborium = { version = "=2.16.0", features = ["all-languages"] }
+arborium = { version = "=2.17.0", features = ["all-languages"] }
 textwrap = "=0.16.2"
 itertools = "=0.14.0"
 
