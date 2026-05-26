@@ -75,7 +75,7 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), 
 
     for (list_type, group) in &groups {
         match list_type {
-            Some(modifier_type) => render_list(modifier_type, group, state),
+            Some(modifier_type) => render_list(modifier_type, group, state)?,
             None => {
                 for node in group {
                     transform_node(node, state)?;
@@ -86,22 +86,57 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), 
     Ok(())
 }
 
+fn render_children(
+    nodes: &[NorgAST],
+    state: &mut TransformState,
+) -> Result<String, EmbedParseError> {
+    let saved = std::mem::take(&mut state.current_html);
+    let parts_len = state.parts.len();
+    let embeds_len = state.embed_components.len();
+    let outcome = transform_nodes(nodes, state);
+    let captured = std::mem::take(&mut state.current_html);
+    state.current_html = saved;
+    // rust-norg's stage_4 only allows NestableDetachedModifier nodes (or
+    // CarryoverTag wrapping one) inside a list item's `content`, so verbatim
+    // tags cannot appear here. If that ever changes, `apply_verbatim` would
+    // push to `state.parts` against the swapped-empty current_html and
+    // misalign the parts/embed_components stream — assert it stays inert.
+    debug_assert_eq!(state.parts.len(), parts_len);
+    debug_assert_eq!(state.embed_components.len(), embeds_len);
+    outcome?;
+    let trimmed = captured.trim_end_matches('\n');
+    Ok(if trimmed.len() == captured.len() {
+        captured
+    } else {
+        trimmed.to_owned()
+    })
+}
+
 fn render_list<'a>(
     modifier_type: NestableDetachedModifier,
     group: impl Iterator<Item = &'a NorgAST>,
     state: &mut TransformState,
-) {
-    let items: String = group
-        .filter_map(|node| match node {
+) -> Result<(), EmbedParseError> {
+    let mut items = String::new();
+    for node in group {
+        match node {
             NorgAST::NestableDetachedModifier {
-                text, extensions, ..
-            } => nestable_modifier(text, extensions),
-            _ => None,
-        })
-        .collect();
+                text,
+                extensions,
+                content,
+                ..
+            } => {
+                let children_html = render_children(content, state)?;
+                if let Some(item) = nestable_modifier(text, extensions, &children_html) {
+                    items.push_str(&item);
+                }
+            }
+            _ => unreachable!("chunk_by groups only NestableDetachedModifier under Some(_) key"),
+        }
+    }
 
     if items.is_empty() {
-        return;
+        return Ok(());
     }
 
     let tag = match modifier_type {
@@ -110,6 +145,7 @@ fn render_list<'a>(
         NestableDetachedModifier::Quote => "blockquote",
     };
     state.push_html(&format!("<{tag}>{items}</{tag}>"));
+    Ok(())
 }
 
 fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), EmbedParseError> {

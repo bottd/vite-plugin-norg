@@ -1,0 +1,35 @@
+@document.meta
+title: Nested Lists
+@end
+
+* Nested Lists
+
+** Two Levels
+
+- Top level item
+-- Sub item A
+-- Sub item B
+- Another top level
+
+** Three Levels
+
+- Outer
+-- Middle
+--- Inner
+--- Inner two
+-- Middle two
+- Outer two
+
+** Mixed Markers
+
+- Bullet parent
+~~ Numbered child A
+~~ Numbered child B
+- Bullet parent two
+
+** Ordered With Nested
+
+~ First
+~~ Nested first
+~~ Nested second
+~ Second

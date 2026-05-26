@@ -7,18 +7,26 @@ use std::fmt::Write;
 pub fn nestable_modifier(
     text: &NorgASTFlat,
     extensions: &[DetachedModifierExtension],
+    children_html: &str,
 ) -> Option<String> {
-    let NorgASTFlat::Paragraph(segments) = text else {
-        return None;
+    let content = match text {
+        NorgASTFlat::Paragraph(segments) => convert_segments(segments),
+        _ => {
+            eprintln!("Warning: non-Paragraph text in nestable modifier");
+            String::new()
+        }
     };
-    let content = convert_segments(segments);
-    if content.trim().is_empty() {
+    if content.trim().is_empty() && children_html.trim().is_empty() && extensions.is_empty() {
         return None;
     }
-    Some(format_nestable(&content, extensions))
+    Some(format_nestable(&content, extensions, children_html))
 }
 
-fn format_nestable(content: &str, extensions: &[DetachedModifierExtension]) -> String {
+fn format_nestable(
+    content: &str,
+    extensions: &[DetachedModifierExtension],
+    children_html: &str,
+) -> String {
     let mut classes = String::new();
     let mut attrs = String::new();
     let mut prefix = String::new();
@@ -57,11 +65,13 @@ fn format_nestable(content: &str, extensions: &[DetachedModifierExtension]) -> S
     };
     let prefix_html = if prefix.is_empty() {
         String::new()
+    } else if content.is_empty() {
+        prefix
     } else {
         format!("{prefix} ")
     };
 
-    format!("<li{class_attr}{attrs}>{prefix_html}{content}</li>")
+    format!("<li{class_attr}{attrs}>{prefix_html}{content}{children_html}</li>")
 }
 
 fn push_class(buf: &mut String, class: &str) {

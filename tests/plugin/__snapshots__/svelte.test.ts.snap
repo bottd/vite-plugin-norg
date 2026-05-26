@@ -48,3 +48,11 @@ exports[`Svelte Generator > generates correct output for links.norg 1`] = `
 </script>
 {@html "<h1 id=\\"link-types\\">Link Types</h1>\\n<h2 id=\\"url-links\\">URL Links</h2>\\n<p><a href=\\"https://example.com\\" target=\\"_blank\\">https://example.com</a> <a href=\\"https://github.com/nvim-neorg\\" target=\\"_blank\\">Neorg GitHub</a></p>\\n<h2 id=\\"file-links\\">File Links</h2>\\n<p><a href=\\"docs/readme.html\\">docs/readme.norg</a> <a href=\\"path/to/file.html\\">File Description</a></p>\\n<h2 id=\\"heading-links\\">Heading Links</h2>\\n<p><a href=\\"#main-heading\\">Main Heading</a> <a href=\\"#sub-heading\\">Sub Heading</a> <a href=\\"#introduction\\">Custom link text</a></p>\\n<h2 id=\\"mixed-content\\">Mixed Content</h2>\\n<p>This paragraph has a <a href=\\"https://rust-lang.org\\" target=\\"_blank\\">Rust website</a> and <a href=\\"tutorial.html\\">tutorial file</a>.</p>\\n"}"
 `;
+
+exports[`Svelte Generator > generates correct output for nested-lists.norg 1`] = `
+"<script lang="ts" module>
+  export const metadata = {"title":"Nested Lists"};
+  export const toc = [{"level":1,"title":"Nested Lists","id":"nested-lists"},{"level":2,"title":"Two Levels","id":"two-levels"},{"level":2,"title":"Three Levels","id":"three-levels"},{"level":2,"title":"Mixed Markers","id":"mixed-markers"},{"level":2,"title":"Ordered With Nested","id":"ordered-with-nested"}];
+</script>
+{@html "<h1 id=\\"nested-lists\\">Nested Lists</h1>\\n<h2 id=\\"two-levels\\">Two Levels</h2>\\n<ul><li>Top level item<ul><li>Sub item A</li><li>Sub item B</li></ul></li><li>Another top level</li></ul>\\n<h2 id=\\"three-levels\\">Three Levels</h2>\\n<ul><li>Outer<ul><li>Middle<ul><li>Inner</li><li>Inner two</li></ul></li><li>Middle two</li></ul></li><li>Outer two</li></ul>\\n<h2 id=\\"mixed-markers\\">Mixed Markers</h2>\\n<ul><li>Bullet parent<ol><li>Numbered child A</li><li>Numbered child B</li></ol></li><li>Bullet parent two</li></ul>\\n<h2 id=\\"ordered-with-nested\\">Ordered With Nested</h2>\\n<ol><li>First<ol><li>Nested first</li><li>Nested second</li></ol></li><li>Second</li></ol>\\n"}"
+`;
