@@ -4,7 +4,6 @@ use crate::types::{EmbedComponent, OutputMode};
 use crate::utils::into_slug;
 use arborium::Highlighter;
 use htmlescape::encode_minimal;
-use itertools::Itertools;
 use rust_norg::{
     NestableDetachedModifier, NorgAST, NorgASTFlat, ParagraphSegment, RangeableDetachedModifier,
 };
@@ -68,20 +67,8 @@ pub fn transform(
 }
 
 fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), EmbedParseError> {
-    let groups = nodes.iter().chunk_by(|node| match node {
-        NorgAST::NestableDetachedModifier { modifier_type, .. } => Some(modifier_type.clone()),
-        _ => None,
-    });
-
-    for (list_type, group) in &groups {
-        match list_type {
-            Some(modifier_type) => render_list(modifier_type, group, state)?,
-            None => {
-                for node in group {
-                    transform_node(node, state)?;
-                }
-            }
-        }
+    for node in nodes {
+        transform_node(node, state)?;
     }
     Ok(())
 }
@@ -93,32 +80,32 @@ fn render_children(
     let saved = std::mem::take(&mut state.current_html);
     let parts_len = state.parts.len();
     let embeds_len = state.embed_components.len();
+    let css_len = state.css_blocks.len();
     let outcome = transform_nodes(nodes, state);
-    let captured = std::mem::take(&mut state.current_html);
+    let mut captured = std::mem::take(&mut state.current_html);
     state.current_html = saved;
-    // rust-norg's stage_4 only allows NestableDetachedModifier nodes (or
-    // CarryoverTag wrapping one) inside a list item's `content`, so verbatim
-    // tags cannot appear here. If that ever changes, `apply_verbatim` would
-    // push to `state.parts` against the swapped-empty current_html and
-    // misalign the parts/embed_components stream — assert it stays inert.
+    outcome?;
+    // rust-norg's stage_4 only allows List nodes (or CarryoverTag wrapping a
+    // Nestable) inside a list item's `content`, so verbatim tags cannot
+    // appear here. If that ever changes, `apply_verbatim` would push to
+    // state.parts/embed_components/css_blocks against the swapped-empty
+    // current_html and misalign the embed-component stream — assert it stays
+    // inert.
     debug_assert_eq!(state.parts.len(), parts_len);
     debug_assert_eq!(state.embed_components.len(), embeds_len);
-    outcome?;
-    let trimmed = captured.trim_end_matches('\n');
-    Ok(if trimmed.len() == captured.len() {
-        captured
-    } else {
-        trimmed.to_owned()
-    })
+    debug_assert_eq!(state.css_blocks.len(), css_len);
+    let new_len = captured.trim_end_matches('\n').len();
+    captured.truncate(new_len);
+    Ok(captured)
 }
 
-fn render_list<'a>(
-    modifier_type: NestableDetachedModifier,
-    group: impl Iterator<Item = &'a NorgAST>,
+fn render_list(
+    modifier_type: &NestableDetachedModifier,
+    items: &[NorgAST],
     state: &mut TransformState,
 ) -> Result<(), EmbedParseError> {
-    let mut items = String::new();
-    for node in group {
+    let mut rendered = String::new();
+    for node in items {
         match node {
             NorgAST::NestableDetachedModifier {
                 text,
@@ -128,14 +115,14 @@ fn render_list<'a>(
             } => {
                 let children_html = render_children(content, state)?;
                 if let Some(item) = nestable_modifier(text, extensions, &children_html) {
-                    items.push_str(&item);
+                    rendered.push_str(&item);
                 }
             }
-            _ => unreachable!("chunk_by groups only NestableDetachedModifier under Some(_) key"),
+            _ => eprintln!("Warning: non-Nestable item inside List"),
         }
     }
 
-    if items.is_empty() {
+    if rendered.is_empty() {
         return Ok(());
     }
 
@@ -144,13 +131,19 @@ fn render_list<'a>(
         NestableDetachedModifier::OrderedList => "ol",
         NestableDetachedModifier::Quote => "blockquote",
     };
-    state.push_html(&format!("<{tag}>{items}</{tag}>"));
+    state.push_html(&format!("<{tag}>{rendered}</{tag}>"));
     Ok(())
 }
 
 fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), EmbedParseError> {
     match node {
-        NorgAST::NestableDetachedModifier { .. } => {}
+        NorgAST::List {
+            modifier_type,
+            items,
+        } => render_list(modifier_type, items, state)?,
+        NorgAST::NestableDetachedModifier { .. } => {
+            eprintln!("Warning: bare NestableDetachedModifier outside List");
+        }
         NorgAST::VerbatimRangedTag {
             name,
             parameters,

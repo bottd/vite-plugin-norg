@@ -63,13 +63,12 @@ fn format_nestable(
     } else {
         format!(r#" class="{classes}""#)
     };
-    let prefix_html = if prefix.is_empty() {
-        String::new()
-    } else if content.is_empty() {
-        prefix
+    let separator = if prefix.is_empty() || content.trim().is_empty() {
+        ""
     } else {
-        format!("{prefix} ")
+        " "
     };
+    let prefix_html = format!("{prefix}{separator}");
 
     format!("<li{class_attr}{attrs}>{prefix_html}{content}{children_html}</li>")
 }
