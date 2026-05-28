@@ -1,0 +1,39 @@
+@document.meta
+title: vite-plugin-norg
+description: A Vite plugin for rendering Norg files
+@end
+
+* vite-plugin-norg
+
+  A {https://vitejs.dev}[Vite] plugin that transforms {https://github.com/nvim-neorg/norg-specs}[Norg] documents into framework components.
+
+** Supported Frameworks
+
+   - *Svelte* — full component output with embed component support
+   - *Vue* — full component output with embed component support
+   - *React* — JSX component output
+   - *HTML* — raw HTML string output
+
+** Quick Install
+
+   @code bash
+   bun add -D vite-plugin-norg
+   @end
+
+   @code typescript
+   import { norgPlugin } from 'vite-plugin-norg';
+
+   export default defineConfig({
+     plugins: [
+       norgPlugin({ mode: 'html' })
+     ]
+   });
+   @end
+
+** Features
+
+   - /Syntax highlighting/ via {https://github.com/bottd/arborium}[Arborium]
+   - *Embed CSS* — embed styles directly in your documents
+   - Metadata extraction from `@document.meta` blocks
+   - Table of contents generation
+   - Hot module replacement for instant previews

@@ -1,0 +1,57 @@
+@document.meta
+title: Getting Started
+description: Set up vite-plugin-norg with Vue
+@end
+
+* Getting Started
+
+  Get up and running with vite-plugin-norg in under 5 minutes.
+
+** Installation
+
+   @code bash
+   bun add -D vite-plugin-norg
+   @end
+
+** Vite Configuration
+
+   @code typescript
+   import vue from '@vitejs/plugin-vue';
+   import { norgPlugin } from 'vite-plugin-norg';
+   import { defineConfig } from 'vite';
+
+   export default defineConfig({
+     plugins: [
+       norgPlugin({
+         mode: 'vue',
+         arboriumConfig: { theme: 'github-dark' }
+       }),
+       vue()
+     ]
+   });
+   @end
+
+** TypeScript Setup
+
+   Add a type reference in your `env.d.ts`:
+
+   @code typescript
+   /// <reference types="vite-plugin-norg/vue" />
+   @end
+
+** Your First Import
+
+   Import a `.norg` file in any Vue component:
+
+   @code vue
+   <script setup lang="ts">
+   import Content, { metadata, toc } from './content/page.norg';
+   </script>
+
+   <template>
+     <h1>{{ metadata.title }}</h1>
+     <Content />
+   </template>
+   @end
+
+   The plugin parses the Norg file and generates a Vue component with exported `metadata` and `toc`.

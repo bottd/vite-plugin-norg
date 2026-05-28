@@ -1,0 +1,59 @@
+@document.meta
+title: Getting Started
+description: Set up vite-plugin-norg with React
+@end
+
+* Getting Started
+
+  Get up and running with vite-plugin-norg in under 5 minutes.
+
+** Installation
+
+   @code bash
+   bun add -D vite-plugin-norg
+   @end
+
+** Vite Configuration
+
+   @code typescript
+   import react from '@vitejs/plugin-react';
+   import { norgPlugin } from 'vite-plugin-norg';
+   import { defineConfig } from 'vite';
+
+   export default defineConfig({
+     plugins: [
+       norgPlugin({
+         mode: 'react',
+         arboriumConfig: { theme: 'github-dark' }
+       }),
+       react()
+     ]
+   });
+   @end
+
+** TypeScript Setup
+
+   Add a type reference in your `env.d.ts`:
+
+   @code typescript
+   /// <reference types="vite-plugin-norg/react" />
+   @end
+
+** Your First Import
+
+   Import a `.norg` file in any React component:
+
+   @code tsx
+   import Content, { metadata, toc } from './content/page.norg';
+
+   function Page() {
+     return (
+       <div>
+         <h1>{metadata.title}</h1>
+         <Content />
+       </div>
+     );
+   }
+   @end
+
+   The plugin parses the Norg file and generates a React component with exported `metadata` and `toc`.
