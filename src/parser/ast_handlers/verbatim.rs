@@ -1,5 +1,6 @@
 use super::error::EmbedParseError;
 use crate::types::OutputMode;
+use crate::utils::is_http_url;
 use arborium::Highlighter;
 use htmlescape::encode_minimal;
 use textwrap::dedent;
@@ -52,7 +53,8 @@ impl VerbatimTag {
                 let lang = first_param().unwrap_or("text");
                 let body = match highlighter.highlight(lang, &code) {
                     Ok(highlighted) => format!(
-                        r#"<pre class="arborium lang-{lang}"><code>{}</code></pre>"#,
+                        r#"<pre class="arborium lang-{}"><code>{}</code></pre>"#,
+                        encode_minimal(lang),
                         wrap_lines(&highlighted)
                     ),
                     Err(_) => format!(
@@ -64,7 +66,7 @@ impl VerbatimTag {
             }
 
             Self::Image => Ok(first_param().map(|path| {
-                let src = if path.starts_with('/') || path.starts_with("http") {
+                let src = if path.starts_with('/') || is_http_url(path) {
                     path.to_string()
                 } else {
                     format!("./{path}")

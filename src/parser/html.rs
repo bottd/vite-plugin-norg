@@ -15,6 +15,10 @@ struct TransformState {
     css_blocks: Vec<String>,
     mode: Option<OutputMode>,
     highlighter: Highlighter,
+    /// Ordinal of every `@embed` declaration (incl. CSS, `None`-mode, error),
+    /// used in error messages to match `find_embed_line`. Unlike
+    /// `embed_components.len()`, it counts embeds that emit no component.
+    embed_decls: usize,
 }
 
 impl TransformState {
@@ -26,6 +30,7 @@ impl TransformState {
             css_blocks: Vec::new(),
             mode,
             highlighter: Highlighter::new(),
+            embed_decls: 0,
         }
     }
 
@@ -118,7 +123,7 @@ fn render_list(
                     rendered.push_str(&item);
                 }
             }
-            _ => eprintln!("Warning: non-Nestable item inside List"),
+            _ => debug_assert!(false, "non-Nestable item inside List"),
         }
     }
 
@@ -142,7 +147,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             items,
         } => render_list(modifier_type, items, state)?,
         NorgAST::NestableDetachedModifier { .. } => {
-            eprintln!("Warning: bare NestableDetachedModifier outside List");
+            debug_assert!(false, "bare NestableDetachedModifier outside List");
         }
         NorgAST::VerbatimRangedTag {
             name,
@@ -150,12 +155,18 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             content,
             ..
         } => {
-            if let Some(result) = VerbatimTag::from(name.as_slice()).render(
+            let tag = VerbatimTag::from(name.as_slice());
+            // Capture the ordinal before incrementing; see `embed_decls` doc.
+            let embed_index = state.embed_decls;
+            if matches!(tag, VerbatimTag::Embed) {
+                state.embed_decls += 1;
+            }
+            if let Some(result) = tag.render(
                 parameters,
                 content,
                 state.mode,
                 &mut state.highlighter,
-                state.embed_components.len(),
+                embed_index,
             )? {
                 state.apply_verbatim(result);
             }
@@ -183,11 +194,22 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             ..
         } => state.push_html(&rangeable_modifier(modifier_type, title, content)),
         NorgAST::DelimitingModifier(delim) => state.push_html(delimiter(delim)),
-        NorgAST::CarryoverTag { .. } | NorgAST::RangedTag { .. } | NorgAST::InfirmTag { .. } => {
-            eprintln!("Warning: unimplemented tag");
-        }
+        NorgAST::CarryoverTag { name, .. } => warn_unimplemented("carryover", name),
+        NorgAST::RangedTag { name, .. } => warn_unimplemented("ranged", name),
+        NorgAST::InfirmTag { name, .. } => warn_unimplemented("infirm", name),
     }
     Ok(())
+}
+
+/// Logs a skipped tag the renderer doesn't implement, naming its kind and the
+/// dotted tag name (e.g. `image.gallery`) so the dropped content is traceable.
+fn warn_unimplemented(kind: &str, name: &[String]) {
+    let name = if name.is_empty() {
+        "<unnamed>".to_string()
+    } else {
+        name.join(".")
+    };
+    eprintln!("Warning: unimplemented {kind} tag '{name}' — content skipped");
 }
 
 fn rangeable_modifier(
@@ -199,10 +221,7 @@ fn rangeable_modifier(
     let body: String = content
         .iter()
         .filter_map(|node| match node {
-            NorgASTFlat::Paragraph(segments) => {
-                let html = convert_segments(segments);
-                (!html.trim().is_empty()).then(|| format!("<p>{html}</p>"))
-            }
+            NorgASTFlat::Paragraph(segments) => paragraph(segments),
             _ => None,
         })
         .collect();
