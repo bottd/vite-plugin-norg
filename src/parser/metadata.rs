@@ -1,3 +1,4 @@
+use crate::ast_handlers::VerbatimTag;
 use rust_norg::NorgAST::{self, VerbatimRangedTag};
 use rust_norg::metadata::{NorgMeta, parse_metadata};
 use serde_json::{Map, Value, json};
@@ -6,7 +7,11 @@ pub fn extract_metadata(ast: &[NorgAST]) -> Map<String, Value> {
     ast.iter()
         .find_map(|node| match node {
             VerbatimRangedTag { name, content, .. }
-                if matches!(name.as_slice(), [doc, meta] if doc == "document" && meta == "meta") => {
+                if matches!(
+                    VerbatimTag::from(name.as_slice()),
+                    VerbatimTag::DocumentMeta
+                ) =>
+            {
                 Some(content.as_str())
             }
             _ => None,

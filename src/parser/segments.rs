@@ -54,11 +54,10 @@ fn render_token(token: &ParagraphSegmentToken) -> String {
     match token {
         ParagraphSegmentToken::Whitespace => " ".into(),
         ParagraphSegmentToken::Text(text) => encode_minimal(text),
-        ParagraphSegmentToken::Special(ch) => {
+        ParagraphSegmentToken::Special(ch) | ParagraphSegmentToken::Escape(ch) => {
             let mut buf = [0u8; 4];
             encode_minimal(ch.encode_utf8(&mut buf))
         }
-        ParagraphSegmentToken::Escape(ch) => ch.to_string(),
     }
 }
 
@@ -126,9 +125,33 @@ fn convert_link(
             display.as_deref().unwrap_or(path),
             false,
         ),
-        Some(_) => String::new(),
+        Some(
+            LinkTarget::Footnote(_)
+            | LinkTarget::Definition(_)
+            | LinkTarget::Timestamp(_)
+            | LinkTarget::Generic(_)
+            | LinkTarget::Extendable(_)
+            | LinkTarget::Wiki(_),
+        ) => String::new(),
         None => filepath
             .map(|fp| anchor(&norg_to_html(fp), display.as_deref().unwrap_or(fp), false))
             .unwrap_or_default(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn escaped_metacharacters_are_html_escaped() {
+        // `\<`, `\>`, `\&` escape the modifier meaning of the char but must
+        // still be encoded so they render as literal text, not raw markup.
+        let segments = [
+            ParagraphSegment::Token(ParagraphSegmentToken::Escape('<')),
+            ParagraphSegment::Token(ParagraphSegmentToken::Escape('&')),
+            ParagraphSegment::Token(ParagraphSegmentToken::Escape('>')),
+        ];
+        assert_eq!(convert_segments(&segments), "&lt;&amp;&gt;");
     }
 }
