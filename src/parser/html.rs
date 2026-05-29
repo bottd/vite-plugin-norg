@@ -15,6 +15,10 @@ struct TransformState {
     css_blocks: Vec<String>,
     mode: Option<OutputMode>,
     highlighter: Highlighter,
+    /// Ordinal of every `@embed` declaration (incl. CSS, `None`-mode, error),
+    /// used in error messages to match `find_embed_line`. Unlike
+    /// `embed_components.len()`, it counts embeds that emit no component.
+    embed_decls: usize,
 }
 
 impl TransformState {
@@ -26,6 +30,7 @@ impl TransformState {
             css_blocks: Vec::new(),
             mode,
             highlighter: Highlighter::new(),
+            embed_decls: 0,
         }
     }
 
@@ -150,12 +155,18 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             content,
             ..
         } => {
-            if let Some(result) = VerbatimTag::from(name.as_slice()).render(
+            let tag = VerbatimTag::from(name.as_slice());
+            // Capture the ordinal before incrementing; see `embed_decls` doc.
+            let embed_index = state.embed_decls;
+            if matches!(tag, VerbatimTag::Embed) {
+                state.embed_decls += 1;
+            }
+            if let Some(result) = tag.render(
                 parameters,
                 content,
                 state.mode,
                 &mut state.highlighter,
-                state.embed_components.len(),
+                embed_index,
             )? {
                 state.apply_verbatim(result);
             }
@@ -199,10 +210,7 @@ fn rangeable_modifier(
     let body: String = content
         .iter()
         .filter_map(|node| match node {
-            NorgASTFlat::Paragraph(segments) => {
-                let html = convert_segments(segments);
-                (!html.trim().is_empty()).then(|| format!("<p>{html}</p>"))
-            }
+            NorgASTFlat::Paragraph(segments) => paragraph(segments),
             _ => None,
         })
         .collect();

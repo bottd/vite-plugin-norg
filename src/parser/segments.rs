@@ -126,7 +126,14 @@ fn convert_link(
             display.as_deref().unwrap_or(path),
             false,
         ),
-        Some(_) => String::new(),
+        Some(
+            LinkTarget::Footnote(_)
+            | LinkTarget::Definition(_)
+            | LinkTarget::Timestamp(_)
+            | LinkTarget::Generic(_)
+            | LinkTarget::Extendable(_)
+            | LinkTarget::Wiki(_),
+        ) => String::new(),
         None => filepath
             .map(|fp| anchor(&norg_to_html(fp), display.as_deref().unwrap_or(fp), false))
             .unwrap_or_default(),

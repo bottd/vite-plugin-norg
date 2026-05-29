@@ -19,10 +19,10 @@ pub fn nestable_modifier(
     if content.trim().is_empty() && children_html.trim().is_empty() && extensions.is_empty() {
         return None;
     }
-    Some(format_nestable(&content, extensions, children_html))
+    Some(list_item(&content, extensions, children_html))
 }
 
-fn format_nestable(
+fn list_item(
     content: &str,
     extensions: &[DetachedModifierExtension],
     children_html: &str,
@@ -35,15 +35,12 @@ fn format_nestable(
         match extension {
             DetachedModifierExtension::Todo(status) => {
                 if matches!(status, TodoStatus::Recurring(_)) {
-                    push_class(&mut classes, "todo-recurring");
+                    push_space_separated(&mut classes, "todo-recurring");
                 }
-                if !prefix.is_empty() {
-                    prefix.push(' ');
-                }
-                prefix.push_str(todo_html(status));
+                push_space_separated(&mut prefix, todo_html(status));
             }
             DetachedModifierExtension::Priority(priority) => {
-                push_class(&mut classes, &format!("priority-{}", into_slug(priority)));
+                push_space_separated(&mut classes, &format!("priority-{}", into_slug(priority)));
                 push_attr(&mut attrs, "data-priority", priority);
             }
             DetachedModifierExtension::Timestamp(timestamp) => {
@@ -68,16 +65,15 @@ fn format_nestable(
     } else {
         " "
     };
-    let prefix_html = format!("{prefix}{separator}");
 
-    format!("<li{class_attr}{attrs}>{prefix_html}{content}{children_html}</li>")
+    format!("<li{class_attr}{attrs}>{prefix}{separator}{content}{children_html}</li>")
 }
 
-fn push_class(buf: &mut String, class: &str) {
+fn push_space_separated(buf: &mut String, value: &str) {
     if !buf.is_empty() {
         buf.push(' ');
     }
-    buf.push_str(class);
+    buf.push_str(value);
 }
 
 fn push_attr(buf: &mut String, name: &str, value: &str) {
