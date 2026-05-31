@@ -10,6 +10,7 @@ use vite_plugin_norg_parser::{extract_metadata, extract_toc, transform};
 #[case::images("tests/fixtures/images.norg")]
 #[case::links("tests/fixtures/links.norg")]
 #[case::embed_css("tests/fixtures/embed-css.norg")]
+#[case::nested_lists("tests/fixtures/nested-lists.norg")]
 fn test_norg_fixture_files(#[case] fixture_path: &str) {
     let content = fs::read_to_string(fixture_path)
         .unwrap_or_else(|_| panic!("Failed to read {fixture_path}"));
