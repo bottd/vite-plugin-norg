@@ -12,6 +12,7 @@ export const fixtures = [
   'images.norg',
   'links.norg',
   'embed-css.norg',
+  'nested-lists.norg',
 ];
 
 export async function loadCode(

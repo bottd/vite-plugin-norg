@@ -1809,15 +1809,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2156,10 +2147,10 @@ dependencies = [
 [[package]]
 name = "rust-norg"
 version = "0.1.0"
-source = "git+https://github.com/nvim-neorg/rust-norg?rev=79673015447b62d021d57b92f80be1454fe5cf83#79673015447b62d021d57b92f80be1454fe5cf83"
+source = "git+https://github.com/nvim-neorg/rust-norg?rev=8e40d2443c39b4719e1c6637b93007fa64353e92#8e40d2443c39b4719e1c6637b93007fa64353e92"
 dependencies = [
  "chumsky",
- "itertools 0.13.0",
+ "itertools",
  "serde",
  "textwrap",
  "unicode_categories",
@@ -2423,7 +2414,6 @@ dependencies = [
  "arborium",
  "htmlescape",
  "insta",
- "itertools 0.14.0",
  "napi",
  "napi-derive",
  "proptest",
