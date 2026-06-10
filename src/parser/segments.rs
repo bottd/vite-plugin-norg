@@ -124,7 +124,9 @@ fn convert_link(
         Some(LinkTarget::Url(url)) => {
             let display_html = display.unwrap_or_else(|| encode_minimal(url));
             match filepath {
-                Some(fp) => anchor(out, fp, &display_html, false),
+                // `{:file.norg:url}` carries a file path; rewrite it to `.html`
+                // like the Heading/Path/None branches do, or the link is dead.
+                Some(fp) => anchor(out, &norg_to_html(fp), &display_html, false),
                 None if is_http_url(url) => anchor(out, url, &display_html, true),
                 None => anchor(out, &norg_to_html(url), &display_html, false),
             }
@@ -218,6 +220,21 @@ mod tests {
             out,
             r#"<a href="https://example.com" target="_blank"><strong>bold</strong></a>"#
         );
+    }
+
+    #[test]
+    fn url_link_with_norg_filepath_is_rewritten_to_html() {
+        // `{:notes.norg:label}` carries a file path on a Url target; it must be
+        // rewritten to `.html` like the Heading/Path branches, not left dead.
+        let description = [text("label")];
+        let mut out = String::new();
+        convert_link(
+            &[LinkTarget::Url("label".into())],
+            Some(&description),
+            Some("notes.norg"),
+            &mut out,
+        );
+        assert_eq!(out, r#"<a href="notes.html">label</a>"#);
     }
 
     #[test]

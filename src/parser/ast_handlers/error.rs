@@ -14,14 +14,24 @@ pub enum EmbedParseError {
         language: String,
         mode: OutputMode,
     },
+    /// A non-list node (an embed, code block, heading, …) nested inside a list
+    /// item. The list renderer is a pure function with no access to the
+    /// embed/CSS stream, so such content cannot be rendered in place — and is
+    /// reported rather than silently dropped. `node` names the unsupported kind.
+    UnsupportedListItemContent {
+        node: &'static str,
+    },
 }
 
 impl EmbedParseError {
-    pub fn index(&self) -> usize {
+    /// The zero-based ordinal of the offending `@embed`, for errors that have
+    /// one.
+    pub fn index(&self) -> Option<usize> {
         match self {
             Self::MissingLanguage { index }
             | Self::InvalidLanguage { index, .. }
-            | Self::LanguageMismatch { index, .. } => *index,
+            | Self::LanguageMismatch { index, .. } => Some(*index),
+            Self::UnsupportedListItemContent { .. } => None,
         }
     }
 
@@ -33,7 +43,7 @@ impl EmbedParseError {
     /// content.
     pub fn offending_line(&self) -> Option<String> {
         match self {
-            Self::MissingLanguage { .. } => None,
+            Self::MissingLanguage { .. } | Self::UnsupportedListItemContent { .. } => None,
             Self::InvalidLanguage { language, .. } | Self::LanguageMismatch { language, .. } => {
                 Some(format!("@embed {language}"))
             }
@@ -43,8 +53,8 @@ impl EmbedParseError {
 
 impl std::fmt::Display for EmbedParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let n = self.index() + 1;
         let supported = OutputMode::ALL.map(|m| m.as_str()).join(", ");
+        let n = self.index().map(|i| i + 1).unwrap_or(0);
         match self {
             Self::MissingLanguage { .. } => write!(
                 f,
@@ -57,6 +67,11 @@ impl std::fmt::Display for EmbedParseError {
             Self::LanguageMismatch { language, mode, .. } => write!(
                 f,
                 "Embed error (embed #{n}): @embed {language} cannot be used in {mode} mode"
+            ),
+            Self::UnsupportedListItemContent { node } => write!(
+                f,
+                "Unsupported content inside a list item: {node}. Move it out of the list \
+                 — embeds and block content cannot be rendered inside a list item."
             ),
         }
     }

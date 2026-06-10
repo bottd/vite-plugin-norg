@@ -81,7 +81,7 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), 
             i += 1;
         }
         if i > start {
-            let html = render_list_items(&items);
+            let html = render_list_items(&items)?;
             if !html.is_empty() {
                 state.push_html(&html);
             }
@@ -100,7 +100,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             // (e.g. reached through a CarryoverTag) renders the same way.
             let mut items = Vec::new();
             collect_list_items(node, &mut items);
-            let html = render_list_items(&items);
+            let html = render_list_items(&items)?;
             if !html.is_empty() {
                 state.push_html(&html);
             }
@@ -135,7 +135,12 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
         } => {
             let title_html = convert_segments(title);
             let id = into_slug(&title_html);
-            state.push_html(&format!("<h{level} id=\"{id}\">{title_html}</h{level}>"));
+            // HTML only defines <h1>–<h6>; deeper Norg headings (7+ `*`) clamp
+            // to <h6> so the markup stays valid.
+            let tag_level = (*level).min(6);
+            state.push_html(&format!(
+                "<h{tag_level} id=\"{id}\">{title_html}</h{tag_level}>"
+            ));
             transform_nodes(content, state)?;
         }
         NorgAST::Paragraph(segments) => {

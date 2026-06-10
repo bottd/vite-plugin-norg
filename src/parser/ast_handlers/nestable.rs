@@ -1,4 +1,4 @@
-use crate::ast_handlers::warn_carryover_ignored;
+use crate::ast_handlers::{EmbedParseError, warn_carryover_ignored};
 use crate::segments::convert_segments;
 use crate::utils::into_slug;
 use htmlescape::encode_minimal;
@@ -52,20 +52,18 @@ pub fn collect_list_items<'a>(node: &'a NorgAST, items: &mut Vec<FlatListItem<'a
         }
         NorgAST::CarryoverTag {
             name, next_object, ..
-        } if is_list_like(next_object) => {
-            // The annotation itself is unimplemented, but the item it
-            // annotates is real content — keep it in the list run.
-            warn_carryover_ignored(name);
-            collect_list_items(next_object, items)
+        } => {
+            // The annotation itself is unimplemented; recurse into the object
+            // it wraps. If that object is list content, keep it in the run and
+            // warn the tag was ignored; otherwise this isn't part of the list.
+            // (`collect_list_items` pushes nothing when it returns false, so
+            // the speculative call is safe.)
+            let consumed = collect_list_items(next_object, items);
+            if consumed {
+                warn_carryover_ignored(name);
+            }
+            consumed
         }
-        _ => false,
-    }
-}
-
-fn is_list_like(node: &NorgAST) -> bool {
-    match node {
-        NorgAST::List { .. } | NorgAST::NestableDetachedModifier { .. } => true,
-        NorgAST::CarryoverTag { next_object, .. } => is_list_like(next_object),
         _ => false,
     }
 }
@@ -76,10 +74,26 @@ fn is_list_like(node: &NorgAST) -> bool {
 /// itself recurses per nesting level and would overflow before rendering.
 pub const MAX_LIST_DEPTH: usize = 100;
 
-pub fn render_list_items(items: &[FlatListItem]) -> String {
+pub fn render_list_items(items: &[FlatListItem]) -> Result<String, EmbedParseError> {
     let mut out = String::new();
-    render_into(items, &mut out, 0);
-    out
+    render_into(items, &mut out, 0)?;
+    Ok(out)
+}
+
+/// A human-readable name for a node kind, for the
+/// `UnsupportedListItemContent` error.
+fn node_kind(node: &NorgAST) -> &'static str {
+    match node {
+        NorgAST::List { .. } | NorgAST::NestableDetachedModifier { .. } => "list",
+        NorgAST::Heading { .. } => "heading",
+        NorgAST::Paragraph(_) => "paragraph",
+        NorgAST::VerbatimRangedTag { .. } => "verbatim block (e.g. @code / @embed)",
+        NorgAST::RangeableDetachedModifier { .. } => "definition/footnote/table",
+        NorgAST::DelimitingModifier(_) => "delimiter",
+        NorgAST::CarryoverTag { .. } => "carryover-tagged block",
+        NorgAST::RangedTag { .. } => "ranged tag",
+        NorgAST::InfirmTag { .. } => "infirm tag",
+    }
 }
 
 struct OpenList {
@@ -90,10 +104,18 @@ struct OpenList {
     item_open: bool,
 }
 
-fn render_into(items: &[FlatListItem], out: &mut String, depth: usize) {
+fn render_into(
+    items: &[FlatListItem],
+    out: &mut String,
+    depth: usize,
+) -> Result<(), EmbedParseError> {
+    // Defense-in-depth: `excessive_nesting` in lib.rs already rejects any
+    // document whose nesting exceeds this cap before `parse_tree` runs, so this
+    // branch cannot fire for a successfully-parsed AST. It is kept as a cheap
+    // guard so the renderer is bounded even if reached through another path.
     if depth > MAX_LIST_DEPTH {
         eprintln!("Warning: list nesting exceeds {MAX_LIST_DEPTH} levels — deeper content skipped");
-        return;
+        return Ok(());
     }
     let mut stack: Vec<OpenList> = Vec::new();
 
@@ -103,11 +125,15 @@ fn render_into(items: &[FlatListItem], out: &mut String, depth: usize) {
         let mut nested = Vec::new();
         for node in item.content {
             if !collect_list_items(node, &mut nested) {
-                eprintln!("Warning: unsupported content inside list item — skipped");
+                // Non-list content can't be placed inside a list item by the
+                // pure list renderer; fail loudly rather than drop it silently.
+                return Err(EmbedParseError::UnsupportedListItemContent {
+                    node: node_kind(node),
+                });
             }
         }
         let mut children = String::new();
-        render_into(&nested, &mut children, depth + 1);
+        render_into(&nested, &mut children, depth + 1)?;
 
         let Some((markup, leaves_item_open)) = item_markup(item, &children) else {
             continue;
@@ -151,6 +177,7 @@ fn render_into(items: &[FlatListItem], out: &mut String, depth: usize) {
     while let Some(open) = stack.pop() {
         close_list(out, open);
     }
+    Ok(())
 }
 
 fn close_list(out: &mut String, open: OpenList) {

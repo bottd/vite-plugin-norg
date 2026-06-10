@@ -154,35 +154,49 @@ fn wrap_lines(html: &str) -> String {
     out
 }
 
-/// Emits `</name>` for an open tag like `<name …>`. The highlighter's tag
-/// names vary by format (`<a-c>` custom elements by default, `<span>` with
-/// the classic format), so the close tag must be derived from the open tag.
-fn push_close_tag(open: &str, out: &mut String) {
+/// The tag name of an open tag like `<name …>` — the run after `<` up to the
+/// first `>` or whitespace. The highlighter's tag names vary by format (`<a-c>`
+/// custom elements by default, `<span>` with the classic format), so the close
+/// tag must be derived from the open tag. Returns `None` for a nameless tag.
+fn open_tag_name(open: &str) -> Option<&str> {
     let name = open[1..]
         .split(|c: char| c == '>' || c.is_whitespace())
         .next()
         .unwrap_or("");
-    out.push_str("</");
-    out.push_str(name);
-    out.push('>');
+    (!name.is_empty()).then_some(name)
+}
+
+/// Emits `</name>` for an open tag, or nothing for a nameless tag.
+fn push_close_tag(open: &str, out: &mut String) {
+    if let Some(name) = open_tag_name(open) {
+        out.push_str("</");
+        out.push_str(name);
+        out.push('>');
+    }
 }
 
 /// Updates `stack` with the highlight spans still open at the end of `line`.
-/// The input contains only `<span …>`/`</span>` tags around HTML-escaped text
-/// (both the highlighter output and the `encode_minimal` fallback), so plain
-/// tag scanning is sufficient.
+/// The input is expected to contain only balanced `<span …>`/`</span>` tags
+/// (or the format's custom-element equivalent) around HTML-escaped text — both
+/// the highlighter output and the `encode_minimal` fallback satisfy this — so
+/// plain tag scanning suffices. The scan is nonetheless defensive: a
+/// self-closing or nameless tag is not tracked, and a close tag never pops past
+/// an empty stack, so unexpected highlighter output degrades to slightly-off
+/// styling rather than corrupting every following line's markup.
 fn track_open_spans<'a>(line: &'a str, stack: &mut Vec<&'a str>) {
     let mut rest = line;
     while let Some(start) = rest.find('<') {
         rest = &rest[start..];
         let Some(end) = rest.find('>') else { break };
         let tag = &rest[..=end];
+        rest = &rest[end + 1..];
         if tag.starts_with("</") {
             stack.pop();
-        } else {
+        } else if !tag.ends_with("/>") && open_tag_name(tag).is_some() {
+            // Skip self-closing (`<br/>`) and nameless tags: neither leaves an
+            // element open across the line break.
             stack.push(tag);
         }
-        rest = &rest[end + 1..];
     }
 }
 
@@ -219,6 +233,19 @@ mod tests {
         assert_eq!(
             wrap_lines(html),
             "<span class=\"line\"><a-c>/* one</a-c></span>\n<span class=\"line\"><a-c>two */</a-c></span>"
+        );
+    }
+
+    #[test]
+    fn wrap_lines_ignores_self_closing_tags_across_line_breaks() {
+        // A self-closing tag opens nothing, so it must not be tracked as an
+        // open span and re-emitted (which would desync the stack and corrupt
+        // every following line).
+        let html = "<span class=\"kw\">a</span><br/>\n<span class=\"kw\">b</span>";
+        assert_eq!(
+            wrap_lines(html),
+            "<span class=\"line\"><span class=\"kw\">a</span><br/></span>\n\
+             <span class=\"line\"><span class=\"kw\">b</span></span>"
         );
     }
 }
