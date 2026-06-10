@@ -51,8 +51,6 @@ pub struct TocEntry {
 #[napi(object)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbedComponent {
-    /// Position of this embed component in the document (0-indexed)
-    pub index: u32,
     /// Target mode ("html" | "svelte" | "vue" | "react")
     pub mode: String,
     /// Raw component code (user writes full component with imports)

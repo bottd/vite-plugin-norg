@@ -3,10 +3,7 @@ use crate::segments::convert_segments;
 use crate::types::{EmbedComponent, OutputMode};
 use crate::utils::into_slug;
 use arborium::Highlighter;
-use htmlescape::encode_minimal;
-use rust_norg::{
-    NestableDetachedModifier, NorgAST, NorgASTFlat, ParagraphSegment, RangeableDetachedModifier,
-};
+use rust_norg::{NorgAST, NorgASTFlat, ParagraphSegment, RangeableDetachedModifier};
 
 struct TransformState {
     parts: Vec<String>,
@@ -15,9 +12,10 @@ struct TransformState {
     css_blocks: Vec<String>,
     mode: Option<OutputMode>,
     highlighter: Highlighter,
-    /// Ordinal of every `@embed` declaration (incl. CSS, `None`-mode, error),
-    /// used in error messages to match `find_embed_line`. Unlike
-    /// `embed_components.len()`, it counts embeds that emit no component.
+    /// Ordinal of every `@embed` declaration the renderer visits (incl. CSS,
+    /// `None`-mode, and failing ones), giving errors their "embed #N" number.
+    /// Unlike `embed_components.len()`, it counts embeds that emit no
+    /// component.
     embed_decls: usize,
 }
 
@@ -44,10 +42,8 @@ impl TransformState {
             VerbatimTagResult::Html(html) => self.push_html(&html),
             VerbatimTagResult::Css(css) => self.css_blocks.push(css),
             VerbatimTagResult::Embed { mode, code } => {
-                let index = self.embed_components.len() as u32;
                 self.parts.push(std::mem::take(&mut self.current_html));
-                self.embed_components
-                    .push(EmbedComponent { index, mode, code });
+                self.embed_components.push(EmbedComponent { mode, code });
             }
         }
     }
@@ -72,82 +68,42 @@ pub fn transform(
 }
 
 fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), EmbedParseError> {
-    for node in nodes {
-        transform_node(node, state)?;
-    }
-    Ok(())
-}
-
-fn render_children(
-    nodes: &[NorgAST],
-    state: &mut TransformState,
-) -> Result<String, EmbedParseError> {
-    let saved = std::mem::take(&mut state.current_html);
-    let parts_len = state.parts.len();
-    let embeds_len = state.embed_components.len();
-    let css_len = state.css_blocks.len();
-    let outcome = transform_nodes(nodes, state);
-    let mut captured = std::mem::take(&mut state.current_html);
-    state.current_html = saved;
-    outcome?;
-    // rust-norg's stage_4 only allows List nodes (or CarryoverTag wrapping a
-    // Nestable) inside a list item's `content`, so verbatim tags cannot
-    // appear here. If that ever changes, `apply_verbatim` would push to
-    // state.parts/embed_components/css_blocks against the swapped-empty
-    // current_html and misalign the embed-component stream — assert it stays
-    // inert.
-    debug_assert_eq!(state.parts.len(), parts_len);
-    debug_assert_eq!(state.embed_components.len(), embeds_len);
-    debug_assert_eq!(state.css_blocks.len(), css_len);
-    let new_len = captured.trim_end_matches('\n').len();
-    captured.truncate(new_len);
-    Ok(captured)
-}
-
-fn render_list(
-    modifier_type: &NestableDetachedModifier,
-    items: &[NorgAST],
-    state: &mut TransformState,
-) -> Result<(), EmbedParseError> {
-    let mut rendered = String::new();
-    for node in items {
-        match node {
-            NorgAST::NestableDetachedModifier {
-                text,
-                extensions,
-                content,
-                ..
-            } => {
-                let children_html = render_children(content, state)?;
-                if let Some(item) = nestable_modifier(text, extensions, &children_html) {
-                    rendered.push_str(&item);
-                }
-            }
-            _ => debug_assert!(false, "non-Nestable item inside List"),
+    let mut i = 0;
+    while i < nodes.len() {
+        // Adjacent list-like nodes form one run so the renderer can re-nest
+        // mixed-marker siblings by level (rust-norg emits a deeper list of a
+        // different marker type as a sibling `List`, not as item content).
+        // List rendering is a pure function over the flattened run — it has
+        // no access to the embed/css stream, so it cannot misalign it.
+        let start = i;
+        let mut items = Vec::new();
+        while i < nodes.len() && collect_list_items(&nodes[i], &mut items) {
+            i += 1;
         }
+        if i > start {
+            let html = render_list_items(&items);
+            if !html.is_empty() {
+                state.push_html(&html);
+            }
+            continue;
+        }
+        transform_node(&nodes[i], state)?;
+        i += 1;
     }
-
-    if rendered.is_empty() {
-        return Ok(());
-    }
-
-    let tag = match modifier_type {
-        NestableDetachedModifier::UnorderedList => "ul",
-        NestableDetachedModifier::OrderedList => "ol",
-        NestableDetachedModifier::Quote => "blockquote",
-    };
-    state.push_html(&format!("<{tag}>{rendered}</{tag}>"));
     Ok(())
 }
 
 fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), EmbedParseError> {
     match node {
-        NorgAST::List {
-            modifier_type,
-            items,
-        } => render_list(modifier_type, items, state)?,
-        NorgAST::NestableDetachedModifier { .. } => {
-            debug_assert!(false, "bare NestableDetachedModifier outside List");
+        NorgAST::List { .. } | NorgAST::NestableDetachedModifier { .. } => {
+            // Normally consumed as a run by transform_nodes; a one-off node
+            // (e.g. reached through a CarryoverTag) renders the same way.
+            let mut items = Vec::new();
+            collect_list_items(node, &mut items);
+            let html = render_list_items(&items);
+            if !html.is_empty() {
+                state.push_html(&html);
+            }
         }
         NorgAST::VerbatimRangedTag {
             name,
@@ -194,22 +150,18 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             ..
         } => state.push_html(&rangeable_modifier(modifier_type, title, content)),
         NorgAST::DelimitingModifier(delim) => state.push_html(delimiter(delim)),
-        NorgAST::CarryoverTag { name, .. } => warn_unimplemented("carryover", name),
+        NorgAST::CarryoverTag {
+            name, next_object, ..
+        } => {
+            // The annotation is unimplemented, but the object it annotates is
+            // real content — warn and render it anyway.
+            warn_carryover_ignored(name);
+            transform_node(next_object, state)?;
+        }
         NorgAST::RangedTag { name, .. } => warn_unimplemented("ranged", name),
         NorgAST::InfirmTag { name, .. } => warn_unimplemented("infirm", name),
     }
     Ok(())
-}
-
-/// Logs a skipped tag the renderer doesn't implement, naming its kind and the
-/// dotted tag name (e.g. `image.gallery`) so the dropped content is traceable.
-fn warn_unimplemented(kind: &str, name: &[String]) {
-    let name = if name.is_empty() {
-        "<unnamed>".to_string()
-    } else {
-        name.join(".")
-    };
-    eprintln!("Warning: unimplemented {kind} tag '{name}' — content skipped");
 }
 
 fn rangeable_modifier(
@@ -217,28 +169,40 @@ fn rangeable_modifier(
     title: &[ParagraphSegment],
     content: &[NorgASTFlat],
 ) -> String {
+    // convert_segments output is final HTML (text already escaped, markup
+    // intentional) — re-encoding it would render `&` as `&amp;` and inline
+    // markup as literal tags.
     let title_html = convert_segments(title);
     let body: String = content
         .iter()
         .filter_map(|node| match node {
             NorgASTFlat::Paragraph(segments) => paragraph(segments),
-            _ => None,
+            _ => {
+                eprintln!(
+                    "Warning: unsupported block inside a definition/footnote/table body — content skipped"
+                );
+                None
+            }
         })
         .collect();
 
-    let title_escaped = encode_minimal(&title_html);
     match modifier_type {
         RangeableDetachedModifier::Definition => {
-            format!("<dl><dt>{title_escaped}</dt><dd>{body}</dd></dl>")
+            format!("<dl><dt>{title_html}</dt><dd>{body}</dd></dl>")
         }
         RangeableDetachedModifier::Footnote => {
             let id = into_slug(&title_html);
+            // `body` is already a sequence of <p> blocks.
             format!(
-                "<aside id=\"footnote-{id}\" class=\"footnote\"><strong>{title_escaped}</strong><p>{body}</p></aside>"
+                "<aside id=\"footnote-{id}\" class=\"footnote\"><strong>{title_html}</strong>{body}</aside>"
             )
         }
         RangeableDetachedModifier::Table => {
-            format!("<table><caption>{title_escaped}</caption><tbody>{body}</tbody></table>")
+            // The Norg table modifier carries free-form body content, not
+            // rows; a single cell is the minimal valid placement for it.
+            format!(
+                "<table><caption>{title_html}</caption><tbody><tr><td>{body}</td></tr></tbody></table>"
+            )
         }
     }
 }

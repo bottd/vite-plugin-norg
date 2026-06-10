@@ -1,0 +1,28 @@
+@document.meta
+title: Blocks
+@end
+
+* Blocks
+
+** Quotes
+
+> First quote line
+> Second quote line
+
+> Quote parent
+>> Nested quote
+
+** Definition
+
+$ Term
+The definition body.
+
+** Footnote
+
+^ note
+Footnote body text.
+
+** Table
+
+: Caption
+Cell content.

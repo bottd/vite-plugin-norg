@@ -11,23 +11,30 @@ pub fn extract_toc(ast: &[NorgAST]) -> Vec<TocEntry> {
 
 fn collect_headings(ast: &[NorgAST], toc: &mut Vec<TocEntry>) {
     for node in ast {
-        if let NorgAST::Heading {
-            level,
-            title,
-            content,
-            ..
-        } = node
-        {
-            let text = convert_segments(title);
-            let id = into_slug(&text);
+        match node {
+            NorgAST::Heading {
+                level,
+                title,
+                content,
+                ..
+            } => {
+                let text = convert_segments(title);
+                let id = into_slug(&text);
 
-            toc.push(TocEntry {
-                level: *level as u32,
-                title: text,
-                id,
-            });
+                toc.push(TocEntry {
+                    level: *level as u32,
+                    title: text,
+                    id,
+                });
 
-            collect_headings(content, toc);
+                collect_headings(content, toc);
+            }
+            // The renderer unwraps carryover tags and renders the annotated
+            // object, so a tagged heading must appear in the TOC too.
+            NorgAST::CarryoverTag { next_object, .. } => {
+                collect_headings(std::slice::from_ref(next_object), toc);
+            }
+            _ => {}
         }
     }
 }

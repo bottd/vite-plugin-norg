@@ -13,6 +13,7 @@ export const fixtures = [
   'links.norg',
   'embed-css.norg',
   'nested-lists.norg',
+  'blocks.norg',
 ];
 
 export async function loadCode(

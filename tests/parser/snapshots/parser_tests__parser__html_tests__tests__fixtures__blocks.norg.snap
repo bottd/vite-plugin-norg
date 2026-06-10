@@ -1,0 +1,22 @@
+---
+source: tests/parser/html_tests.rs
+expression: "(html, toc, metadata, embed_css)"
+---
+- "<h1 id=\"blocks\">Blocks</h1>\n<h2 id=\"quotes\">Quotes</h2>\n<blockquote><p>First quote line</p><p>Second quote line</p><p>Quote parent</p><blockquote><p>Nested quote</p></blockquote></blockquote>\n<h2 id=\"definition\">Definition</h2>\n<dl><dt>Term</dt><dd><p>The definition body.</p></dd></dl>\n<h2 id=\"footnote\">Footnote</h2>\n<aside id=\"footnote-note\" class=\"footnote\"><strong>note</strong><p>Footnote body text.</p></aside>\n<h2 id=\"table\">Table</h2>\n<table><caption>Caption</caption><tbody><tr><td><p>Cell content.</p></td></tr></tbody></table>\n"
+- - level: 1
+    title: Blocks
+    id: blocks
+  - level: 2
+    title: Quotes
+    id: quotes
+  - level: 2
+    title: Definition
+    id: definition
+  - level: 2
+    title: Footnote
+    id: footnote
+  - level: 2
+    title: Table
+    id: table
+- title: Blocks
+- ""

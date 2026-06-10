@@ -24,6 +24,21 @@ impl EmbedParseError {
             | Self::LanguageMismatch { index, .. } => *index,
         }
     }
+
+    /// The offending `@embed` declaration, reconstructed from the parsed
+    /// language — not the source line verbatim, so any extra parameters the
+    /// author wrote are not echoed back. Rebuilding it from AST data (rather
+    /// than re-scanning the source text by ordinal) cannot mis-attribute the
+    /// error to an `@embed` line sitting inside another verbatim block's raw
+    /// content.
+    pub fn offending_line(&self) -> Option<String> {
+        match self {
+            Self::MissingLanguage { .. } => None,
+            Self::InvalidLanguage { language, .. } | Self::LanguageMismatch { language, .. } => {
+                Some(format!("@embed {language}"))
+            }
+        }
+    }
 }
 
 impl std::fmt::Display for EmbedParseError {

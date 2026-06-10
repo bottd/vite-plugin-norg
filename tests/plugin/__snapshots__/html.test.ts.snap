@@ -9,6 +9,15 @@ export const toc = [{"level":1,"title":"Main Title","id":"main-title"},{"level":
 export default { metadata, html, toc };"
 `;
 
+exports[`HTML Generator > generates correct output for blocks.norg 1`] = `
+"
+export const metadata = {"title":"Blocks"};
+export const html = "<h1 id=\\"blocks\\">Blocks</h1>\\n<h2 id=\\"quotes\\">Quotes</h2>\\n<blockquote><p>First quote line</p><p>Second quote line</p><p>Quote parent</p><blockquote><p>Nested quote</p></blockquote></blockquote>\\n<h2 id=\\"definition\\">Definition</h2>\\n<dl><dt>Term</dt><dd><p>The definition body.</p></dd></dl>\\n<h2 id=\\"footnote\\">Footnote</h2>\\n<aside id=\\"footnote-note\\" class=\\"footnote\\"><strong>note</strong><p>Footnote body text.</p></aside>\\n<h2 id=\\"table\\">Table</h2>\\n<table><caption>Caption</caption><tbody><tr><td><p>Cell content.</p></td></tr></tbody></table>\\n";
+export const toc = [{"level":1,"title":"Blocks","id":"blocks"},{"level":2,"title":"Quotes","id":"quotes"},{"level":2,"title":"Definition","id":"definition"},{"level":2,"title":"Footnote","id":"footnote"},{"level":2,"title":"Table","id":"table"}];
+
+export default { metadata, html, toc };"
+`;
+
 exports[`HTML Generator > generates correct output for code-blocks.norg 1`] = `
 "
 export const metadata = {"title":"\\"Code Test\\""};
@@ -57,7 +66,7 @@ export default { metadata, html, toc };"
 exports[`HTML Generator > generates correct output for nested-lists.norg 1`] = `
 "
 export const metadata = {"title":"Nested Lists"};
-export const html = "<h1 id=\\"nested-lists\\">Nested Lists</h1>\\n<h2 id=\\"two-levels\\">Two Levels</h2>\\n<ul><li>Top level item<ul><li>Sub item A</li><li>Sub item B</li></ul></li><li>Another top level</li></ul>\\n<h2 id=\\"three-levels\\">Three Levels</h2>\\n<ul><li>Outer<ul><li>Middle<ul><li>Inner</li><li>Inner two</li></ul></li><li>Middle two</li></ul></li><li>Outer two</li></ul>\\n<h2 id=\\"mixed-markers\\">Mixed Markers</h2>\\n<ul><li>Bullet parent</li></ul>\\n<ol><li>Numbered child A</li><li>Numbered child B</li></ol>\\n<ul><li>Bullet parent two</li></ul>\\n<h2 id=\\"ordered-with-nested\\">Ordered With Nested</h2>\\n<ol><li>First<ol><li>Nested first</li><li>Nested second</li></ol></li><li>Second</li></ol>\\n";
+export const html = "<h1 id=\\"nested-lists\\">Nested Lists</h1>\\n<h2 id=\\"two-levels\\">Two Levels</h2>\\n<ul><li>Top level item<ul><li>Sub item A</li><li>Sub item B</li></ul></li><li>Another top level</li></ul>\\n<h2 id=\\"three-levels\\">Three Levels</h2>\\n<ul><li>Outer<ul><li>Middle<ul><li>Inner</li><li>Inner two</li></ul></li><li>Middle two</li></ul></li><li>Outer two</li></ul>\\n<h2 id=\\"mixed-markers\\">Mixed Markers</h2>\\n<ul><li>Bullet parent<ol><li>Numbered child A</li><li>Numbered child B</li></ol></li><li>Bullet parent two</li></ul>\\n<h2 id=\\"ordered-with-nested\\">Ordered With Nested</h2>\\n<ol><li>First<ol><li>Nested first</li><li>Nested second</li></ol></li><li>Second</li></ol>\\n";
 export const toc = [{"level":1,"title":"Nested Lists","id":"nested-lists"},{"level":2,"title":"Two Levels","id":"two-levels"},{"level":2,"title":"Three Levels","id":"three-levels"},{"level":2,"title":"Mixed Markers","id":"mixed-markers"},{"level":2,"title":"Ordered With Nested","id":"ordered-with-nested"}];
 
 export default { metadata, html, toc };"
