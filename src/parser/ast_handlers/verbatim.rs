@@ -49,19 +49,24 @@ impl VerbatimTag {
 
         match self {
             Self::Code => {
-                let code = dedent(content);
+                let dedented = dedent(content);
+                // Trim the trailing newline once, up front, so the highlight
+                // and fallback paths see identical input and emit the same
+                // number of `<span class="line">` rows. (Highlighting the
+                // untrimmed string but the fallback the trimmed one could yield
+                // a different line count between languages arborium does and
+                // doesn't support.)
+                let code = dedented.trim_end_matches('\n');
                 let lang = first_param().unwrap_or("text");
-                let body = match highlighter.highlight(lang, &code) {
+                let body = match highlighter.highlight(lang, code) {
                     Ok(highlighted) => format!(
                         r#"<pre class="arborium lang-{}"><code>{}</code></pre>"#,
                         encode_minimal(lang),
                         wrap_lines(&highlighted)
                     ),
-                    // Trim the trailing newline like the highlighter does, so
-                    // both paths emit the same number of line spans.
                     Err(_) => format!(
                         r#"<pre><code>{}</code></pre>"#,
-                        wrap_lines(&encode_minimal(code.trim_end_matches('\n')))
+                        wrap_lines(&encode_minimal(code))
                     ),
                 };
                 Ok(Some(VerbatimTagResult::Html(body)))

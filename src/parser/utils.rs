@@ -26,6 +26,40 @@ pub fn is_http_url(s: &str) -> bool {
     s.starts_with("http://") || s.starts_with("https://")
 }
 
+/// True if `href` carries an explicit URL scheme that is NOT in the safe
+/// allowlist (`http`/`https`/`mailto`). Browser URL parsing strips leading C0
+/// controls/spaces and ignores ASCII tab/newline inside URLs, so this check
+/// mirrors that before looking for a scheme.
+pub fn has_unsafe_scheme(href: &str) -> bool {
+    let normalized: String = href
+        .trim_start_matches(|c: char| c.is_ascii_control() || c == ' ')
+        .chars()
+        .filter(|c| !matches!(c, '\t' | '\n' | '\r'))
+        .collect();
+
+    // A scheme is `ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) ":"` that
+    // appears before any `/`, `?`, or `#`. If the first such delimiter is not a
+    // `:`, there is no scheme (the href is relative / a fragment) and it is
+    // safe.
+    let Some(pos) = normalized.find([':', '/', '?', '#']) else {
+        return false;
+    };
+    if normalized.as_bytes()[pos] != b':' {
+        return false;
+    }
+    let scheme = &normalized[..pos];
+    let mut chars = scheme.chars();
+    let valid = chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'));
+    // A `pos` of 0 (leading `:`) or a non-scheme-shaped prefix isn't a real
+    // scheme; treat it as safe (relative) rather than blocking it.
+    valid
+        && !matches!(
+            scheme.to_ascii_lowercase().as_str(),
+            "http" | "https" | "mailto"
+        )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -38,6 +72,29 @@ mod tests {
         assert!(!is_http_url("https.norg"));
         assert!(!is_http_url("/absolute/path"));
         assert!(!is_http_url("./relative"));
+    }
+
+    #[test]
+    fn test_has_unsafe_scheme() {
+        // Dangerous schemes are blocked (case-insensitive, whitespace/case tricks).
+        assert!(has_unsafe_scheme("javascript:alert(1)"));
+        assert!(has_unsafe_scheme("JavaScript:alert(1)"));
+        assert!(has_unsafe_scheme(" java\nscript:alert(1)"));
+        assert!(has_unsafe_scheme("\tdata:text/html,<script>"));
+        assert!(has_unsafe_scheme("data:text/html,<script>"));
+        assert!(has_unsafe_scheme("vbscript:msgbox"));
+        // Allowlisted schemes pass.
+        assert!(!has_unsafe_scheme("http://example.com"));
+        assert!(!has_unsafe_scheme("https://example.com"));
+        assert!(!has_unsafe_scheme("mailto:a@b.com"));
+        // No scheme: relative paths, absolute paths, fragments are safe.
+        assert!(!has_unsafe_scheme("docs/readme.html"));
+        assert!(!has_unsafe_scheme("./relative"));
+        assert!(!has_unsafe_scheme("/absolute/path"));
+        assert!(!has_unsafe_scheme("#section"));
+        // A colon after a path separator is not a scheme.
+        assert!(!has_unsafe_scheme("path/to:file"));
+        assert!(!has_unsafe_scheme("foo?x=a:b"));
     }
 
     #[test]

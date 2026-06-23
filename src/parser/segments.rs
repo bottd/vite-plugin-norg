@@ -1,4 +1,4 @@
-use crate::utils::{into_slug, is_http_url};
+use crate::utils::{has_unsafe_scheme, into_slug, is_http_url};
 use htmlescape::encode_minimal;
 use rust_norg::{LinkTarget, ParagraphSegment, ParagraphSegmentToken};
 use std::fmt::Write;
@@ -103,8 +103,23 @@ fn norg_to_html(path: &str) -> String {
 /// Writes an anchor tag. `display_html` must already be final HTML — either
 /// converted segments or an escaped raw fallback; escaping it here again
 /// would double-encode descriptions and render their inline markup as text.
+///
+/// Two safety measures apply here, the single chokepoint for every link:
+/// a target with an unsafe URL scheme (`javascript:`, `data:`, …) is dropped
+/// to its plain display text rather than emitted as a clickable script URL,
+/// and external links get `rel="noopener noreferrer"` alongside
+/// `target="_blank"` to prevent the opened page from hijacking `window.opener`.
 fn anchor(out: &mut String, href: &str, display_html: &str, external: bool) {
-    let target = if external { r#" target="_blank""# } else { "" };
+    if has_unsafe_scheme(href) {
+        eprintln!("Warning: dropping link with unsafe URL scheme: {href}");
+        out.push_str(display_html);
+        return;
+    }
+    let target = if external {
+        r#" target="_blank" rel="noopener noreferrer""#
+    } else {
+        ""
+    };
     let _ = write!(
         out,
         r#"<a href="{}"{target}>{display_html}</a>"#,
@@ -199,7 +214,7 @@ mod tests {
         );
         assert_eq!(
             out,
-            r#"<a href="https://example.com" target="_blank">AT&amp;T</a>"#
+            r#"<a href="https://example.com" target="_blank" rel="noopener noreferrer">AT&amp;T</a>"#
         );
     }
 
@@ -218,7 +233,7 @@ mod tests {
         );
         assert_eq!(
             out,
-            r#"<a href="https://example.com" target="_blank"><strong>bold</strong></a>"#
+            r#"<a href="https://example.com" target="_blank" rel="noopener noreferrer"><strong>bold</strong></a>"#
         );
     }
 
@@ -250,5 +265,20 @@ mod tests {
             &mut out,
         );
         assert_eq!(out, r##"<a href="docs/readme.html#install">Install</a>"##);
+    }
+
+    #[test]
+    fn javascript_scheme_link_is_dropped_to_plain_text() {
+        // A crafted `javascript:` target must not become a clickable script
+        // URL; the link degrades to its display text.
+        let description = [text("click me")];
+        let mut out = String::new();
+        convert_link(
+            &[LinkTarget::Url("javascript:alert(document.cookie)".into())],
+            Some(&description),
+            None,
+            &mut out,
+        );
+        assert_eq!(out, "click me");
     }
 }

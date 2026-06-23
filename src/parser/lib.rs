@@ -35,8 +35,11 @@ pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResu
         )));
     }
 
-    let ast = rust_norg::parse_tree(&content)
+    let mut ast = rust_norg::parse_tree(&content)
         .map_err(|e| Error::from_reason(format!("Parse error: {e:?}")))?;
+    // Clamp heading levels once, before the TOC and HTML are derived, so the
+    // recorded TOC level and the emitted `<hN>` tag never disagree.
+    clamp_heading_levels(&mut ast);
 
     let output_mode = mode.as_deref().and_then(|s| s.parse().ok());
     let (html_parts, embed_components, embed_css) =
@@ -65,19 +68,20 @@ pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResu
 /// Depth is the actual nesting-*tree* depth, not a single line's marker-run
 /// length. A lone `------…` line is one item at a high *level* but only one
 /// level *deep*, and `rust_norg` parses it without recursing, so it must not be
-/// rejected. Only markers that nest by repetition are counted: `*` headings and
-/// `-`/`~`/`>` lists. Rangeable modifiers (`$` definitions, `^` footnotes, …)
-/// do not recurse and are ignored.
+/// rejected.
 ///
-/// Heading and list nesting are tracked on *separate* stacks because they
-/// recurse independently and *stack*: `rust_norg` recursively descends into a
-/// heading's content, and a list nested under that heading adds its own
-/// recursion on top, so the depth that drives the overflow is the sum of the
-/// two. A single shared stack keyed only by numeric level would let a heading
-/// run pop genuinely-open list levels (and vice versa), under-counting the real
-/// depth and reintroducing the overflow this guard exists to prevent. A new
-/// heading also closes the previous heading's list content, so it clears the
-/// list stack.
+/// Every construct that `rust_norg` recurses through must be counted: headings,
+/// lists, ranged rangeable modifiers, and stacked carryover tags. Their depths
+/// are summed because the parser's recursive passes can compose, and headings
+/// and lists use separate stacks so same-numbered levels do not pop each other.
+///
+/// Carryover tags stack onto the single object that follows them, so the run
+/// counter is reset once a non-carryover object is consumed (otherwise a
+/// document with many independent `#tag\n* H` pairs would falsely accumulate).
+/// Ranged modifiers track open/close like lists; an unclosed run of `$$ x`
+/// openers can over-count (the parser would actually reject them and not
+/// recurse), but that only errs toward a clean rejection, never a missed
+/// overflow.
 ///
 /// Blank lines and other content lines both leave the run intact: a text line
 /// directly after an item is a paragraph *continuation* (`- a\nx\n-- b` still
@@ -106,6 +110,10 @@ fn excessive_nesting(content: &str) -> Option<usize> {
 
     let mut heading_levels: Vec<usize> = Vec::new();
     let mut list_levels: Vec<usize> = Vec::new();
+    // Open ranged rangeable modifiers (`$$`/`^^`/`::`), and the length of the
+    // run of carryover tags (`#`/`+`) currently stacked on the next object.
+    let mut ranged_open: usize = 0;
+    let mut carryover_run: usize = 0;
     let mut i = 0;
     while i < lines.len() {
         let line = lines[i];
@@ -114,11 +122,11 @@ fn excessive_nesting(content: &str) -> Option<usize> {
         // a closer it is just a paragraph and falls through to normal handling.
         // The block breaks the surrounding list (a list after it is a sibling),
         // but not the heading whose content it belongs to.
-        if line.starts_with('@')
-            && line != "@end"
+        if is_verbatim_opener(line)
             && let Some(end) = next_after(&end_lines, i)
         {
             list_levels.clear();
+            carryover_run = 0;
             i = end + 1;
             continue;
         }
@@ -129,9 +137,22 @@ fn excessive_nesting(content: &str) -> Option<usize> {
             continue;
         }
 
-        // A non-marker line may be a paragraph continuation of the current
-        // item, which keeps the chain alive — so there is no reset branch.
-        if let Some((marker, level)) = nesting_level(line) {
+        // Classify the line and update the open-nesting counts. A carryover tag
+        // stacks onto the object that follows it (the run grows until a real
+        // object consumes it); every other line *is* that object, so it counts
+        // the stacked carryovers and then clears the run. A bare continuation
+        // line changes no stack but still consumes the run.
+        let carryover = is_carryover(line);
+        if carryover {
+            carryover_run += 1;
+        } else if let Some(opens) = ranged_modifier(line) {
+            // A ranged rangeable modifier opens/closes a recursing body.
+            if opens {
+                ranged_open += 1;
+            } else {
+                ranged_open = ranged_open.saturating_sub(1);
+            }
+        } else if let Some((marker, level)) = nesting_level(line) {
             if marker == '*' {
                 // A heading closes any heading at or above its level, nests
                 // under what remains, and ends the previous heading's list.
@@ -148,12 +169,14 @@ fn excessive_nesting(content: &str) -> Option<usize> {
                 }
                 list_levels.push(level);
             }
-            // Heading and list recursion stack, so the depth `rust_norg` will
-            // recurse to is the sum of the two open chains.
-            let depth = heading_levels.len() + list_levels.len();
-            if depth > ast_handlers::MAX_LIST_DEPTH {
-                return Some(depth);
-            }
+        }
+
+        let depth = heading_levels.len() + list_levels.len() + ranged_open + carryover_run;
+        if depth > ast_handlers::MAX_LIST_DEPTH {
+            return Some(depth);
+        }
+        if !carryover {
+            carryover_run = 0;
         }
         i += 1;
     }
@@ -164,6 +187,16 @@ fn excessive_nesting(content: &str) -> Option<usize> {
 fn next_after(ends: &[usize], i: usize) -> Option<usize> {
     let pos = ends.partition_point(|&e| e <= i);
     ends.get(pos).copied()
+}
+
+/// Whether `line` can start a ranged verbatim tag (`@name ...`). A bare `@`
+/// or `@ name` is ordinary content in `rust_norg`, so treating it as a raw block
+/// would let real nesting after it bypass the pre-parse guard.
+fn is_verbatim_opener(line: &str) -> bool {
+    let Some(rest) = line.strip_prefix('@') else {
+        return false;
+    };
+    line != "@end" && rest.chars().next().is_some_and(|c| !c.is_whitespace())
 }
 
 /// The marker and nesting level of a detached-modifier line: the marker char
@@ -182,6 +215,61 @@ fn nesting_level(line: &str) -> Option<(char, usize)> {
     line[run..]
         .starts_with(|c: char| c.is_whitespace())
         .then_some((first, run))
+}
+
+/// Whether `line` is a carryover tag (`#name` / `+name`). The lexer requires the
+/// name to follow the marker with no intervening space, so `# foo` is not one.
+/// Each carryover tag recurses once in `rust_norg`, so a stacked run of them
+/// must count toward the depth bound. `line` must already be `trim_start`ed.
+fn is_carryover(line: &str) -> bool {
+    let mut chars = line.chars();
+    matches!(chars.next(), Some('#' | '+')) && chars.next().is_some_and(|c| !c.is_whitespace())
+}
+
+/// Classifies a *ranged* rangeable-modifier line by its double marker
+/// (`$$`/`^^`/`::`): `Some(true)` opens one (`$$ title`), `Some(false)` closes
+/// one (a bare `$$`). A single marker (`$ term`) is non-ranged and does not
+/// recurse, so it returns `None`; three or more markers are plain text, not a
+/// modifier. The body of a ranged modifier is parsed by recursive `stage_3`, so
+/// nested ranged modifiers must be counted like list levels. `line` must
+/// already be `trim_start`ed.
+fn ranged_modifier(line: &str) -> Option<bool> {
+    let first = line.chars().next()?;
+    if !matches!(first, '$' | '^' | ':') {
+        return None;
+    }
+    // The lexer accepts at most two marker chars; the opener is two markers, a
+    // space, then a title, and the closer is exactly two markers alone.
+    if line.chars().take_while(|&c| c == first).count() != 2 {
+        return None;
+    }
+    let rest = &line[2..]; // markers are ASCII, so byte 2 is a char boundary
+    if rest.is_empty() {
+        return Some(false); // bare `$$` is the closer
+    }
+    (rest.starts_with(|c: char| c.is_whitespace()) && !rest.trim().is_empty()).then_some(true)
+}
+
+/// Clamps every heading's level to the `<h1>`–`<h6>` range. HTML has no `<h7>`,
+/// and `rust_norg` parses 7+ `*` as level 7+. Doing this once on the AST (rather
+/// than only at the render site) keeps `extract_toc`'s recorded level in sync
+/// with the `<hN>` tag the renderer emits. Headings occur at the top level, in
+/// another heading's content, and wrapped in a carryover tag — all three are
+/// walked here.
+fn clamp_heading_levels(nodes: &mut [rust_norg::NorgAST]) {
+    use rust_norg::NorgAST;
+    for node in nodes {
+        match node {
+            NorgAST::Heading { level, content, .. } => {
+                *level = (*level).min(6);
+                clamp_heading_levels(content);
+            }
+            NorgAST::CarryoverTag { next_object, .. } => {
+                clamp_heading_levels(std::slice::from_mut(next_object.as_mut()));
+            }
+            _ => {}
+        }
+    }
 }
 
 fn format_embed_error(err: &crate::ast_handlers::EmbedParseError) -> String {
@@ -261,6 +349,22 @@ mod tests {
             excessive_nesting(&format!("@code\n{deep}")).is_some(),
             "deep nesting after an unclosed @code slipped past the guard"
         );
+    }
+
+    #[test]
+    fn malformed_verbatim_opener_does_not_hide_deep_nesting() {
+        // `@` and `@ code` are paragraphs, not verbatim openers, even if a
+        // later `@end` appears. The scanner must not skip over real nesting.
+        let deep: String = (1..=200)
+            .map(|level| format!("{} item\n", "-".repeat(level)))
+            .collect();
+
+        for opener in ["@", "@ code"] {
+            assert!(
+                excessive_nesting(&format!("{opener}\n{deep}@end\n")).is_some(),
+                "deep nesting after malformed opener {opener:?} slipped past the guard"
+            );
+        }
     }
 
     #[test]
@@ -363,6 +467,53 @@ mod tests {
         assert!(
             excessive_nesting(&lists).is_none(),
             "60 nested list levels alone were wrongly rejected"
+        );
+    }
+
+    #[test]
+    fn carryover_tag_chain_is_rejected_before_parsing() {
+        // A long run of stacked carryover tags recurses once per tag in
+        // rust_norg's stage_3/convert. The guard counts `#`/`+` runs so the
+        // chain can't slip past and overflow the native stack at parse_tree.
+        let content = "#a\n".repeat(200);
+        assert!(
+            excessive_nesting(&content).is_some(),
+            "a deep carryover-tag chain slipped past the nesting guard"
+        );
+        // `+` (attribute) tags recurse the same way.
+        assert!(excessive_nesting(&"+a\n".repeat(200)).is_some());
+    }
+
+    #[test]
+    fn nested_ranged_modifiers_are_rejected() {
+        // A ranged rangeable modifier (`$$ …`) parses its body via recursive
+        // stage_3, so deeply nested ones overflow parse_tree. The matching
+        // closers nest them rather than making them siblings.
+        let opens = "$$ x\n".repeat(150);
+        let closes = "$$\n".repeat(150);
+        assert!(
+            excessive_nesting(&format!("{opens}{closes}")).is_some(),
+            "deeply nested ranged modifiers slipped past the nesting guard"
+        );
+    }
+
+    #[test]
+    fn single_rangeable_modifiers_are_not_rejected() {
+        // `$ term` is a *single*-marker, non-ranged definition that does not
+        // recurse; a long list of them must not be mistaken for nesting.
+        assert!(
+            excessive_nesting(&"$ term\n".repeat(200)).is_none(),
+            "non-ranged single-marker definitions were wrongly rejected"
+        );
+    }
+
+    #[test]
+    fn scattered_carryover_tags_are_not_rejected() {
+        // Many independent `#tag\n* H` pairs are shallow (each tag wraps one
+        // heading), not a deep chain — the run counter must reset per object.
+        assert!(
+            excessive_nesting(&"#tag\n* H\n".repeat(60)).is_none(),
+            "scattered (non-stacked) carryover tags were wrongly rejected"
         );
     }
 

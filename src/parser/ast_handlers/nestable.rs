@@ -1,4 +1,4 @@
-use crate::ast_handlers::{EmbedParseError, warn_carryover_ignored};
+use crate::ast_handlers::warn_carryover_ignored;
 use crate::segments::convert_segments;
 use crate::utils::into_slug;
 use htmlescape::encode_minimal;
@@ -74,14 +74,14 @@ pub fn collect_list_items<'a>(node: &'a NorgAST, items: &mut Vec<FlatListItem<'a
 /// itself recurses per nesting level and would overflow before rendering.
 pub const MAX_LIST_DEPTH: usize = 100;
 
-pub fn render_list_items(items: &[FlatListItem]) -> Result<String, EmbedParseError> {
+pub fn render_list_items(items: &[FlatListItem]) -> String {
     let mut out = String::new();
-    render_into(items, &mut out, 0)?;
-    Ok(out)
+    render_into(items, &mut out, 0);
+    out
 }
 
-/// A human-readable name for a node kind, for the
-/// `UnsupportedListItemContent` error.
+/// A human-readable name for a node kind, used in the warning emitted when a
+/// list item holds content the pure list renderer can't place.
 fn node_kind(node: &NorgAST) -> &'static str {
     match node {
         NorgAST::List { .. } | NorgAST::NestableDetachedModifier { .. } => "list",
@@ -104,18 +104,14 @@ struct OpenList {
     item_open: bool,
 }
 
-fn render_into(
-    items: &[FlatListItem],
-    out: &mut String,
-    depth: usize,
-) -> Result<(), EmbedParseError> {
+fn render_into(items: &[FlatListItem], out: &mut String, depth: usize) {
     // Defense-in-depth: `excessive_nesting` in lib.rs already rejects any
     // document whose nesting exceeds this cap before `parse_tree` runs, so this
     // branch cannot fire for a successfully-parsed AST. It is kept as a cheap
     // guard so the renderer is bounded even if reached through another path.
     if depth > MAX_LIST_DEPTH {
         eprintln!("Warning: list nesting exceeds {MAX_LIST_DEPTH} levels — deeper content skipped");
-        return Ok(());
+        return;
     }
     let mut stack: Vec<OpenList> = Vec::new();
 
@@ -125,15 +121,19 @@ fn render_into(
         let mut nested = Vec::new();
         for node in item.content {
             if !collect_list_items(node, &mut nested) {
-                // Non-list content can't be placed inside a list item by the
-                // pure list renderer; fail loudly rather than drop it silently.
-                return Err(EmbedParseError::UnsupportedListItemContent {
-                    node: node_kind(node),
-                });
+                // The pure list renderer can't place non-list content inside a
+                // list item (rust_norg never actually puts such a node here, so
+                // this is defensive). Warn and skip it rather than fail the
+                // whole document — matching how every other unsupported node is
+                // handled.
+                eprintln!(
+                    "Warning: unsupported {} inside a list item — content skipped",
+                    node_kind(node)
+                );
             }
         }
         let mut children = String::new();
-        render_into(&nested, &mut children, depth + 1)?;
+        render_into(&nested, &mut children, depth + 1);
 
         let Some((markup, leaves_item_open)) = item_markup(item, &children) else {
             continue;
@@ -177,7 +177,6 @@ fn render_into(
     while let Some(open) = stack.pop() {
         close_list(out, open);
     }
-    Ok(())
 }
 
 fn close_list(out: &mut String, open: OpenList) {

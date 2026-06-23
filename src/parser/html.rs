@@ -37,6 +37,14 @@ impl TransformState {
         self.current_html.push('\n');
     }
 
+    /// Renders a flattened list run and appends it, skipping an empty render.
+    fn push_list(&mut self, items: &[FlatListItem]) {
+        let html = render_list_items(items);
+        if !html.is_empty() {
+            self.push_html(&html);
+        }
+    }
+
     fn apply_verbatim(&mut self, result: VerbatimTagResult) {
         match result {
             VerbatimTagResult::Html(html) => self.push_html(&html),
@@ -81,10 +89,7 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), 
             i += 1;
         }
         if i > start {
-            let html = render_list_items(&items)?;
-            if !html.is_empty() {
-                state.push_html(&html);
-            }
+            state.push_list(&items);
             continue;
         }
         transform_node(&nodes[i], state)?;
@@ -100,10 +105,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             // (e.g. reached through a CarryoverTag) renders the same way.
             let mut items = Vec::new();
             collect_list_items(node, &mut items);
-            let html = render_list_items(&items)?;
-            if !html.is_empty() {
-                state.push_html(&html);
-            }
+            state.push_list(&items);
         }
         NorgAST::VerbatimRangedTag {
             name,
@@ -135,8 +137,10 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
         } => {
             let title_html = convert_segments(title);
             let id = into_slug(&title_html);
-            // HTML only defines <h1>–<h6>; deeper Norg headings (7+ `*`) clamp
-            // to <h6> so the markup stays valid.
+            // HTML only defines <h1>–<h6>. `parse_norg` clamps heading levels
+            // up front so the TOC and this tag agree; the `.min(6)` is a local
+            // belt so `transform` still emits valid markup if called on an
+            // un-clamped AST directly.
             let tag_level = (*level).min(6);
             state.push_html(&format!(
                 "<h{tag_level} id=\"{id}\">{title_html}</h{tag_level}>"
