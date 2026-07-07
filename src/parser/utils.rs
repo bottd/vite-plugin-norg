@@ -35,10 +35,11 @@ pub fn is_external_url(s: &str) -> bool {
 }
 
 /// True if `href` carries an explicit URL scheme that can execute script when
-/// navigated (`javascript:`, `vbscript:`, `data:`). Benign schemes (`http`,
-/// `https`, `mailto`, `tel`, `ftp`, …) and scheme-less relative links are safe.
-/// Browser URL parsing strips leading C0 controls/spaces and ignores ASCII
-/// tab/newline inside URLs, so this check mirrors that before finding a scheme.
+/// navigated (`javascript:`, `vbscript:`, and scriptable `data:` payloads).
+/// Benign schemes (`http`, `https`, `mailto`, `tel`, `ftp`, …) and scheme-less
+/// relative links are safe. Browser URL parsing strips leading C0 controls/spaces
+/// and ignores ASCII tab/newline inside URLs, so this check mirrors that before
+/// finding a scheme.
 pub fn has_unsafe_scheme(href: &str) -> bool {
     let normalized: String = href
         .trim_start_matches(|c: char| c.is_ascii_control() || c == ' ')
@@ -62,11 +63,20 @@ pub fn has_unsafe_scheme(href: &str) -> bool {
         && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'));
     // A `pos` of 0 (leading `:`) or a non-scheme-shaped prefix isn't a real
     // scheme; treat it as safe (relative) rather than blocking it.
-    valid
-        && matches!(
-            scheme.to_ascii_lowercase().as_str(),
-            "javascript" | "vbscript" | "data"
-        )
+    if !valid {
+        return false;
+    }
+    match scheme.to_ascii_lowercase().as_str() {
+        "javascript" | "vbscript" => true,
+        // `data:` can carry executable payloads (`text/html`, `image/svg+xml`
+        // with embedded scripts). Allow only non-SVG image media types — raster
+        // images can't run script — and block everything else.
+        "data" => {
+            let lower = normalized.to_ascii_lowercase();
+            !(lower.starts_with("data:image/") && !lower.starts_with("data:image/svg"))
+        }
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -92,6 +102,15 @@ mod tests {
         assert!(has_unsafe_scheme("\tdata:text/html,<script>"));
         assert!(has_unsafe_scheme("data:text/html,<script>"));
         assert!(has_unsafe_scheme("vbscript:msgbox"));
+        // `data:` is blocked except for non-SVG image media types. SVG can carry
+        // scripts, so it stays blocked; raster images are allowed through.
+        assert!(has_unsafe_scheme(
+            "data:image/svg+xml,<svg onload=alert(1)>"
+        ));
+        assert!(has_unsafe_scheme("data:application/octet-stream,x"));
+        assert!(!has_unsafe_scheme("data:image/png;base64,iVBORw0KGgo="));
+        assert!(!has_unsafe_scheme("DATA:IMAGE/PNG;base64,iVBORw0KGgo="));
+        assert!(!has_unsafe_scheme("data:image/gif;base64,R0lGOD"));
         // Benign schemes are NOT blocked — the check is a denylist of script
         // schemes, not an allowlist, so ordinary links keep working.
         assert!(!has_unsafe_scheme("http://example.com"));

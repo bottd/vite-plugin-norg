@@ -16,6 +16,9 @@ struct TransformState {
     /// Unlike `embed_components.len()`, it counts embeds that emit no
     /// component.
     embed_decls: usize,
+    /// Per-document slug counter so duplicate heading titles get distinct ids
+    /// (`setup`, `setup-1`, …); walked in the same order as the TOC pass.
+    heading_ids: std::collections::HashMap<String, u32>,
 }
 
 impl TransformState {
@@ -28,6 +31,7 @@ impl TransformState {
             mode,
             highlighter: Highlighter::new(),
             embed_decls: 0,
+            heading_ids: std::collections::HashMap::new(),
         }
     }
 
@@ -136,9 +140,17 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             content,
             ..
         } => {
-            let (title_html, id, tag_level) = heading_html_and_id(title, *level);
+            let (title_html, id, tag_level) =
+                heading_html_and_id(title, *level, &mut state.heading_ids);
+            // A symbol-only title (e.g. `* @@@`) slugs to "" — omit the
+            // attribute rather than emit an HTML5-invalid `id=""`.
+            let id_attr = if id.is_empty() {
+                String::new()
+            } else {
+                format!(" id=\"{id}\"")
+            };
             state.push_html(&format!(
-                "<h{tag_level} id=\"{id}\">{title_html}</h{tag_level}>"
+                "<h{tag_level}{id_attr}>{title_html}</h{tag_level}>"
             ));
             transform_nodes(content, state)?;
         }

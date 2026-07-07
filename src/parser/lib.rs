@@ -154,6 +154,31 @@ mod tests {
     }
 
     #[test]
+    fn symbol_only_heading_omits_empty_id() {
+        // A title with no alphanumerics slugs to "" — the heading must omit the
+        // `id` attribute rather than emit an HTML5-invalid `id=""`.
+        let result = parse_norg("* @@@\n".to_string(), None).unwrap();
+        let html = result.html_parts.join("");
+        assert!(html.contains("<h1"), "no heading emitted: {html}");
+        assert!(
+            !html.contains("id=\"\""),
+            "emitted invalid empty id: {html}"
+        );
+    }
+
+    #[test]
+    fn duplicate_heading_titles_get_distinct_ids() {
+        // Two headings with the same title must not share an id (invalid HTML);
+        // the second is suffixed, and the TOC must agree with the emitted tags.
+        let result = parse_norg("* Setup\nOne.\n* Setup\nTwo.\n".to_string(), None).unwrap();
+        let html = result.html_parts.join("");
+        assert!(html.contains("id=\"setup\""), "{html}");
+        assert!(html.contains("id=\"setup-1\""), "{html}");
+        let ids: Vec<&str> = result.toc.iter().map(|e| e.id.as_str()).collect();
+        assert_eq!(ids, ["setup", "setup-1"], "toc ids diverged from tags");
+    }
+
+    #[test]
     fn carryover_tagged_heading_appears_in_toc() {
         // The renderer unwraps carryover tags and emits the heading; the TOC
         // must list it too or anchors point at entries the TOC doesn't have.

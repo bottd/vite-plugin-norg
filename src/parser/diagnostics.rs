@@ -25,7 +25,17 @@ pub fn warn(message: impl Into<String>) {
     SINK.with(|sink| sink.borrow_mut().push(message.into()));
 }
 
-/// Drains and returns everything recorded on this thread since the last drain.
+/// Drains and returns everything recorded on this thread since the last drain,
+/// with exact duplicates collapsed (order preserved). A heading title is
+/// converted twice per parse — once by the renderer, once by TOC extraction —
+/// so a warning about it (dropped unsafe link, unsupported segment) would
+/// otherwise surface twice; these are advisory, so reporting each once is enough.
 pub fn take() -> Vec<String> {
-    SINK.with(|sink| std::mem::take(&mut *sink.borrow_mut()))
+    SINK.with(|sink| {
+        let mut seen = std::collections::HashSet::new();
+        std::mem::take(&mut *sink.borrow_mut())
+            .into_iter()
+            .filter(|message| seen.insert(message.clone()))
+            .collect()
+    })
 }

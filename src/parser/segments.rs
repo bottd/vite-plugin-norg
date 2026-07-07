@@ -1,7 +1,16 @@
 use crate::utils::{has_unsafe_scheme, into_slug, is_external_url};
 use htmlescape::encode_minimal;
 use rust_norg::{LinkTarget, ParagraphSegment, ParagraphSegmentToken};
+use std::cell::Cell;
+use std::collections::HashMap;
 use std::fmt::Write;
+
+thread_local! {
+    /// True while a link's display text is being rendered, so a link nested in
+    /// another link's description emits as plain text instead of `<a>` inside
+    /// `<a>` (invalid HTML that browsers silently auto-close).
+    static IN_ANCHOR: Cell<bool> = const { Cell::new(false) };
+}
 
 pub fn convert_segments(segments: &[ParagraphSegment]) -> String {
     let mut out = String::with_capacity(segments.len() * 32);
@@ -88,11 +97,35 @@ fn push_escaped(out: &mut String, s: &str) {
 /// Renders a heading's final HTML, its slug id, and its level clamped to the
 /// `<h1>`–`<h6>` range, so the renderer and the TOC can't derive any of the
 /// three differently for the same heading (`rust_norg` parses 7+ `*` as level
-/// 7+, but HTML has no `<h7>`).
-pub fn heading_html_and_id(title: &[ParagraphSegment], level: u16) -> (String, String, u16) {
+/// 7+, but HTML has no `<h7>`). `seen` de-duplicates ids across the document so
+/// two headings with the same title don't emit the same (invalid) id.
+pub fn heading_html_and_id(
+    title: &[ParagraphSegment],
+    level: u16,
+    seen: &mut HashMap<String, u32>,
+) -> (String, String, u16) {
     let html = convert_segments(title);
-    let id = title_slug(title);
+    let id = dedup_id(title_slug(title), seen);
     (html, id, level.min(6))
+}
+
+/// Disambiguates a slug against the ones already emitted in the same document:
+/// the first `setup` stays `setup`, the next becomes `setup-1`, and so on. An
+/// empty slug (symbol-only title) is left empty — the emit site omits the `id`
+/// attribute. The renderer and TOC each walk headings in document order, so they
+/// derive identical suffixes from separate counters.
+fn dedup_id(base: String, seen: &mut HashMap<String, u32>) -> String {
+    if base.is_empty() {
+        return base;
+    }
+    let count = seen.entry(base.clone()).or_insert(0);
+    let id = if *count == 0 {
+        base.clone()
+    } else {
+        format!("{base}-{count}")
+    };
+    *count += 1;
+    id
 }
 
 /// The slug id for a heading or footnote title, derived from its plain visible
@@ -179,13 +212,19 @@ fn norg_to_html(path: &str) -> String {
 /// would double-encode descriptions and render their inline markup as text.
 ///
 /// Two safety measures apply here, the single chokepoint for every link:
-/// a target with an unsafe URL scheme (`javascript:`, `data:`, …) is dropped
-/// to its plain display text rather than emitted as a clickable script URL,
-/// and external links get `rel="noopener noreferrer"` alongside
+/// a target with an unsafe URL scheme (`javascript:`, scriptable `data:`, …) is
+/// dropped to its plain display text rather than emitted as a clickable script
+/// URL, and external links get `rel="noopener noreferrer"` alongside
 /// `target="_blank"` to prevent the opened page from hijacking `window.opener`.
-fn anchor(out: &mut String, href: &str, display_html: &str, external: bool) {
+/// When `nested`, this link sits inside another link's display, so only the
+/// display text is emitted (an `<a>` inside an `<a>` is invalid HTML).
+fn anchor(out: &mut String, href: &str, display_html: &str, external: bool, nested: bool) {
     if has_unsafe_scheme(href) {
         crate::diagnostics::warn(format!("dropping link with unsafe URL scheme: {href}"));
+        out.push_str(display_html);
+        return;
+    }
+    if nested {
         out.push_str(display_html);
         return;
     }
@@ -207,38 +246,41 @@ fn convert_link(
     filepath: Option<&str>,
     out: &mut String,
 ) {
+    // Render this link's display with nested links flattened to plain text;
+    // `nested` records whether we are ourselves inside a parent link's display.
+    let nested = IN_ANCHOR.replace(true);
     let display = description.map(convert_segments);
 
-    match targets.first() {
+    let link = match targets.first() {
         Some(LinkTarget::Url(url)) => {
             let display_html = display.unwrap_or_else(|| encode_minimal(url));
-            match filepath {
+            let (href, external) = match filepath {
                 // `{:file.norg:url}` carries a file path; rewrite it to `.html`
                 // like the Heading/Path/None branches do, or the link is dead.
-                Some(fp) => anchor(out, &norg_to_html(fp), &display_html, false),
+                Some(fp) => (norg_to_html(fp), false),
                 // External (`http(s)://` or protocol-relative `//host`): emit
                 // as-is with external-link hardening, never as an in-site path.
-                None if is_external_url(url) => anchor(out, url, &display_html, true),
-                None => anchor(out, &norg_to_html(url), &display_html, false),
-            }
+                None if is_external_url(url) => (url.clone(), true),
+                None => (norg_to_html(url), false),
+            };
+            Some((href, display_html, external))
         }
         Some(LinkTarget::Heading { title, .. }) => {
-            let title_html = convert_segments(title);
             // Same derivation as the heading tag/TOC so the anchor resolves.
             let slug = title_slug(title);
             // `{:path:# Heading}` links carry both a file path and a heading
-            // target; keep the path instead of degrading to a same-page
-            // anchor.
+            // target; keep the path instead of degrading to a same-page anchor.
             let href = match filepath {
                 Some(fp) => format!("{}#{slug}", norg_to_html(fp)),
                 None => format!("#{slug}"),
             };
-            let display_html = display.unwrap_or(title_html);
-            anchor(out, &href, &display_html, false);
+            // Only render the title HTML when there's no description to use.
+            let display_html = display.unwrap_or_else(|| convert_segments(title));
+            Some((href, display_html, false))
         }
         Some(LinkTarget::Path(path)) => {
             let display_html = display.unwrap_or_else(|| encode_minimal(path));
-            anchor(out, &norg_to_html(path), &display_html, false);
+            Some((norg_to_html(path), display_html, false))
         }
         Some(
             LinkTarget::Footnote(_)
@@ -247,13 +289,18 @@ fn convert_link(
             | LinkTarget::Generic(_)
             | LinkTarget::Extendable(_)
             | LinkTarget::Wiki(_),
-        ) => {}
-        None => {
-            if let Some(fp) = filepath {
-                let display_html = display.unwrap_or_else(|| encode_minimal(fp));
-                anchor(out, &norg_to_html(fp), &display_html, false);
-            }
-        }
+        ) => None,
+        None => filepath.map(|fp| {
+            let display_html = display.unwrap_or_else(|| encode_minimal(fp));
+            (norg_to_html(fp), display_html, false)
+        }),
+    };
+
+    // Restore the flag before emitting, so this link's own `<a>` is written
+    // unless it is itself nested inside a parent link.
+    IN_ANCHOR.set(nested);
+    if let Some((href, display_html, external)) = link {
+        anchor(out, &href, &display_html, external, nested);
     }
 }
 
@@ -385,7 +432,9 @@ mod tests {
         let title = [
             ParagraphSegment::Link {
                 filepath: None,
-                targets: vec![LinkTarget::Url("https://neovim.io/doc#nvim_create_buf()".into())],
+                targets: vec![LinkTarget::Url(
+                    "https://neovim.io/doc#nvim_create_buf()".into(),
+                )],
                 description: Some(vec![text("nvim_create_buf")]),
             },
             text(" in "),
@@ -395,5 +444,33 @@ mod tests {
             },
         ];
         assert_eq!(title_slug(&title), "nvim-create-buf-in-lua");
+    }
+
+    #[test]
+    fn nested_link_in_description_does_not_nest_anchors() {
+        // A link whose description contains another link must not emit `<a>`
+        // inside `<a>` (invalid HTML); the inner link degrades to its text.
+        let inner = ParagraphSegment::Link {
+            filepath: None,
+            targets: vec![LinkTarget::Url("https://b.com".into())],
+            description: Some(vec![text("inner")]),
+        };
+        let description = [text("see "), inner];
+        let mut out = String::new();
+        convert_link(
+            &[LinkTarget::Url("https://a.com".into())],
+            Some(&description),
+            None,
+            &mut out,
+        );
+        assert_eq!(
+            out,
+            r#"<a href="https://a.com" target="_blank" rel="noopener noreferrer">see inner</a>"#
+        );
+        assert_eq!(
+            out.matches("<a ").count(),
+            1,
+            "nested anchor emitted: {out}"
+        );
     }
 }
