@@ -1,7 +1,8 @@
 use super::error::EmbedParseError;
 use crate::types::OutputMode;
 use crate::utils::is_http_url;
-use arborium::Highlighter;
+use arborium::advanced::{spans_to_html, Span};
+use arborium::{Highlighter, HtmlFormat};
 use htmlescape::encode_minimal;
 use textwrap::dedent;
 
@@ -58,15 +59,15 @@ impl VerbatimTag {
                 // doesn't support.)
                 let code = dedented.trim_end_matches('\n');
                 let lang = first_param().unwrap_or("text");
-                let body = match highlighter.highlight(lang, code) {
-                    Ok(highlighted) => format!(
+                let body = match highlighter.highlight_spans(lang, code) {
+                    Ok(spans) => format!(
                         r#"<pre class="arborium lang-{}"><code>{}</code></pre>"#,
                         encode_minimal(lang),
-                        wrap_lines(&highlighted)
+                        highlight_lines(code, spans)
                     ),
                     Err(_) => format!(
                         r#"<pre><code>{}</code></pre>"#,
-                        wrap_lines(&encode_minimal(code))
+                        wrap_plain_lines(&encode_minimal(code))
                     ),
                 };
                 Ok(Some(VerbatimTagResult::Html(body)))
@@ -132,77 +133,75 @@ fn render_embed(
     }
 }
 
-/// Wraps each line of highlighted HTML in `<span class="line">` so consumers
-/// can attach per-line styling (line numbers, highlights, etc.). The
-/// highlighter emits multi-line tokens (block comments, multi-line strings)
-/// as a single `<span>` with the newline inside; those spans are closed at
-/// each line break and re-opened on the next line so every line span stays
-/// self-contained and balanced.
-fn wrap_lines(html: &str) -> String {
-    let mut out = String::with_capacity(html.len() + 64);
-    let mut open_spans: Vec<&str> = Vec::new();
-    for (i, line) in html.lines().enumerate() {
+/// Renders highlighted `code` as one `<span class="line">` row per source line,
+/// so consumers can attach per-line styling (line numbers, highlights, etc.).
+///
+/// Rather than serialize the whole block and re-parse the resulting HTML, each
+/// highlight span is clipped to the line it falls on and that line is rendered
+/// with arborium's own `spans_to_html`. A token that crosses a newline (block
+/// comment, multi-line string) is therefore emitted as one self-contained span
+/// per line by construction, and arborium — not this code — owns the tag
+/// format, so it can never drift from what the highlighter produces.
+///
+/// `code` must already have its trailing newline trimmed (see the caller),
+/// matching arborium's own trailing-newline trimming; a single-line block thus
+/// renders byte-for-byte identically to `spans_to_html` over the whole block.
+fn highlight_lines(code: &str, spans: Vec<Span>) -> String {
+    if code.is_empty() {
+        return String::new();
+    }
+    let mut out = String::with_capacity(code.len() + code.len() / 4);
+    let mut line_start: u32 = 0;
+    for (i, line) in code.split('\n').enumerate() {
         if i > 0 {
             out.push('\n');
         }
+        let line_end = line_start + line.len() as u32;
         out.push_str(r#"<span class="line">"#);
-        for span in &open_spans {
-            out.push_str(span);
-        }
-        out.push_str(line);
-        track_open_spans(line, &mut open_spans);
-        for span in open_spans.iter().rev() {
-            push_close_tag(span, &mut out);
-        }
+        // We render the spans ourselves (never `Highlighter::highlight`), so
+        // this is the sole place the output format is chosen; CustomElements
+        // matches what the plugin's stylesheet targets.
+        out.push_str(&spans_to_html(
+            line,
+            clip_spans(&spans, line_start, line_end),
+            &HtmlFormat::CustomElements,
+        ));
         out.push_str("</span>");
+        line_start = line_end + 1; // +1 skips the '\n' separator
     }
     out
 }
 
-/// The tag name of an open tag like `<name …>` — the run after `<` up to the
-/// first `>` or whitespace. The highlighter's tag names vary by format (`<a-c>`
-/// custom elements by default, `<span>` with the classic format), so the close
-/// tag must be derived from the open tag. Returns `None` for a nameless tag.
-fn open_tag_name(open: &str) -> Option<&str> {
-    let name = open[1..]
-        .split(|c: char| c == '>' || c.is_whitespace())
-        .next()
-        .unwrap_or("");
-    (!name.is_empty()).then_some(name)
+/// The spans overlapping `[line_start, line_end)`, clipped to that range and
+/// rebased to line-local byte offsets so they render against the line's own
+/// substring.
+fn clip_spans(spans: &[Span], line_start: u32, line_end: u32) -> Vec<Span> {
+    spans
+        .iter()
+        .filter(|s| s.start < line_end && s.end > line_start)
+        .map(|s| Span {
+            start: s.start.max(line_start) - line_start,
+            end: s.end.min(line_end) - line_start,
+            capture: s.capture.clone(),
+            pattern_index: s.pattern_index,
+        })
+        .collect()
 }
 
-/// Emits `</name>` for an open tag, or nothing for a nameless tag.
-fn push_close_tag(open: &str, out: &mut String) {
-    if let Some(name) = open_tag_name(open) {
-        out.push_str("</");
-        out.push_str(name);
-        out.push('>');
-    }
-}
-
-/// Updates `stack` with the highlight spans still open at the end of `line`.
-/// The input is expected to contain only balanced `<span …>`/`</span>` tags
-/// (or the format's custom-element equivalent) around HTML-escaped text — both
-/// the highlighter output and the `encode_minimal` fallback satisfy this — so
-/// plain tag scanning suffices. The scan is nonetheless defensive: a
-/// self-closing or nameless tag is not tracked, and a close tag never pops past
-/// an empty stack, so unexpected highlighter output degrades to slightly-off
-/// styling rather than corrupting every following line's markup.
-fn track_open_spans<'a>(line: &'a str, stack: &mut Vec<&'a str>) {
-    let mut rest = line;
-    while let Some(start) = rest.find('<') {
-        rest = &rest[start..];
-        let Some(end) = rest.find('>') else { break };
-        let tag = &rest[..=end];
-        rest = &rest[end + 1..];
-        if tag.starts_with("</") {
-            stack.pop();
-        } else if !tag.ends_with("/>") && open_tag_name(tag).is_some() {
-            // Skip self-closing (`<br/>`) and nameless tags: neither leaves an
-            // element open across the line break.
-            stack.push(tag);
+/// Wraps each line of already-escaped, tag-free `text` in `<span class="line">`.
+/// Used on the fallback path, when the language is unsupported and there are no
+/// highlight spans to place.
+fn wrap_plain_lines(text: &str) -> String {
+    let mut out = String::new();
+    for (i, line) in text.lines().enumerate() {
+        if i > 0 {
+            out.push('\n');
         }
+        out.push_str(r#"<span class="line">"#);
+        out.push_str(line);
+        out.push_str("</span>");
     }
+    out
 }
 
 #[cfg(test)]
@@ -210,47 +209,50 @@ mod tests {
     use super::*;
 
     #[test]
-    fn wrap_lines_keeps_single_line_spans_intact() {
-        let html = "<span class=\"kw\">fn</span> main";
+    fn highlight_lines_wraps_each_line() {
+        // With no spans every line is just escaped text wrapped in a line span.
         assert_eq!(
-            wrap_lines(html),
-            "<span class=\"line\"><span class=\"kw\">fn</span> main</span>"
+            highlight_lines("a\nb", vec![]),
+            "<span class=\"line\">a</span>\n<span class=\"line\">b</span>"
         );
     }
 
     #[test]
-    fn wrap_lines_rebalances_multiline_spans() {
-        // A token spanning a newline must be split into one balanced span per
-        // line, otherwise its closing tag would close the line span instead.
-        let html = "<span class=\"string\">\"a\nb\"</span>";
+    fn highlight_lines_single_line() {
         assert_eq!(
-            wrap_lines(html),
-            "<span class=\"line\"><span class=\"string\">\"a</span></span>\n<span class=\"line\"><span class=\"string\">b\"</span></span>"
+            highlight_lines("x", vec![]),
+            "<span class=\"line\">x</span>"
         );
     }
 
     #[test]
-    fn wrap_lines_closes_custom_elements_with_matching_tags() {
-        // arborium's default HtmlFormat::CustomElements emits tags like
-        // <a-c>; a multi-line token must be closed and reopened with that
-        // exact element name, not a hardcoded </span>.
-        let html = "<a-c>/* one\ntwo */</a-c>";
-        assert_eq!(
-            wrap_lines(html),
-            "<span class=\"line\"><a-c>/* one</a-c></span>\n<span class=\"line\"><a-c>two */</a-c></span>"
-        );
+    fn highlight_lines_empty_is_empty() {
+        assert_eq!(highlight_lines("", vec![]), "");
     }
 
     #[test]
-    fn wrap_lines_ignores_self_closing_tags_across_line_breaks() {
-        // A self-closing tag opens nothing, so it must not be tracked as an
-        // open span and re-emitted (which would desync the stack and corrupt
-        // every following line).
-        let html = "<span class=\"kw\">a</span><br/>\n<span class=\"kw\">b</span>";
+    fn clip_spans_clips_and_rebases_to_line_local_offsets() {
+        // A span over bytes 1..5 of "ab\ncd" (line 0 = [0,2), line 1 = [3,5))
+        // crosses the newline and must clip to one span per line, rebased.
+        let span = Span {
+            start: 1,
+            end: 5,
+            capture: "kw".to_string(),
+            pattern_index: 0,
+        };
+        let line0 = clip_spans(std::slice::from_ref(&span), 0, 2);
+        assert_eq!((line0[0].start, line0[0].end), (1, 2));
+        let line1 = clip_spans(std::slice::from_ref(&span), 3, 5);
+        assert_eq!((line1[0].start, line1[0].end), (0, 2));
+        // A span outside the line entirely is dropped.
+        assert!(clip_spans(std::slice::from_ref(&span), 10, 12).is_empty());
+    }
+
+    #[test]
+    fn wrap_plain_lines_wraps_each_line() {
         assert_eq!(
-            wrap_lines(html),
-            "<span class=\"line\"><span class=\"kw\">a</span><br/></span>\n\
-             <span class=\"line\"><span class=\"kw\">b</span></span>"
+            wrap_plain_lines("a\nb"),
+            "<span class=\"line\">a</span>\n<span class=\"line\">b</span>"
         );
     }
 }

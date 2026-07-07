@@ -157,6 +157,11 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
     if (!result) {
       const content = await readFile(filePath, 'utf-8');
       result = parseNorg(content, mode);
+      // Surface non-fatal render warnings (skipped/altered content) in the Vite
+      // terminal — the parser can't reach it, and its stderr is swallowed here.
+      result.diagnostics?.forEach((d) =>
+        console.warn(`[vite-plugin-norg] ${filePath}: ${d}`)
+      );
       parseCache.set(filePath, result);
     }
     return result;

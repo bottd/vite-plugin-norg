@@ -1,6 +1,5 @@
-use crate::segments::convert_segments;
+use crate::segments::heading_html_and_id;
 use crate::types::TocEntry;
-use crate::utils::into_slug;
 use rust_norg::NorgAST;
 
 pub fn extract_toc(ast: &[NorgAST]) -> Vec<TocEntry> {
@@ -18,11 +17,10 @@ fn collect_headings(ast: &[NorgAST], toc: &mut Vec<TocEntry>) {
                 content,
                 ..
             } => {
-                let text = convert_segments(title);
-                let id = into_slug(&text);
+                let (text, id, level) = heading_html_and_id(title, *level);
 
                 toc.push(TocEntry {
-                    level: *level as u32,
+                    level: level as u32,
                     title: text,
                     id,
                 });

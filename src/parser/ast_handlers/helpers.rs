@@ -14,22 +14,22 @@ fn dotted(name: &[String]) -> String {
     }
 }
 
-/// Logs a skipped tag the renderer doesn't implement, naming its kind and the
-/// dotted tag name (e.g. `image.gallery`) so the dropped content is traceable.
+/// Records a skipped tag the renderer doesn't implement, naming its kind and
+/// the dotted tag name (e.g. `image.gallery`) so the dropped content is traceable.
 pub fn warn_unimplemented(kind: &str, name: &[String]) {
-    eprintln!(
-        "Warning: unimplemented {kind} tag '{}' — content skipped",
+    crate::diagnostics::warn(format!(
+        "unimplemented {kind} tag '{}' — content skipped",
         dotted(name)
-    );
+    ));
 }
 
-/// Logs a carryover tag whose annotation the renderer doesn't implement; the
+/// Records a carryover tag whose annotation the renderer doesn't implement; the
 /// annotated object itself is still rendered.
 pub fn warn_carryover_ignored(name: &[String]) {
-    eprintln!(
-        "Warning: unimplemented carryover tag '{}' — annotation ignored, content rendered",
+    crate::diagnostics::warn(format!(
+        "unimplemented carryover tag '{}' — annotation ignored, content rendered",
         dotted(name)
-    );
+    ));
 }
 
 pub fn delimiter(delim: &DelimitingModifier) -> &'static str {

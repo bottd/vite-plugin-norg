@@ -29,7 +29,7 @@ pub fn collect_list_items<'a>(node: &'a NorgAST, items: &mut Vec<FlatListItem<'a
         } => {
             for item in list_items {
                 if !collect_list_items(item, items) {
-                    eprintln!("Warning: unsupported node inside list — content skipped");
+                    crate::diagnostics::warn("unsupported node inside list — content skipped");
                 }
             }
             true
@@ -68,32 +68,10 @@ pub fn collect_list_items<'a>(node: &'a NorgAST, items: &mut Vec<FlatListItem<'a
     }
 }
 
-/// Hard ceiling on list nesting depth: deeper content is skipped with a
-/// warning instead of overflowing the native stack on adversarial input.
-/// Also enforced pre-parse in `lib.rs`, because `rust_norg::parse_tree`
-/// itself recurses per nesting level and would overflow before rendering.
-pub const MAX_LIST_DEPTH: usize = 100;
-
 pub fn render_list_items(items: &[FlatListItem]) -> String {
     let mut out = String::new();
-    render_into(items, &mut out, 0);
+    render_into(items, &mut out, true);
     out
-}
-
-/// A human-readable name for a node kind, used in the warning emitted when a
-/// list item holds content the pure list renderer can't place.
-fn node_kind(node: &NorgAST) -> &'static str {
-    match node {
-        NorgAST::List { .. } | NorgAST::NestableDetachedModifier { .. } => "list",
-        NorgAST::Heading { .. } => "heading",
-        NorgAST::Paragraph(_) => "paragraph",
-        NorgAST::VerbatimRangedTag { .. } => "verbatim block (e.g. @code / @embed)",
-        NorgAST::RangeableDetachedModifier { .. } => "definition/footnote/table",
-        NorgAST::DelimitingModifier(_) => "delimiter",
-        NorgAST::CarryoverTag { .. } => "carryover-tagged block",
-        NorgAST::RangedTag { .. } => "ranged tag",
-        NorgAST::InfirmTag { .. } => "infirm tag",
-    }
 }
 
 struct OpenList {
@@ -104,15 +82,12 @@ struct OpenList {
     item_open: bool,
 }
 
-fn render_into(items: &[FlatListItem], out: &mut String, depth: usize) {
-    // Defense-in-depth: `excessive_nesting` in lib.rs already rejects any
-    // document whose nesting exceeds this cap before `parse_tree` runs, so this
-    // branch cannot fire for a successfully-parsed AST. It is kept as a cheap
-    // guard so the renderer is bounded even if reached through another path.
-    if depth > MAX_LIST_DEPTH {
-        eprintln!("Warning: list nesting exceeds {MAX_LIST_DEPTH} levels — deeper content skipped");
-        return;
-    }
+fn render_into(items: &[FlatListItem], out: &mut String, top_level: bool) {
+    // No render-side depth cap: recursion here can't exceed the AST's list
+    // nesting, which `parse_tree` already recursed through on the same
+    // large-stack thread (see `parse_norg`). `top_level` only distinguishes the
+    // outermost run (which starts a sibling list on its own line) from nested
+    // runs (which open inside a parent's still-open item).
     let mut stack: Vec<OpenList> = Vec::new();
 
     for item in items {
@@ -122,18 +97,14 @@ fn render_into(items: &[FlatListItem], out: &mut String, depth: usize) {
         for node in item.content {
             if !collect_list_items(node, &mut nested) {
                 // The pure list renderer can't place non-list content inside a
-                // list item (rust_norg never actually puts such a node here, so
-                // this is defensive). Warn and skip it rather than fail the
-                // whole document — matching how every other unsupported node is
-                // handled.
-                eprintln!(
-                    "Warning: unsupported {} inside a list item — content skipped",
-                    node_kind(node)
-                );
+                // list item. rust_norg never actually puts such a node here, so
+                // this is defensive: warn and skip rather than fail the whole
+                // document, matching how every other unsupported node is handled.
+                crate::diagnostics::warn("unsupported node inside a list item — content skipped");
             }
         }
         let mut children = String::new();
-        render_into(&nested, &mut children, depth + 1);
+        render_into(&nested, &mut children, false);
 
         let Some((markup, leaves_item_open)) = item_markup(item, &children) else {
             continue;
@@ -157,7 +128,7 @@ fn render_into(items: &[FlatListItem], out: &mut String, depth: usize) {
             _ => {
                 // A deeper container opens inside the parent's still-open
                 // item; a top-level sibling starts on its own line.
-                if depth == 0 && stack.is_empty() && !out.is_empty() {
+                if top_level && stack.is_empty() && !out.is_empty() {
                     out.push('\n');
                 }
                 let _ = write!(out, "<{tag}>");
@@ -202,7 +173,7 @@ fn item_markup(item: &FlatListItem, children: &str) -> Option<(String, bool)> {
     let content = match item.text {
         NorgASTFlat::Paragraph(segments) => convert_segments(segments),
         _ => {
-            eprintln!("Warning: unsupported text node in list item — skipped");
+            crate::diagnostics::warn("unsupported text node in list item — skipped");
             String::new()
         }
     };

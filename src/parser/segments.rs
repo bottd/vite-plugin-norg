@@ -1,4 +1,4 @@
-use crate::utils::{has_unsafe_scheme, into_slug, is_http_url};
+use crate::utils::{has_unsafe_scheme, into_slug, is_external_url};
 use htmlescape::encode_minimal;
 use rust_norg::{LinkTarget, ParagraphSegment, ParagraphSegmentToken};
 use std::fmt::Write;
@@ -49,21 +49,95 @@ fn convert_segment(segment: &ParagraphSegment, out: &mut String) {
         ParagraphSegment::InlineVerbatim(tokens) => {
             let text: String = tokens.iter().map(ToString::to_string).collect();
             out.push_str("<code>");
-            out.push_str(&encode_minimal(&text));
+            push_escaped(out, &text);
             out.push_str("</code>");
         }
 
-        _ => eprintln!("Warning: Unsupported paragraph segment type"),
+        _ => crate::diagnostics::warn("unsupported paragraph segment type"),
     }
 }
 
 fn render_token(token: &ParagraphSegmentToken, out: &mut String) {
     match token {
         ParagraphSegmentToken::Whitespace => out.push(' '),
-        ParagraphSegmentToken::Text(text) => out.push_str(&encode_minimal(text)),
+        ParagraphSegmentToken::Text(text) => push_escaped(out, text),
         ParagraphSegmentToken::Special(ch) | ParagraphSegmentToken::Escape(ch) => {
             let mut buf = [0u8; 4];
-            out.push_str(&encode_minimal(ch.encode_utf8(&mut buf)));
+            push_escaped(out, ch.encode_utf8(&mut buf));
+        }
+    }
+}
+
+/// Writes `s` into `out` HTML-escaped, matching `htmlescape::encode_minimal`'s
+/// five entities byte-for-byte but without the `String` it allocates per call.
+/// Tokens are the hottest path in the renderer (every word/space/punctuation of
+/// every paragraph), so escaping streams straight into the shared buffer.
+fn push_escaped(out: &mut String, s: &str) {
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("&quot;"),
+            '&' => out.push_str("&amp;"),
+            '\'' => out.push_str("&#x27;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            _ => out.push(c),
+        }
+    }
+}
+
+/// Renders a heading's final HTML, its slug id, and its level clamped to the
+/// `<h1>`–`<h6>` range, so the renderer and the TOC can't derive any of the
+/// three differently for the same heading (`rust_norg` parses 7+ `*` as level
+/// 7+, but HTML has no `<h7>`).
+pub fn heading_html_and_id(title: &[ParagraphSegment], level: u16) -> (String, String, u16) {
+    let html = convert_segments(title);
+    let id = title_slug(title);
+    (html, id, level.min(6))
+}
+
+/// The slug id for a heading or footnote title, derived from its plain visible
+/// *text* rather than its rendered HTML — so a title like `{url}[Install]` slugs
+/// to `install`, not the `<a href…>` markup `convert_segments` would emit. Every
+/// id site (heading tag/TOC, same-document `{# Heading}` links, footnote anchor)
+/// routes through here, so an id and the anchor pointing at it always match.
+pub fn title_slug(title: &[ParagraphSegment]) -> String {
+    let mut text = String::new();
+    push_title_text(title, &mut text);
+    into_slug(&text)
+}
+
+/// Appends the plain visible text of `segments` to `out`: the words a reader
+/// sees, with inline markup (emphasis, links, code, anchors) unwrapped and no
+/// HTML tags or entities.
+fn push_title_text(segments: &[ParagraphSegment], out: &mut String) {
+    for segment in segments {
+        match segment {
+            ParagraphSegment::Token(ParagraphSegmentToken::Whitespace) => out.push(' '),
+            ParagraphSegment::Token(ParagraphSegmentToken::Text(text)) => out.push_str(text),
+            ParagraphSegment::Token(
+                ParagraphSegmentToken::Special(c) | ParagraphSegmentToken::Escape(c),
+            ) => out.push(*c),
+            ParagraphSegment::AttachedModifier { content, .. }
+            | ParagraphSegment::Anchor { content, .. } => push_title_text(content, out),
+            // A link shows its description if it has one, otherwise the target
+            // itself (URL/path text, or a nested heading title).
+            ParagraphSegment::Link {
+                targets,
+                description,
+                ..
+            } => match description {
+                Some(desc) => push_title_text(desc, out),
+                None => match targets.first() {
+                    Some(LinkTarget::Url(u)) => out.push_str(u),
+                    Some(LinkTarget::Path(p)) => out.push_str(p),
+                    Some(LinkTarget::Heading { title, .. }) => push_title_text(title, out),
+                    _ => {}
+                },
+            },
+            ParagraphSegment::InlineVerbatim(tokens) => {
+                tokens.iter().for_each(|t| out.push_str(&t.to_string()));
+            }
+            _ => {}
         }
     }
 }
@@ -111,7 +185,7 @@ fn norg_to_html(path: &str) -> String {
 /// `target="_blank"` to prevent the opened page from hijacking `window.opener`.
 fn anchor(out: &mut String, href: &str, display_html: &str, external: bool) {
     if has_unsafe_scheme(href) {
-        eprintln!("Warning: dropping link with unsafe URL scheme: {href}");
+        crate::diagnostics::warn(format!("dropping link with unsafe URL scheme: {href}"));
         out.push_str(display_html);
         return;
     }
@@ -142,13 +216,16 @@ fn convert_link(
                 // `{:file.norg:url}` carries a file path; rewrite it to `.html`
                 // like the Heading/Path/None branches do, or the link is dead.
                 Some(fp) => anchor(out, &norg_to_html(fp), &display_html, false),
-                None if is_http_url(url) => anchor(out, url, &display_html, true),
+                // External (`http(s)://` or protocol-relative `//host`): emit
+                // as-is with external-link hardening, never as an in-site path.
+                None if is_external_url(url) => anchor(out, url, &display_html, true),
                 None => anchor(out, &norg_to_html(url), &display_html, false),
             }
         }
         Some(LinkTarget::Heading { title, .. }) => {
             let title_html = convert_segments(title);
-            let slug = into_slug(&title_html);
+            // Same derivation as the heading tag/TOC so the anchor resolves.
+            let slug = title_slug(title);
             // `{:path:# Heading}` links carry both a file path and a heading
             // target; keep the path instead of degrading to a same-page
             // anchor.
@@ -280,5 +357,43 @@ mod tests {
             &mut out,
         );
         assert_eq!(out, "click me");
+    }
+
+    #[test]
+    fn protocol_relative_url_is_treated_as_external() {
+        // `//host` is a cross-origin URL, not an in-site path: it must be
+        // emitted as-is (never rewritten to `.html`) and get external-link
+        // hardening, not rendered as a bare same-site link.
+        let description = [text("cdn")];
+        let mut out = String::new();
+        convert_link(
+            &[LinkTarget::Url("//cdn.example.com/x".into())],
+            Some(&description),
+            None,
+            &mut out,
+        );
+        assert_eq!(
+            out,
+            r#"<a href="//cdn.example.com/x" target="_blank" rel="noopener noreferrer">cdn</a>"#
+        );
+    }
+
+    #[test]
+    fn title_slug_derives_from_visible_text_not_markup() {
+        // A heading with a link and emphasis must slug from the words a reader
+        // sees, never the `<a href…>`/`<i>` markup `convert_segments` emits.
+        let title = [
+            ParagraphSegment::Link {
+                filepath: None,
+                targets: vec![LinkTarget::Url("https://neovim.io/doc#nvim_create_buf()".into())],
+                description: Some(vec![text("nvim_create_buf")]),
+            },
+            text(" in "),
+            ParagraphSegment::AttachedModifier {
+                modifier_type: '/',
+                content: vec![text("Lua")],
+            },
+        ];
+        assert_eq!(title_slug(&title), "nvim-create-buf-in-lua");
     }
 }

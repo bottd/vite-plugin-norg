@@ -17,9 +17,8 @@ pub enum EmbedParseError {
 }
 
 impl EmbedParseError {
-    /// The zero-based ordinal of the offending `@embed`, for errors that have
-    /// one.
-    pub fn index(&self) -> usize {
+    /// The zero-based ordinal of the offending `@embed`.
+    fn index(&self) -> usize {
         match self {
             Self::MissingLanguage { index }
             | Self::InvalidLanguage { index, .. }
@@ -35,7 +34,8 @@ impl EmbedParseError {
     /// content.
     pub fn offending_line(&self) -> Option<String> {
         match self {
-            Self::MissingLanguage { .. } => None,
+            // No language was parsed, so point at the bare `@embed` tag.
+            Self::MissingLanguage { .. } => Some("@embed".to_string()),
             Self::InvalidLanguage { language, .. } | Self::LanguageMismatch { language, .. } => {
                 Some(format!("@embed {language}"))
             }

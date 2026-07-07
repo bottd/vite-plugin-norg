@@ -26,10 +26,19 @@ pub fn is_http_url(s: &str) -> bool {
     s.starts_with("http://") || s.starts_with("https://")
 }
 
-/// True if `href` carries an explicit URL scheme that is NOT in the safe
-/// allowlist (`http`/`https`/`mailto`). Browser URL parsing strips leading C0
-/// controls/spaces and ignores ASCII tab/newline inside URLs, so this check
-/// mirrors that before looking for a scheme.
+/// True for a link pointing off the current site: an absolute `http(s)://` URL
+/// or a protocol-relative `//host/…` URL. Both open in a new tab with
+/// `rel="noopener noreferrer"`; a protocol-relative URL must not be mistaken
+/// for an in-site `.norg` path (which would get rewritten/prefixed and break).
+pub fn is_external_url(s: &str) -> bool {
+    is_http_url(s) || s.starts_with("//")
+}
+
+/// True if `href` carries an explicit URL scheme that can execute script when
+/// navigated (`javascript:`, `vbscript:`, `data:`). Benign schemes (`http`,
+/// `https`, `mailto`, `tel`, `ftp`, …) and scheme-less relative links are safe.
+/// Browser URL parsing strips leading C0 controls/spaces and ignores ASCII
+/// tab/newline inside URLs, so this check mirrors that before finding a scheme.
 pub fn has_unsafe_scheme(href: &str) -> bool {
     let normalized: String = href
         .trim_start_matches(|c: char| c.is_ascii_control() || c == ' ')
@@ -54,9 +63,9 @@ pub fn has_unsafe_scheme(href: &str) -> bool {
     // A `pos` of 0 (leading `:`) or a non-scheme-shaped prefix isn't a real
     // scheme; treat it as safe (relative) rather than blocking it.
     valid
-        && !matches!(
+        && matches!(
             scheme.to_ascii_lowercase().as_str(),
-            "http" | "https" | "mailto"
+            "javascript" | "vbscript" | "data"
         )
 }
 
@@ -83,18 +92,33 @@ mod tests {
         assert!(has_unsafe_scheme("\tdata:text/html,<script>"));
         assert!(has_unsafe_scheme("data:text/html,<script>"));
         assert!(has_unsafe_scheme("vbscript:msgbox"));
-        // Allowlisted schemes pass.
+        // Benign schemes are NOT blocked — the check is a denylist of script
+        // schemes, not an allowlist, so ordinary links keep working.
         assert!(!has_unsafe_scheme("http://example.com"));
         assert!(!has_unsafe_scheme("https://example.com"));
         assert!(!has_unsafe_scheme("mailto:a@b.com"));
+        assert!(!has_unsafe_scheme("tel:+15551234567"));
+        assert!(!has_unsafe_scheme("ftp://ftp.gnu.org/gnu/"));
+        assert!(!has_unsafe_scheme("sms:+15551234567"));
         // No scheme: relative paths, absolute paths, fragments are safe.
         assert!(!has_unsafe_scheme("docs/readme.html"));
         assert!(!has_unsafe_scheme("./relative"));
         assert!(!has_unsafe_scheme("/absolute/path"));
+        assert!(!has_unsafe_scheme("//protocol-relative.example.com"));
         assert!(!has_unsafe_scheme("#section"));
         // A colon after a path separator is not a scheme.
         assert!(!has_unsafe_scheme("path/to:file"));
         assert!(!has_unsafe_scheme("foo?x=a:b"));
+    }
+
+    #[test]
+    fn test_is_external_url() {
+        assert!(is_external_url("http://example.com"));
+        assert!(is_external_url("https://example.com"));
+        assert!(is_external_url("//cdn.example.com/x"));
+        assert!(!is_external_url("docs/readme.norg"));
+        assert!(!is_external_url("/absolute/path"));
+        assert!(!is_external_url("#section"));
     }
 
     #[test]

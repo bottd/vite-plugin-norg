@@ -1,7 +1,6 @@
 use crate::ast_handlers::*;
-use crate::segments::convert_segments;
+use crate::segments::{convert_segments, heading_html_and_id, title_slug};
 use crate::types::{EmbedComponent, OutputMode};
-use crate::utils::into_slug;
 use arborium::Highlighter;
 use rust_norg::{NorgAST, NorgASTFlat, ParagraphSegment, RangeableDetachedModifier};
 
@@ -101,8 +100,10 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), 
 fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), EmbedParseError> {
     match node {
         NorgAST::List { .. } | NorgAST::NestableDetachedModifier { .. } => {
-            // Normally consumed as a run by transform_nodes; a one-off node
-            // (e.g. reached through a CarryoverTag) renders the same way.
+            // Defensive: transform_nodes' run loop consumes list-like nodes
+            // (including carryover-wrapped ones) before dispatching here, so a
+            // list should never reach this arm. Render it the same way rather
+            // than silently dropping it if the AST shape ever changes.
             let mut items = Vec::new();
             collect_list_items(node, &mut items);
             state.push_list(&items);
@@ -135,13 +136,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             content,
             ..
         } => {
-            let title_html = convert_segments(title);
-            let id = into_slug(&title_html);
-            // HTML only defines <h1>–<h6>. `parse_norg` clamps heading levels
-            // up front so the TOC and this tag agree; the `.min(6)` is a local
-            // belt so `transform` still emits valid markup if called on an
-            // un-clamped AST directly.
-            let tag_level = (*level).min(6);
+            let (title_html, id, tag_level) = heading_html_and_id(title, *level);
             state.push_html(&format!(
                 "<h{tag_level} id=\"{id}\">{title_html}</h{tag_level}>"
             ));
@@ -187,8 +182,8 @@ fn rangeable_modifier(
         .filter_map(|node| match node {
             NorgASTFlat::Paragraph(segments) => paragraph(segments),
             _ => {
-                eprintln!(
-                    "Warning: unsupported block inside a definition/footnote/table body — content skipped"
+                crate::diagnostics::warn(
+                    "unsupported block inside a definition/footnote/table body — content skipped",
                 );
                 None
             }
@@ -200,7 +195,7 @@ fn rangeable_modifier(
             format!("<dl><dt>{title_html}</dt><dd>{body}</dd></dl>")
         }
         RangeableDetachedModifier::Footnote => {
-            let id = into_slug(&title_html);
+            let id = title_slug(title);
             // `body` is already a sequence of <p> blocks.
             format!(
                 "<aside id=\"footnote-{id}\" class=\"footnote\"><strong>{title_html}</strong>{body}</aside>"
