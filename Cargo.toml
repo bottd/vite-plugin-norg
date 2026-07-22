@@ -21,13 +21,11 @@ serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.150"
 htmlescape = "=0.3.1"
 rust-norg = { git = "https://github.com/nvim-neorg/rust-norg", rev = "8e40d2443c39b4719e1c6637b93007fa64353e92" }
-arborium = { version = "=2.17.0", features = ["all-languages"] }
+arborium = { version = "=2.18.1", features = ["all-languages"] }
 textwrap = "=0.16.2"
 
 [dev-dependencies]
 insta = { version = "=1.48.0", features = ["yaml"] }
-proptest = "=1.11.0"
-rstest = "=0.26.1"
 
 [profile.release]
 opt-level = 3

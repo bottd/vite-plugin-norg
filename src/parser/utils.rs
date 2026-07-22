@@ -23,7 +23,11 @@ pub fn into_slug(text: &str) -> String {
 /// the `://` separator so it doesn't match a same-document path like
 /// `httpserver.norg` the way a bare `starts_with("http")` would.
 pub fn is_http_url(s: &str) -> bool {
-    s.starts_with("http://") || s.starts_with("https://")
+    let Some((scheme, rest)) = s.split_once(':') else {
+        return false;
+    };
+    rest.starts_with("//")
+        && (scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https"))
 }
 
 /// True for a link pointing off the current site: an absolute `http(s)://` URL
@@ -73,7 +77,7 @@ pub fn has_unsafe_scheme(href: &str) -> bool {
         // images can't run script — and block everything else.
         "data" => {
             let lower = normalized.to_ascii_lowercase();
-            !(lower.starts_with("data:image/") && !lower.starts_with("data:image/svg"))
+            !lower.starts_with("data:image/") || lower.starts_with("data:image/svg")
         }
         _ => false,
     }
@@ -87,6 +91,8 @@ mod tests {
     fn test_is_http_url() {
         assert!(is_http_url("http://example.com"));
         assert!(is_http_url("https://example.com"));
+        assert!(is_http_url("HTTP://example.com"));
+        assert!(is_http_url("Https://example.com"));
         assert!(!is_http_url("httpserver.norg"));
         assert!(!is_http_url("https.norg"));
         assert!(!is_http_url("/absolute/path"));

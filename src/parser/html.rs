@@ -1,5 +1,5 @@
 use crate::ast_handlers::*;
-use crate::segments::{convert_segments, heading_html_and_id, title_slug};
+use crate::segments::{DocumentIds, convert_segments_with_ids, heading_html_and_id};
 use crate::types::{EmbedComponent, OutputMode};
 use arborium::Highlighter;
 use rust_norg::{NorgAST, NorgASTFlat, ParagraphSegment, RangeableDetachedModifier};
@@ -16,13 +16,11 @@ struct TransformState {
     /// Unlike `embed_components.len()`, it counts embeds that emit no
     /// component.
     embed_decls: usize,
-    /// Per-document slug counter so duplicate heading titles get distinct ids
-    /// (`setup`, `setup-1`, …); walked in the same order as the TOC pass.
-    heading_ids: std::collections::HashMap<String, u32>,
+    ids: DocumentIds,
 }
 
 impl TransformState {
-    fn new(mode: Option<OutputMode>) -> Self {
+    fn new(mode: Option<OutputMode>, ids: DocumentIds) -> Self {
         Self {
             parts: Vec::new(),
             current_html: String::new(),
@@ -31,7 +29,7 @@ impl TransformState {
             mode,
             highlighter: Highlighter::new(),
             embed_decls: 0,
-            heading_ids: std::collections::HashMap::new(),
+            ids,
         }
     }
 
@@ -41,8 +39,8 @@ impl TransformState {
     }
 
     /// Renders a flattened list run and appends it, skipping an empty render.
-    fn push_list(&mut self, items: &[FlatListItem]) {
-        let html = render_list_items(items);
+    fn push_list(&mut self, events: &[FlatListEvent]) {
+        let html = render_list_items(events, &self.ids);
         if !html.is_empty() {
             self.push_html(&html);
         }
@@ -54,7 +52,11 @@ impl TransformState {
             VerbatimTagResult::Css(css) => self.css_blocks.push(css),
             VerbatimTagResult::Embed { mode, code } => {
                 self.parts.push(std::mem::take(&mut self.current_html));
-                self.embed_components.push(EmbedComponent { mode, code });
+                self.embed_components.push(EmbedComponent {
+                    index: self.embed_components.len() as u32,
+                    mode,
+                    code,
+                });
             }
         }
     }
@@ -73,7 +75,7 @@ pub fn transform(
     ast: &[NorgAST],
     mode: Option<OutputMode>,
 ) -> Result<(Vec<String>, Vec<EmbedComponent>, String), EmbedParseError> {
-    let mut state = TransformState::new(mode);
+    let mut state = TransformState::new(mode, document_ids(ast));
     transform_nodes(ast, &mut state)?;
     Ok(state.finalize())
 }
@@ -87,16 +89,82 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), 
         // List rendering is a pure function over the flattened run — it has
         // no access to the embed/css stream, so it cannot misalign it.
         let start = i;
-        let mut items = Vec::new();
-        while i < nodes.len() && collect_list_items(&nodes[i], &mut items) {
+        let mut events = Vec::new();
+        while i < nodes.len() && collect_list_items(&nodes[i], &mut events) {
             i += 1;
         }
         if i > start {
-            state.push_list(&items);
+            state.push_list(&events);
             continue;
         }
+
+        if let Some(next) = transform_comment(nodes, i, state)? {
+            i = next;
+            continue;
+        }
+
         transform_node(&nodes[i], state)?;
         i += 1;
+    }
+    Ok(())
+}
+
+fn transform_comment(
+    nodes: &[NorgAST],
+    index: usize,
+    state: &mut TransformState,
+) -> Result<Option<usize>, EmbedParseError> {
+    let Some((kind, target)) = comment_target(&nodes[index]) else {
+        return Ok(None);
+    };
+    let Some(level) = heading_level(target) else {
+        return Ok(Some(index + 1));
+    };
+
+    if kind == CommentKind::Weak
+        && let NorgAST::Heading { content, .. } = target
+    {
+        transform_nested_headings(content, state)?;
+    }
+
+    if !has_chained_carryover(&nodes[index]) {
+        return Ok(Some(index + 1));
+    }
+
+    let mut next = index + 1;
+    let mut current_level = level as i16;
+    while next < nodes.len() {
+        match heading_level(&nodes[next]) {
+            Some(next_level) if next_level <= level => break,
+            Some(next_level) => {
+                current_level = next_level as i16;
+                if kind == CommentKind::Weak {
+                    transform_nodes(std::slice::from_ref(&nodes[next]), state)?;
+                }
+            }
+            None if matches!(
+                &nodes[next],
+                NorgAST::DelimitingModifier(delim)
+                    if delimiter_exits_heading_scope(delim, level, &mut current_level)
+            ) =>
+            {
+                break;
+            }
+            None => {}
+        }
+        next += 1;
+    }
+    Ok(Some(next))
+}
+
+fn transform_nested_headings(
+    nodes: &[NorgAST],
+    state: &mut TransformState,
+) -> Result<(), EmbedParseError> {
+    for node in nodes {
+        if heading_level(node).is_some() {
+            transform_nodes(std::slice::from_ref(node), state)?;
+        }
     }
     Ok(())
 }
@@ -104,14 +172,9 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), 
 fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), EmbedParseError> {
     match node {
         NorgAST::List { .. } | NorgAST::NestableDetachedModifier { .. } => {
-            // Defensive: transform_nodes' run loop consumes list-like nodes
-            // (including carryover-wrapped ones) before dispatching here, so a
-            // list should never reach this arm. Render it the same way rather
-            // than silently dropping it if the AST shape ever changes.
-            let mut items = Vec::new();
-            collect_list_items(node, &mut items);
-            state.push_list(&items);
+            unreachable!("list nodes are consumed by transform_nodes")
         }
+        NorgAST::VerbatimRangedTag { name, .. } if is_comment_tag(name) => {}
         NorgAST::VerbatimRangedTag {
             name,
             parameters,
@@ -140,8 +203,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             content,
             ..
         } => {
-            let (title_html, id, tag_level) =
-                heading_html_and_id(title, *level, &mut state.heading_ids);
+            let (title_html, id, tag_level) = heading_html_and_id(title, *level, &mut state.ids);
             // A symbol-only title (e.g. `* @@@`) slugs to "" — omit the
             // attribute rather than emit an HTML5-invalid `id=""`.
             let id_attr = if id.is_empty() {
@@ -155,7 +217,7 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             transform_nodes(content, state)?;
         }
         NorgAST::Paragraph(segments) => {
-            if let Some(html) = paragraph(segments) {
+            if let Some(html) = paragraph(segments, &state.ids) {
                 state.push_html(&html);
             }
         }
@@ -164,16 +226,20 @@ fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), Embe
             title,
             content,
             ..
-        } => state.push_html(&rangeable_modifier(modifier_type, title, content)),
+        } => {
+            let html = rangeable_modifier(modifier_type, title, content, &mut state.ids);
+            state.push_html(&html);
+        }
         NorgAST::DelimitingModifier(delim) => state.push_html(delimiter(delim)),
         NorgAST::CarryoverTag {
             name, next_object, ..
         } => {
-            // The annotation is unimplemented, but the object it annotates is
-            // real content — warn and render it anyway.
-            warn_carryover_ignored(name);
-            transform_node(next_object, state)?;
+            if comment_target(node).is_none() {
+                warn_carryover_ignored(name);
+                transform_nodes(std::slice::from_ref(next_object), state)?;
+            }
         }
+        NorgAST::RangedTag { name, .. } if is_comment_tag(name) => {}
         NorgAST::RangedTag { name, .. } => warn_unimplemented("ranged", name),
         NorgAST::InfirmTag { name, .. } => warn_unimplemented("infirm", name),
     }
@@ -184,33 +250,23 @@ fn rangeable_modifier(
     modifier_type: &RangeableDetachedModifier,
     title: &[ParagraphSegment],
     content: &[NorgASTFlat],
+    ids: &mut DocumentIds,
 ) -> String {
     // convert_segments output is final HTML (text already escaped, markup
     // intentional) — re-encoding it would render `&` as `&amp;` and inline
     // markup as literal tags.
-    let title_html = convert_segments(title);
-    let body: String = content
-        .iter()
-        .filter_map(|node| match node {
-            NorgASTFlat::Paragraph(segments) => paragraph(segments),
-            _ => {
-                crate::diagnostics::warn(
-                    "unsupported block inside a definition/footnote/table body — content skipped",
-                );
-                None
-            }
-        })
-        .collect();
+    let title_html = convert_segments_with_ids(title, ids);
+    let body = rangeable_body(content, ids);
 
     match modifier_type {
         RangeableDetachedModifier::Definition => {
             format!("<dl><dt>{title_html}</dt><dd>{body}</dd></dl>")
         }
         RangeableDetachedModifier::Footnote => {
-            let id = title_slug(title);
+            let id = ids.next_footnote();
             // `body` is already a sequence of <p> blocks.
             format!(
-                "<aside id=\"footnote-{id}\" class=\"footnote\"><strong>{title_html}</strong>{body}</aside>"
+                "<aside id=\"{id}\" class=\"footnote\"><strong>{title_html}</strong>{body}</aside>"
             )
         }
         RangeableDetachedModifier::Table => {
@@ -221,4 +277,87 @@ fn rangeable_modifier(
             )
         }
     }
+}
+
+fn rangeable_body(content: &[NorgASTFlat], ids: &DocumentIds) -> String {
+    let mut body = String::new();
+    let mut index = 0;
+    while index < content.len() {
+        if let Some(next) = flat_comment_end(content, index) {
+            index = next;
+            continue;
+        }
+
+        match &content[index] {
+            NorgASTFlat::Paragraph(segments) => {
+                if let Some(html) = paragraph(segments, ids) {
+                    body.push_str(&html);
+                }
+            }
+            NorgASTFlat::RangedTag { name, .. } | NorgASTFlat::VerbatimRangedTag { name, .. }
+                if is_comment_tag(name) => {}
+            _ => crate::diagnostics::warn(
+                "unsupported block inside a definition/footnote/table body — content skipped",
+            ),
+        }
+        index += 1;
+    }
+    body
+}
+
+fn flat_comment_end(content: &[NorgASTFlat], index: usize) -> Option<usize> {
+    let (kind, target) = flat_comment_target(&content[index])?;
+
+    if let Some(level) = flat_heading_level(target) {
+        let mut next = index + 1;
+        let mut current_level = level as i16;
+        while next < content.len() {
+            match flat_heading_level(&content[next]) {
+                Some(next_level) if next_level <= level || kind == CommentKind::Weak => break,
+                Some(next_level) => current_level = next_level as i16,
+                None if matches!(
+                    &content[next],
+                    NorgASTFlat::DelimitingModifier(delim)
+                        if delimiter_exits_heading_scope(
+                            delim,
+                            level,
+                            &mut current_level,
+                        )
+                ) =>
+                {
+                    break;
+                }
+                None => {}
+            }
+            next += 1;
+        }
+        return Some(next);
+    }
+
+    if kind == CommentKind::Strong
+        && let NorgASTFlat::NestableDetachedModifier {
+            modifier_type,
+            level,
+            ..
+        } = target
+    {
+        let mut next = index + 1;
+        while next < content.len() {
+            let NorgASTFlat::NestableDetachedModifier {
+                modifier_type: next_type,
+                level: next_level,
+                ..
+            } = flat_carryover_target(&content[next])
+            else {
+                break;
+            };
+            if next_level < level || (next_level == level && next_type != modifier_type) {
+                break;
+            }
+            next += 1;
+        }
+        return Some(next);
+    }
+
+    Some(index + 1)
 }

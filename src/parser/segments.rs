@@ -1,59 +1,114 @@
 use crate::utils::{has_unsafe_scheme, into_slug, is_external_url};
 use htmlescape::encode_minimal;
 use rust_norg::{LinkTarget, ParagraphSegment, ParagraphSegmentToken};
-use std::cell::Cell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
-thread_local! {
-    /// True while a link's display text is being rendered, so a link nested in
-    /// another link's description emits as plain text instead of `<a>` inside
-    /// `<a>` (invalid HTML that browsers silently auto-close).
-    static IN_ANCHOR: Cell<bool> = const { Cell::new(false) };
+#[cfg(test)]
+pub fn convert_segments(segments: &[ParagraphSegment]) -> String {
+    render_segments(segments, false, None)
 }
 
-pub fn convert_segments(segments: &[ParagraphSegment]) -> String {
+pub fn convert_segments_with_ids(segments: &[ParagraphSegment], ids: &DocumentIds) -> String {
+    render_segments(segments, false, Some(ids))
+}
+
+fn render_segments(
+    segments: &[ParagraphSegment],
+    in_anchor: bool,
+    ids: Option<&DocumentIds>,
+) -> String {
     let mut out = String::with_capacity(segments.len() * 32);
-    convert_segments_into(segments, &mut out);
+    convert_segments_into(segments, &mut out, in_anchor, ids);
     out
 }
 
 /// Tokens are the hottest path in the renderer (every word, space, and
 /// punctuation char of every paragraph) — all conversion writes into one
 /// shared buffer instead of allocating a `String` per segment.
-fn convert_segments_into(segments: &[ParagraphSegment], out: &mut String) {
+fn convert_segments_into(
+    segments: &[ParagraphSegment],
+    out: &mut String,
+    in_anchor: bool,
+    ids: Option<&DocumentIds>,
+) {
     for segment in segments {
-        convert_segment(segment, out);
+        convert_segment(segment, out, in_anchor, ids);
     }
 }
 
-pub fn convert_code_segments(segments: &[ParagraphSegment]) -> String {
-    let mut out = String::new();
+fn convert_code_segments(segments: &[ParagraphSegment], out: &mut String) {
     for segment in segments {
         if let ParagraphSegment::Token(token) = segment {
-            render_token(token, &mut out);
+            render_token(token, out);
         }
     }
-    out
 }
 
-fn convert_segment(segment: &ParagraphSegment, out: &mut String) {
+fn convert_segment(
+    segment: &ParagraphSegment,
+    out: &mut String,
+    in_anchor: bool,
+    ids: Option<&DocumentIds>,
+) {
     match segment {
         ParagraphSegment::Token(token) => render_token(token, out),
 
         ParagraphSegment::AttachedModifier {
             modifier_type,
             content,
-        } => convert_attached_modifier(*modifier_type, content, out),
+        } => convert_attached_modifier(*modifier_type, content, out, in_anchor, ids),
 
         ParagraphSegment::Link {
             targets,
             description,
             filepath,
             ..
-        } => convert_link(targets, description.as_deref(), filepath.as_deref(), out),
+        } => convert_link(
+            targets,
+            description.as_deref(),
+            filepath.as_deref(),
+            out,
+            in_anchor,
+            ids,
+        ),
 
-        ParagraphSegment::Anchor { content, .. } => convert_segments_into(content, out),
+        ParagraphSegment::Anchor {
+            content,
+            description,
+        } => convert_segments_into(
+            description.as_deref().unwrap_or(content),
+            out,
+            in_anchor,
+            ids,
+        ),
+
+        ParagraphSegment::AnchorDefinition { content, target } => match target.as_ref() {
+            ParagraphSegment::Link {
+                targets, filepath, ..
+            } if !targets.is_empty() || filepath.is_some() => {
+                convert_link(
+                    targets,
+                    Some(content),
+                    filepath.as_deref(),
+                    out,
+                    in_anchor,
+                    ids,
+                );
+            }
+            ParagraphSegment::Link { .. } => {
+                crate::diagnostics::warn("anchor definition has no target");
+                convert_segments_into(content, out, in_anchor, ids);
+            }
+            _ => {
+                crate::diagnostics::warn("unsupported anchor definition target");
+                convert_segments_into(content, out, in_anchor, ids);
+            }
+        },
+
+        ParagraphSegment::InlineLinkTarget(content) => {
+            convert_segments_into(content, out, in_anchor, ids)
+        }
 
         ParagraphSegment::InlineVerbatim(tokens) => {
             let text: String = tokens.iter().map(ToString::to_string).collect();
@@ -102,41 +157,253 @@ fn push_escaped(out: &mut String, s: &str) {
 pub fn heading_html_and_id(
     title: &[ParagraphSegment],
     level: u16,
-    seen: &mut HashMap<String, u32>,
+    ids: &mut DocumentIds,
 ) -> (String, String, u16) {
-    let html = convert_segments(title);
-    let id = dedup_id(title_slug(title), seen);
+    let id = ids.next_heading();
+    let html = convert_segments_with_ids(title, ids);
     (html, id, level.min(6))
 }
 
-/// Disambiguates a slug against the ones already emitted in the same document:
-/// the first `setup` stays `setup`, the next becomes `setup-1`, and so on. An
-/// empty slug (symbol-only title) is left empty — the emit site omits the `id`
-/// attribute. The renderer and TOC each walk headings in document order, so they
-/// derive identical suffixes from separate counters.
-fn dedup_id(base: String, seen: &mut HashMap<String, u32>) -> String {
-    if base.is_empty() {
-        return base;
+#[derive(Default)]
+pub struct DocumentIds {
+    headings: Vec<String>,
+    footnotes: Vec<String>,
+    heading_links: HashMap<(u16, String), String>,
+    footnote_links: HashMap<String, String>,
+    next_heading: usize,
+    next_footnote: usize,
+}
+
+impl DocumentIds {
+    pub fn new(headings: Vec<(u16, String, String)>, footnotes: Vec<(String, String)>) -> Self {
+        let mut allocator = IdAllocator::default();
+        for (_, _, slug) in &headings {
+            allocator.reserve(slug);
+        }
+        for (_, slug) in &footnotes {
+            allocator.reserve(&format!("footnote-{slug}"));
+        }
+
+        let mut ids = Self::default();
+        for (level, key, slug) in headings {
+            let id = allocator.allocate(slug.clone());
+            ids.heading_links
+                .entry((level, key))
+                .or_insert_with(|| id.clone());
+            ids.headings.push(id);
+        }
+        for (key, slug) in footnotes {
+            let id = allocator.allocate(format!("footnote-{slug}"));
+            ids.footnote_links.entry(key).or_insert_with(|| id.clone());
+            ids.footnotes.push(id);
+        }
+        ids
     }
-    let count = seen.entry(base.clone()).or_insert(0);
-    let id = if *count == 0 {
-        base.clone()
-    } else {
-        format!("{base}-{count}")
-    };
-    *count += 1;
-    id
+
+    fn next_heading(&mut self) -> String {
+        let id = self.headings[self.next_heading].clone();
+        self.next_heading += 1;
+        id
+    }
+
+    pub fn next_footnote(&mut self) -> String {
+        let id = self.footnotes[self.next_footnote].clone();
+        self.next_footnote += 1;
+        id
+    }
+
+    fn heading_link(&self, level: u16, slug: &str) -> Option<&str> {
+        self.heading_links
+            .get(&(level, slug.to_string()))
+            .map(String::as_str)
+    }
+
+    fn footnote_link(&self, slug: &str) -> Option<&str> {
+        self.footnote_links.get(slug).map(String::as_str)
+    }
+}
+
+#[derive(Default)]
+struct IdAllocator {
+    seen: HashSet<String>,
+    reserved: HashSet<String>,
+}
+
+impl IdAllocator {
+    fn reserve(&mut self, id: &str) {
+        if !id.is_empty() {
+            self.reserved.insert(id.to_string());
+        }
+    }
+
+    fn allocate(&mut self, base: String) -> String {
+        if base.is_empty() || self.seen.insert(base.clone()) {
+            return base;
+        }
+
+        for suffix in 1.. {
+            let id = format!("{base}-{suffix}");
+            if !self.reserved.contains(&id) && self.seen.insert(id.clone()) {
+                return id;
+            }
+        }
+        unreachable!()
+    }
 }
 
 /// The slug id for a heading or footnote title, derived from its plain visible
 /// *text* rather than its rendered HTML — so a title like `{url}[Install]` slugs
 /// to `install`, not the `<a href…>` markup `convert_segments` would emit. Every
-/// id site (heading tag/TOC, same-document `{# Heading}` links, footnote anchor)
-/// routes through here, so an id and the anchor pointing at it always match.
+/// base-slug site routes through here so links and generated IDs use the same
+/// visible-text rules.
 pub fn title_slug(title: &[ParagraphSegment]) -> String {
     let mut text = String::new();
     push_title_text(title, &mut text);
     into_slug(&text)
+}
+
+pub fn title_key(title: &[ParagraphSegment]) -> String {
+    let mut key = String::new();
+    push_title_key(title, &mut key);
+    key
+}
+
+fn push_title_key(segments: &[ParagraphSegment], out: &mut String) {
+    for segment in segments {
+        match segment {
+            ParagraphSegment::Token(ParagraphSegmentToken::Whitespace) => {}
+            ParagraphSegment::Token(ParagraphSegmentToken::Text(text)) => {
+                push_key_text(text, out);
+            }
+            ParagraphSegment::Token(
+                ParagraphSegmentToken::Special(c) | ParagraphSegmentToken::Escape(c),
+            ) => push_key_char(*c, out),
+            ParagraphSegment::AttachedModifier {
+                modifier_type,
+                content,
+            } => {
+                out.push('m');
+                out.push(*modifier_type);
+                out.push('(');
+                push_title_key(content, out);
+                out.push(')');
+            }
+            ParagraphSegment::Link {
+                filepath,
+                targets,
+                description,
+            } => {
+                out.push_str("link(");
+                if let Some(filepath) = filepath {
+                    push_key_text(filepath, out);
+                }
+                for target in targets {
+                    push_link_target_key(target, out);
+                }
+                out.push(')');
+                if let Some(description) = description {
+                    out.push('[');
+                    push_title_key(description, out);
+                    out.push(']');
+                }
+            }
+            ParagraphSegment::AnchorDefinition { content, target } => {
+                out.push_str("anchor-def[");
+                push_title_key(content, out);
+                out.push(']');
+                push_title_key(std::slice::from_ref(target.as_ref()), out);
+            }
+            ParagraphSegment::Anchor {
+                content,
+                description,
+            } => {
+                out.push_str("anchor[");
+                push_title_key(content, out);
+                out.push(']');
+                if let Some(description) = description {
+                    out.push('[');
+                    push_title_key(description, out);
+                    out.push(']');
+                }
+            }
+            ParagraphSegment::InlineLinkTarget(content) => {
+                out.push('<');
+                push_title_key(content, out);
+                out.push('>');
+            }
+            ParagraphSegment::InlineVerbatim(tokens) => {
+                out.push('`');
+                for token in tokens {
+                    push_key_text(&token.to_string(), out);
+                }
+                out.push('`');
+            }
+            _ => out.push('?'),
+        }
+    }
+}
+
+fn push_link_target_key(target: &LinkTarget, out: &mut String) {
+    match target {
+        LinkTarget::Heading { level, title } => {
+            let _ = write!(out, "h{level}(");
+            push_title_key(title, out);
+            out.push(')');
+        }
+        LinkTarget::Footnote(title) => {
+            out.push_str("footnote(");
+            push_title_key(title, out);
+            out.push(')');
+        }
+        LinkTarget::Definition(title) => {
+            out.push_str("definition(");
+            push_title_key(title, out);
+            out.push(')');
+        }
+        LinkTarget::Generic(title) => {
+            out.push_str("generic(");
+            push_title_key(title, out);
+            out.push(')');
+        }
+        LinkTarget::Wiki(title) => {
+            out.push_str("wiki(");
+            push_title_key(title, out);
+            out.push(')');
+        }
+        LinkTarget::Extendable(title) => {
+            out.push_str("extendable(");
+            push_title_key(title, out);
+            out.push(')');
+        }
+        LinkTarget::Path(path) => {
+            out.push_str("path(");
+            push_key_text(path, out);
+            out.push(')');
+        }
+        LinkTarget::Url(url) => {
+            out.push_str("url(");
+            push_key_text(url, out);
+            out.push(')');
+        }
+        LinkTarget::Timestamp(timestamp) => {
+            out.push_str("timestamp(");
+            push_key_text(timestamp, out);
+            out.push(')');
+        }
+    }
+}
+
+fn push_key_text(text: &str, out: &mut String) {
+    for c in text.chars() {
+        push_key_char(c, out);
+    }
+}
+
+fn push_key_char(c: char, out: &mut String) {
+    if c.is_whitespace() || c == '\\' {
+        return;
+    }
+    out.extend(c.to_lowercase());
 }
 
 /// Appends the plain visible text of `segments` to `out`: the words a reader
@@ -151,20 +418,37 @@ fn push_title_text(segments: &[ParagraphSegment], out: &mut String) {
                 ParagraphSegmentToken::Special(c) | ParagraphSegmentToken::Escape(c),
             ) => out.push(*c),
             ParagraphSegment::AttachedModifier { content, .. }
-            | ParagraphSegment::Anchor { content, .. } => push_title_text(content, out),
+            | ParagraphSegment::AnchorDefinition { content, .. }
+            | ParagraphSegment::InlineLinkTarget(content) => push_title_text(content, out),
+            ParagraphSegment::Anchor {
+                content,
+                description,
+            } => push_title_text(description.as_deref().unwrap_or(content), out),
             // A link shows its description if it has one, otherwise the target
             // itself (URL/path text, or a nested heading title).
             ParagraphSegment::Link {
                 targets,
                 description,
-                ..
+                filepath,
             } => match description {
                 Some(desc) => push_title_text(desc, out),
                 None => match targets.first() {
                     Some(LinkTarget::Url(u)) => out.push_str(u),
                     Some(LinkTarget::Path(p)) => out.push_str(p),
                     Some(LinkTarget::Heading { title, .. }) => push_title_text(title, out),
-                    _ => {}
+                    Some(
+                        LinkTarget::Footnote(title)
+                        | LinkTarget::Definition(title)
+                        | LinkTarget::Generic(title)
+                        | LinkTarget::Wiki(title)
+                        | LinkTarget::Extendable(title),
+                    ) => push_title_text(title, out),
+                    Some(LinkTarget::Timestamp(timestamp)) => out.push_str(timestamp),
+                    _ => {
+                        if let Some(filepath) = filepath {
+                            out.push_str(filepath);
+                        }
+                    }
                 },
             },
             ParagraphSegment::InlineVerbatim(tokens) => {
@@ -175,10 +459,16 @@ fn push_title_text(segments: &[ParagraphSegment], out: &mut String) {
     }
 }
 
-fn convert_attached_modifier(modifier_type: char, content: &[ParagraphSegment], out: &mut String) {
+fn convert_attached_modifier(
+    modifier_type: char,
+    content: &[ParagraphSegment],
+    out: &mut String,
+    in_anchor: bool,
+    ids: Option<&DocumentIds>,
+) {
     if modifier_type == '`' {
         out.push_str("<code>");
-        out.push_str(&convert_code_segments(content));
+        convert_code_segments(content, out);
         out.push_str("</code>");
         return;
     }
@@ -193,10 +483,10 @@ fn convert_attached_modifier(modifier_type: char, content: &[ParagraphSegment], 
         '&' => ("<var>", "</var>"),
         '/' => ("<i>", "</i>"),
         '=' => ("<mark>", "</mark>"),
-        _ => return convert_segments_into(content, out),
+        _ => return convert_segments_into(content, out, in_anchor, ids),
     };
     out.push_str(open);
-    convert_segments_into(content, out);
+    convert_segments_into(content, out, in_anchor, ids);
     out.push_str(close);
 }
 
@@ -245,11 +535,10 @@ fn convert_link(
     description: Option<&[ParagraphSegment]>,
     filepath: Option<&str>,
     out: &mut String,
+    nested: bool,
+    ids: Option<&DocumentIds>,
 ) {
-    // Render this link's display with nested links flattened to plain text;
-    // `nested` records whether we are ourselves inside a parent link's display.
-    let nested = IN_ANCHOR.replace(true);
-    let display = description.map(convert_segments);
+    let display = description.map(|segments| render_segments(segments, true, ids));
 
     let link = match targets.first() {
         Some(LinkTarget::Url(url)) => {
@@ -265,40 +554,60 @@ fn convert_link(
             };
             Some((href, display_html, external))
         }
-        Some(LinkTarget::Heading { title, .. }) => {
+        Some(LinkTarget::Heading { level, title }) => {
             // Same derivation as the heading tag/TOC so the anchor resolves.
             let slug = title_slug(title);
+            let key = title_key(title);
             // `{:path:# Heading}` links carry both a file path and a heading
             // target; keep the path instead of degrading to a same-page anchor.
             let href = match filepath {
                 Some(fp) => format!("{}#{slug}", norg_to_html(fp)),
-                None => format!("#{slug}"),
+                None => format!(
+                    "#{}",
+                    ids.and_then(|ids| ids.heading_link(*level, &key))
+                        .unwrap_or(&slug)
+                ),
             };
             // Only render the title HTML when there's no description to use.
-            let display_html = display.unwrap_or_else(|| convert_segments(title));
+            let display_html = display.unwrap_or_else(|| render_segments(title, true, ids));
             Some((href, display_html, false))
         }
         Some(LinkTarget::Path(path)) => {
             let display_html = display.unwrap_or_else(|| encode_minimal(path));
             Some((norg_to_html(path), display_html, false))
         }
+        Some(LinkTarget::Footnote(title)) => {
+            let slug = title_slug(title);
+            let key = title_key(title);
+            let href = match filepath {
+                Some(fp) => format!("{}#footnote-{slug}", norg_to_html(fp)),
+                None => ids
+                    .and_then(|ids| ids.footnote_link(&key))
+                    .map(|id| format!("#{id}"))
+                    .unwrap_or_else(|| format!("#footnote-{slug}")),
+            };
+            let display_html = display.unwrap_or_else(|| render_segments(title, true, ids));
+            Some((href, display_html, false))
+        }
         Some(
-            LinkTarget::Footnote(_)
-            | LinkTarget::Definition(_)
-            | LinkTarget::Timestamp(_)
-            | LinkTarget::Generic(_)
-            | LinkTarget::Extendable(_)
-            | LinkTarget::Wiki(_),
-        ) => None,
+            LinkTarget::Definition(title)
+            | LinkTarget::Generic(title)
+            | LinkTarget::Extendable(title)
+            | LinkTarget::Wiki(title),
+        ) => {
+            out.push_str(&display.unwrap_or_else(|| render_segments(title, true, ids)));
+            return;
+        }
+        Some(LinkTarget::Timestamp(timestamp)) => {
+            out.push_str(&display.unwrap_or_else(|| encode_minimal(timestamp)));
+            return;
+        }
         None => filepath.map(|fp| {
             let display_html = display.unwrap_or_else(|| encode_minimal(fp));
             (norg_to_html(fp), display_html, false)
         }),
     };
 
-    // Restore the flag before emitting, so this link's own `<a>` is written
-    // unless it is itself nested inside a parent link.
-    IN_ANCHOR.set(nested);
     if let Some((href, display_html, external)) = link {
         anchor(out, &href, &display_html, external, nested);
     }
@@ -335,6 +644,8 @@ mod tests {
             Some(&description),
             None,
             &mut out,
+            false,
+            None,
         );
         assert_eq!(
             out,
@@ -354,6 +665,8 @@ mod tests {
             Some(&description),
             None,
             &mut out,
+            false,
+            None,
         );
         assert_eq!(
             out,
@@ -372,6 +685,8 @@ mod tests {
             Some(&description),
             Some("notes.norg"),
             &mut out,
+            false,
+            None,
         );
         assert_eq!(out, r#"<a href="notes.html">label</a>"#);
     }
@@ -387,6 +702,8 @@ mod tests {
             None,
             Some("docs/readme.norg"),
             &mut out,
+            false,
+            None,
         );
         assert_eq!(out, r##"<a href="docs/readme.html#install">Install</a>"##);
     }
@@ -402,6 +719,8 @@ mod tests {
             Some(&description),
             None,
             &mut out,
+            false,
+            None,
         );
         assert_eq!(out, "click me");
     }
@@ -418,11 +737,37 @@ mod tests {
             Some(&description),
             None,
             &mut out,
+            false,
+            None,
         );
         assert_eq!(
             out,
             r#"<a href="//cdn.example.com/x" target="_blank" rel="noopener noreferrer">cdn</a>"#
         );
+    }
+
+    #[test]
+    fn non_addressable_links_keep_their_display_text() {
+        let description = [text("shown")];
+        let mut out = String::new();
+        convert_link(
+            &[LinkTarget::Definition(vec![text("target")])],
+            Some(&description),
+            None,
+            &mut out,
+            false,
+            None,
+        );
+        assert_eq!(out, "shown");
+    }
+
+    #[test]
+    fn anchor_descriptions_are_visible() {
+        let anchor = [ParagraphSegment::Anchor {
+            content: vec![text("target")],
+            description: Some(vec![text("shown")]),
+        }];
+        assert_eq!(convert_segments(&anchor), "shown");
     }
 
     #[test]
@@ -462,6 +807,8 @@ mod tests {
             Some(&description),
             None,
             &mut out,
+            false,
+            None,
         );
         assert_eq!(
             out,

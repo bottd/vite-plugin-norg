@@ -1,37 +1,63 @@
-use crate::ast_handlers::warn_carryover_ignored;
-use crate::segments::convert_segments;
+use crate::ast_handlers::{CommentKind, comment_target, warn_carryover_ignored};
+use crate::segments::{DocumentIds, convert_segments_with_ids};
 use crate::utils::into_slug;
 use htmlescape::encode_minimal;
 use rust_norg::{
-    DetachedModifierExtension, NestableDetachedModifier, NorgAST, NorgASTFlat, TodoStatus,
+    DetachedModifierExtension, NestableDetachedModifier, NorgAST, NorgASTFlat, ParagraphSegment,
+    TodoStatus,
 };
 use std::fmt::Write;
 
-/// One list item flattened out of the AST's `List`/`NestableDetachedModifier`
-/// nodes. rust-norg only nests same-marker items into an item's `content`;
-/// deeper items of a *different* marker type end up as a sibling `List` node,
-/// so the renderer re-nests flattened runs by `level`.
 pub struct FlatListItem<'a> {
-    kind: &'a NestableDetachedModifier,
+    kind: NestableDetachedModifier,
     level: u16,
-    text: &'a NorgASTFlat,
+    text: &'a [ParagraphSegment],
     extensions: &'a [DetachedModifierExtension],
-    content: &'a [NorgAST],
 }
 
-/// Flattens a list-like node (`List`, a bare `NestableDetachedModifier`, or a
-/// `CarryoverTag` wrapping either) into `items`. Returns false — consuming
-/// nothing — for any other node.
-pub fn collect_list_items<'a>(node: &'a NorgAST, items: &mut Vec<FlatListItem<'a>>) -> bool {
+pub enum FlatListEvent<'a> {
+    Item(FlatListItem<'a>),
+    StrongComment {
+        kind: NestableDetachedModifier,
+        level: u16,
+    },
+}
+
+// rust-norg nests only same-marker descendants. Preorder flattening lets one
+// level-aware stack handle marker changes without losing the parent item.
+pub fn collect_list_items<'a>(node: &'a NorgAST, events: &mut Vec<FlatListEvent<'a>>) -> bool {
+    if let Some((comment, target)) = comment_target(node) {
+        return match target {
+            NorgAST::NestableDetachedModifier {
+                modifier_type,
+                level,
+                content,
+                ..
+            } => {
+                match comment {
+                    CommentKind::Strong => events.push(FlatListEvent::StrongComment {
+                        kind: *modifier_type,
+                        level: *level,
+                    }),
+                    CommentKind::Weak => collect_list_children(content, events),
+                }
+                true
+            }
+            NorgAST::List { items, .. } => {
+                if comment == CommentKind::Weak {
+                    collect_list_children(items, events);
+                }
+                true
+            }
+            _ => false,
+        };
+    }
+
     match node {
         NorgAST::List {
             items: list_items, ..
         } => {
-            for item in list_items {
-                if !collect_list_items(item, items) {
-                    crate::diagnostics::warn("unsupported node inside list — content skipped");
-                }
-            }
+            collect_list_children(list_items, events);
             true
         }
         NorgAST::NestableDetachedModifier {
@@ -41,24 +67,22 @@ pub fn collect_list_items<'a>(node: &'a NorgAST, items: &mut Vec<FlatListItem<'a
             text,
             content,
         } => {
-            items.push(FlatListItem {
-                kind: modifier_type,
+            let NorgASTFlat::Paragraph(text) = text.as_ref() else {
+                unreachable!("rust-norg list item text must be a paragraph")
+            };
+            events.push(FlatListEvent::Item(FlatListItem {
+                kind: *modifier_type,
                 level: *level,
                 text,
                 extensions,
-                content,
-            });
+            }));
+            collect_list_children(content, events);
             true
         }
         NorgAST::CarryoverTag {
             name, next_object, ..
         } => {
-            // The annotation itself is unimplemented; recurse into the object
-            // it wraps. If that object is list content, keep it in the run and
-            // warn the tag was ignored; otherwise this isn't part of the list.
-            // (`collect_list_items` pushes nothing when it returns false, so
-            // the speculative call is safe.)
-            let consumed = collect_list_items(next_object, items);
+            let consumed = collect_list_items(next_object, events);
             if consumed {
                 warn_carryover_ignored(name);
             }
@@ -68,96 +92,72 @@ pub fn collect_list_items<'a>(node: &'a NorgAST, items: &mut Vec<FlatListItem<'a
     }
 }
 
-pub fn render_list_items(items: &[FlatListItem]) -> String {
-    let mut out = String::new();
-    render_into(items, &mut out, true);
-    out
-}
-
-struct OpenList {
-    tag: &'static str,
-    level: u16,
-    /// An `<li>` is left open so deeper sibling containers can nest inside
-    /// it; quote items (`<p>`) close immediately.
-    item_open: bool,
-}
-
-fn render_into(items: &[FlatListItem], out: &mut String, top_level: bool) {
-    // No render-side depth cap: recursion here can't exceed the AST's list
-    // nesting, which `parse_tree` already recursed through on the same
-    // large-stack thread (see `parse_norg`). `top_level` only distinguishes the
-    // outermost run (which starts a sibling list on its own line) from nested
-    // runs (which open inside a parent's still-open item).
-    let mut stack: Vec<OpenList> = Vec::new();
-
-    for item in items {
-        let tag = container_tag(item.kind);
-
-        let mut nested = Vec::new();
-        for node in item.content {
-            if !collect_list_items(node, &mut nested) {
-                // The pure list renderer can't place non-list content inside a
-                // list item. rust_norg never actually puts such a node here, so
-                // this is defensive: warn and skip rather than fail the whole
-                // document, matching how every other unsupported node is handled.
-                crate::diagnostics::warn("unsupported node inside a list item — content skipped");
-            }
+fn collect_list_children<'a>(nodes: &'a [NorgAST], events: &mut Vec<FlatListEvent<'a>>) {
+    for node in nodes {
+        if !collect_list_items(node, events) {
+            unreachable!("rust-norg list content must contain only list nodes")
         }
-        let mut children = String::new();
-        render_into(&nested, &mut children, false);
+    }
+}
 
-        let Some((markup, leaves_item_open)) = item_markup(item, &children) else {
-            continue;
+pub fn render_list_items(events: &[FlatListEvent], ids: &DocumentIds) -> String {
+    let mut out = String::new();
+    let mut stack: Vec<OpenContainer> = Vec::new();
+    let mut suppressed = None;
+
+    for event in events {
+        let item = match event {
+            FlatListEvent::StrongComment { kind, level } => {
+                suppressed = Some((*kind, *level));
+                continue;
+            }
+            FlatListEvent::Item(item) => item,
         };
 
-        // Close containers this item doesn't belong to: anything deeper, or a
-        // same-level container of a different kind.
-        while let Some(top) = stack.last() {
-            if top.level > item.level || (top.level == item.level && top.tag != tag) {
-                close_list(out, stack.pop().unwrap());
+        if let Some((kind, level)) = suppressed {
+            if item.level < level || (item.level == level && item.kind != kind) {
+                suppressed = None;
             } else {
-                break;
+                continue;
             }
         }
-        match stack.last_mut() {
-            Some(top) if top.level == item.level => {
-                if top.item_open {
-                    out.push_str("</li>");
-                }
-            }
-            _ => {
-                // A deeper container opens inside the parent's still-open
-                // item; a top-level sibling starts on its own line.
-                if top_level && stack.is_empty() && !out.is_empty() {
-                    out.push('\n');
-                }
-                let _ = write!(out, "<{tag}>");
-                stack.push(OpenList {
-                    tag,
-                    level: item.level,
-                    item_open: false,
-                });
-            }
+
+        while stack.last().is_some_and(|open| {
+            open.level > item.level || (open.level == item.level && open.kind != item.kind)
+        }) {
+            close_container(&mut out, stack.pop().unwrap());
         }
-        out.push_str(&markup);
-        if let Some(top) = stack.last_mut() {
-            top.item_open = leaves_item_open;
+
+        if stack.last().is_some_and(|open| open.level == item.level) {
+            close_item(&mut out, item.kind);
+        } else {
+            if stack.is_empty() && !out.is_empty() {
+                out.push('\n');
+            }
+            let _ = write!(out, "<{}>", container_tag(item.kind));
+            stack.push(OpenContainer {
+                kind: item.kind,
+                level: item.level,
+            });
         }
+
+        render_item(item, &mut out, ids);
     }
 
     while let Some(open) = stack.pop() {
-        close_list(out, open);
+        close_container(&mut out, open);
     }
+
+    out
 }
 
-fn close_list(out: &mut String, open: OpenList) {
-    if open.item_open {
-        out.push_str("</li>");
-    }
-    let _ = write!(out, "</{}>", open.tag);
+#[derive(Clone, Copy)]
+struct OpenContainer {
+    kind: NestableDetachedModifier,
+    level: u16,
 }
 
-fn container_tag(kind: &NestableDetachedModifier) -> &'static str {
+fn container_tag(kind: NestableDetachedModifier) -> &'static str {
     match kind {
         NestableDetachedModifier::UnorderedList => "ul",
         NestableDetachedModifier::OrderedList => "ol",
@@ -165,40 +165,36 @@ fn container_tag(kind: &NestableDetachedModifier) -> &'static str {
     }
 }
 
-/// Renders one item's own markup, or `None` when the item renders to nothing.
-/// The bool says whether an `<li>` was left open for nested content; quote
-/// items render as a closed `<p>` (an `<li>` is invalid outside `ul`/`ol`,
-/// and `<p>` cannot contain the nested `<blockquote>`s that follow it).
-fn item_markup(item: &FlatListItem, children: &str) -> Option<(String, bool)> {
-    let content = match item.text {
-        NorgASTFlat::Paragraph(segments) => convert_segments(segments),
-        _ => {
-            crate::diagnostics::warn("unsupported text node in list item — skipped");
-            String::new()
-        }
-    };
+fn render_item(item: &FlatListItem, out: &mut String, ids: &DocumentIds) {
+    let content = convert_segments_with_ids(item.text, ids);
     let blank = content.trim().is_empty();
-    if blank && children.is_empty() && item.extensions.is_empty() {
-        return None;
-    }
-
     let (class_attr, attrs, prefix) = extension_markup(item.extensions);
     let separator = if prefix.is_empty() || blank { "" } else { " " };
 
-    Some(match item.kind {
+    match item.kind {
         NestableDetachedModifier::Quote => {
-            let mut s = String::new();
             if !blank || !prefix.is_empty() || !class_attr.is_empty() || !attrs.is_empty() {
-                let _ = write!(s, "<p{class_attr}{attrs}>{prefix}{separator}{content}</p>");
+                let _ = write!(
+                    out,
+                    "<p{class_attr}{attrs}>{prefix}{separator}{content}</p>"
+                );
             }
-            s.push_str(children);
-            (s, false)
         }
-        _ => (
-            format!("<li{class_attr}{attrs}>{prefix}{separator}{content}{children}"),
-            true,
-        ),
-    })
+        _ => {
+            let _ = write!(out, "<li{class_attr}{attrs}>{prefix}{separator}{content}");
+        }
+    }
+}
+
+fn close_item(out: &mut String, kind: NestableDetachedModifier) {
+    if !matches!(kind, NestableDetachedModifier::Quote) {
+        out.push_str("</li>");
+    }
+}
+
+fn close_container(out: &mut String, open: OpenContainer) {
+    close_item(out, open.kind);
+    let _ = write!(out, "</{}>", container_tag(open.kind));
 }
 
 fn extension_markup(extensions: &[DetachedModifierExtension]) -> (String, String, String) {

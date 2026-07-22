@@ -33,6 +33,7 @@ describe('@embed feature', () => {
       const result = parseNorg(content, 'svelte');
 
       expect(result.embedComponents).toHaveLength(1);
+      expect(result.embedComponents[0].index).toBe(0);
       expect(result.embedComponents[0].mode).toBe('svelte');
       expect(result.embedComponents[0].code).toContain('let count');
       expect(result.htmlParts).toHaveLength(2);
@@ -53,6 +54,7 @@ describe('@embed feature', () => {
       const result = parseNorg(content, 'svelte');
 
       expect(result.embedComponents).toHaveLength(2);
+      expect(result.embedComponents.map(embed => embed.index)).toEqual([0, 1]);
       expect(result.htmlParts).toHaveLength(3);
     });
 

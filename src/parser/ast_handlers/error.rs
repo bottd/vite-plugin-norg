@@ -18,7 +18,7 @@ pub enum EmbedParseError {
 
 impl EmbedParseError {
     /// The zero-based ordinal of the offending `@embed`.
-    fn index(&self) -> usize {
+    pub fn index(&self) -> usize {
         match self {
             Self::MissingLanguage { index }
             | Self::InvalidLanguage { index, .. }
@@ -32,12 +32,12 @@ impl EmbedParseError {
     /// than re-scanning the source text by ordinal) cannot mis-attribute the
     /// error to an `@embed` line sitting inside another verbatim block's raw
     /// content.
-    pub fn offending_line(&self) -> Option<String> {
+    pub fn offending_line(&self) -> String {
         match self {
             // No language was parsed, so point at the bare `@embed` tag.
-            Self::MissingLanguage { .. } => Some("@embed".to_string()),
+            Self::MissingLanguage { .. } => "@embed".to_string(),
             Self::InvalidLanguage { language, .. } | Self::LanguageMismatch { language, .. } => {
-                Some(format!("@embed {language}"))
+                format!("@embed {language}")
             }
         }
     }
