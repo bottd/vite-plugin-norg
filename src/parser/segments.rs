@@ -1,4 +1,4 @@
-use crate::utils::{has_unsafe_scheme, into_slug, is_external_url};
+use crate::utils::{UrlKind, has_unsafe_scheme, into_slug};
 use htmlescape::encode_minimal;
 use rust_norg::{LinkTarget, ParagraphSegment, ParagraphSegmentToken};
 use std::collections::{HashMap, HashSet};
@@ -201,15 +201,11 @@ impl DocumentIds {
     }
 
     fn next_heading(&mut self) -> String {
-        let id = self.headings[self.next_heading].clone();
-        self.next_heading += 1;
-        id
+        take_id(&self.headings, &mut self.next_heading, "heading")
     }
 
     pub fn next_footnote(&mut self) -> String {
-        let id = self.footnotes[self.next_footnote].clone();
-        self.next_footnote += 1;
-        id
+        take_id(&self.footnotes, &mut self.next_footnote, "footnote")
     }
 
     fn heading_link(&self, level: u16, slug: &str) -> Option<&str> {
@@ -221,6 +217,30 @@ impl DocumentIds {
     fn footnote_link(&self, slug: &str) -> Option<&str> {
         self.footnote_links.get(slug).map(String::as_str)
     }
+
+    /// Reserved but never handed out, as `(headings, footnotes)`. Both must
+    /// reach zero: ids are consumed positionally, so a divergence means every
+    /// node past it already took its neighbour's id. Callers assert on this.
+    pub fn unconsumed(&self) -> (usize, usize) {
+        (
+            self.headings.len().saturating_sub(self.next_heading),
+            self.footnotes.len().saturating_sub(self.next_footnote),
+        )
+    }
+}
+
+/// Release-mode net only — [`DocumentIds::unconsumed`] is what actually catches
+/// a desync. An anchorless heading beats panicking out of the parse thread.
+fn take_id(ids: &[String], next: &mut usize, kind: &str) -> String {
+    let id = ids.get(*next).cloned().unwrap_or_else(|| {
+        crate::diagnostics::warn(format!(
+            "internal: {kind} ids exhausted — this {kind} gets no anchor, \
+             and links to it will not resolve"
+        ));
+        String::new()
+    });
+    *next += 1;
+    id
 }
 
 #[derive(Default)]
@@ -490,8 +510,13 @@ fn convert_attached_modifier(
     out.push_str(close);
 }
 
-/// `.norg` paths are rewritten to `.html` so links resolve in the build output.
+/// Rewrites a `.norg` path to `.html` so links resolve in the build output.
+/// Guards here rather than at the call sites because every link shape funnels
+/// through it — see [`UrlKind::is_site_relative`] for what it refuses.
 fn norg_to_html(path: &str) -> String {
+    if !UrlKind::of(path).is_site_relative() {
+        return path.to_string();
+    }
     path.strip_suffix(".norg")
         .map(|base| format!("{base}.html"))
         .unwrap_or_else(|| path.to_string())
@@ -547,10 +572,10 @@ fn convert_link(
                 // `{:file.norg:url}` carries a file path; rewrite it to `.html`
                 // like the Heading/Path/None branches do, or the link is dead.
                 Some(fp) => (norg_to_html(fp), false),
-                // External (`http(s)://` or protocol-relative `//host`): emit
-                // as-is with external-link hardening, never as an in-site path.
-                None if is_external_url(url) => (url.clone(), true),
-                None => (norg_to_html(url), false),
+                // `norg_to_html` rewrites only in-site paths, so an `https:`,
+                // `mailto:` or `//host` target passes through untouched and
+                // keeps whatever hardening its scheme calls for.
+                None => (norg_to_html(url), UrlKind::of(url).is_external()),
             };
             Some((href, display_html, external))
         }
@@ -621,6 +646,18 @@ mod tests {
         ParagraphSegment::Token(ParagraphSegmentToken::Text(s.to_string()))
     }
 
+    /// Renders a single link the way `convert_segment` would, at the top level
+    /// of a paragraph.
+    fn link_html(
+        target: LinkTarget,
+        description: Option<&[ParagraphSegment]>,
+        filepath: Option<&str>,
+    ) -> String {
+        let mut out = String::new();
+        convert_link(&[target], description, filepath, &mut out, false, None);
+        out
+    }
+
     #[test]
     fn escaped_metacharacters_are_html_escaped() {
         // `\<`, `\>`, `\&` escape the modifier meaning of the char but must
@@ -637,14 +674,9 @@ mod tests {
     fn link_description_is_encoded_exactly_once() {
         // The description is converted-segment HTML; encoding it again in
         // anchor() would display 'AT&amp;T' and turn markup into literal tags.
-        let description = [text("AT&T")];
-        let mut out = String::new();
-        convert_link(
-            &[LinkTarget::Url("https://example.com".into())],
-            Some(&description),
-            None,
-            &mut out,
-            false,
+        let out = link_html(
+            LinkTarget::Url("https://example.com".into()),
+            Some(&[text("AT&T")]),
             None,
         );
         assert_eq!(
@@ -655,17 +687,12 @@ mod tests {
 
     #[test]
     fn link_description_keeps_inline_markup() {
-        let description = [ParagraphSegment::AttachedModifier {
-            modifier_type: '*',
-            content: vec![text("bold")],
-        }];
-        let mut out = String::new();
-        convert_link(
-            &[LinkTarget::Url("https://example.com".into())],
-            Some(&description),
-            None,
-            &mut out,
-            false,
+        let out = link_html(
+            LinkTarget::Url("https://example.com".into()),
+            Some(&[ParagraphSegment::AttachedModifier {
+                modifier_type: '*',
+                content: vec![text("bold")],
+            }]),
             None,
         );
         assert_eq!(
@@ -678,15 +705,10 @@ mod tests {
     fn url_link_with_norg_filepath_is_rewritten_to_html() {
         // `{:notes.norg:label}` carries a file path on a Url target; it must be
         // rewritten to `.html` like the Heading/Path branches, not left dead.
-        let description = [text("label")];
-        let mut out = String::new();
-        convert_link(
-            &[LinkTarget::Url("label".into())],
-            Some(&description),
+        let out = link_html(
+            LinkTarget::Url("label".into()),
+            Some(&[text("label")]),
             Some("notes.norg"),
-            &mut out,
-            false,
-            None,
         );
         assert_eq!(out, r#"<a href="notes.html">label</a>"#);
     }
@@ -695,15 +717,13 @@ mod tests {
     fn heading_link_with_filepath_keeps_the_path() {
         // `{:docs/readme.norg:# Install}` must link into the target document,
         // not to a same-page anchor.
-        let title = vec![text("Install")];
-        let mut out = String::new();
-        convert_link(
-            &[LinkTarget::Heading { level: 1, title }],
+        let out = link_html(
+            LinkTarget::Heading {
+                level: 1,
+                title: vec![text("Install")],
+            },
             None,
             Some("docs/readme.norg"),
-            &mut out,
-            false,
-            None,
         );
         assert_eq!(out, r##"<a href="docs/readme.html#install">Install</a>"##);
     }
@@ -712,14 +732,9 @@ mod tests {
     fn javascript_scheme_link_is_dropped_to_plain_text() {
         // A crafted `javascript:` target must not become a clickable script
         // URL; the link degrades to its display text.
-        let description = [text("click me")];
-        let mut out = String::new();
-        convert_link(
-            &[LinkTarget::Url("javascript:alert(document.cookie)".into())],
-            Some(&description),
-            None,
-            &mut out,
-            false,
+        let out = link_html(
+            LinkTarget::Url("javascript:alert(document.cookie)".into()),
+            Some(&[text("click me")]),
             None,
         );
         assert_eq!(out, "click me");
@@ -730,14 +745,9 @@ mod tests {
         // `//host` is a cross-origin URL, not an in-site path: it must be
         // emitted as-is (never rewritten to `.html`) and get external-link
         // hardening, not rendered as a bare same-site link.
-        let description = [text("cdn")];
-        let mut out = String::new();
-        convert_link(
-            &[LinkTarget::Url("//cdn.example.com/x".into())],
-            Some(&description),
-            None,
-            &mut out,
-            false,
+        let out = link_html(
+            LinkTarget::Url("//cdn.example.com/x".into()),
+            Some(&[text("cdn")]),
             None,
         );
         assert_eq!(
@@ -748,14 +758,9 @@ mod tests {
 
     #[test]
     fn non_addressable_links_keep_their_display_text() {
-        let description = [text("shown")];
-        let mut out = String::new();
-        convert_link(
-            &[LinkTarget::Definition(vec![text("target")])],
-            Some(&description),
-            None,
-            &mut out,
-            false,
+        let out = link_html(
+            LinkTarget::Definition(vec![text("target")]),
+            Some(&[text("shown")]),
             None,
         );
         assert_eq!(out, "shown");
@@ -800,14 +805,9 @@ mod tests {
             targets: vec![LinkTarget::Url("https://b.com".into())],
             description: Some(vec![text("inner")]),
         };
-        let description = [text("see "), inner];
-        let mut out = String::new();
-        convert_link(
-            &[LinkTarget::Url("https://a.com".into())],
-            Some(&description),
-            None,
-            &mut out,
-            false,
+        let out = link_html(
+            LinkTarget::Url("https://a.com".into()),
+            Some(&[text("see "), inner]),
             None,
         );
         assert_eq!(
@@ -819,5 +819,67 @@ mod tests {
             1,
             "nested anchor emitted: {out}"
         );
+    }
+
+    #[test]
+    fn exhausted_ids_drop_the_anchor_rather_than_panicking() {
+        // Unreachable today; if it ever happens the node must lose only its
+        // anchor rather than abort the parse thread.
+        let ids = vec!["first".to_string()];
+        let mut next = 0;
+        let (taken, diagnostics) = crate::diagnostics::capture(|| {
+            [
+                take_id(&ids, &mut next, "heading"),
+                take_id(&ids, &mut next, "heading"),
+            ]
+        });
+
+        assert_eq!(taken, ["first".to_string(), String::new()]);
+        assert_eq!(next, 2, "the cursor must still advance past the miss");
+        assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+        assert!(
+            diagnostics[0].contains("heading ids exhausted"),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn only_in_site_paths_are_rewritten_to_html() {
+        // `mailto:me@example.norg` is a mailbox, not a document; rewriting it
+        // to `.html` points at nothing.
+        for target in [
+            "mailto:me@example.norg",
+            "ftp://host/file.norg",
+            "https://example.com/a.norg",
+            "//cdn.example.com/a.norg",
+        ] {
+            assert_eq!(norg_to_html(target), target);
+        }
+
+        // A scheme-less path is still rewritten — that's the whole feature.
+        assert_eq!(norg_to_html("docs/readme.norg"), "docs/readme.html");
+        assert_eq!(norg_to_html("/rooted/a.norg"), "/rooted/a.html");
+    }
+
+    #[test]
+    fn scheme_targets_reach_the_rewrite_guard_intact() {
+        // `convert_link` must hand the raw target to `norg_to_html`.
+        let out = link_html(
+            LinkTarget::Path("mailto:me@example.norg".into()),
+            Some(&[text("label")]),
+            None,
+        );
+        assert_eq!(out, r#"<a href="mailto:me@example.norg">label</a>"#);
+    }
+
+    #[test]
+    fn only_web_schemes_get_new_tab_hardening() {
+        // `mailto:` hands off to the OS; a new tab leaves a blank page.
+        let out = link_html(
+            LinkTarget::Url("mailto:me@example.com".into()),
+            Some(&[text("label")]),
+            None,
+        );
+        assert_eq!(out, r#"<a href="mailto:me@example.com">label</a>"#);
     }
 }

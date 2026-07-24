@@ -1,6 +1,6 @@
 use super::error::EmbedParseError;
 use crate::types::OutputMode;
-use crate::utils::is_http_url;
+use crate::utils::UrlKind;
 use arborium::advanced::{Span, spans_to_html};
 use arborium::{Highlighter, HtmlFormat};
 use htmlescape::encode_minimal;
@@ -74,10 +74,12 @@ impl VerbatimTag {
             }
 
             Self::Image => Ok(first_param().map(|path| {
-                let src = if path.starts_with('/') || is_http_url(path) {
-                    path.to_string()
-                } else {
+                // Only a bare relative path needs `./`; rooted, `//host` and
+                // scheme'd sources already resolve.
+                let src = if UrlKind::of(path).is_site_relative() && !path.starts_with('/') {
                     format!("./{path}")
+                } else {
+                    path.to_string()
                 };
                 VerbatimTagResult::Html(format!(
                     r#"<img src="{}" alt="{}" />"#,

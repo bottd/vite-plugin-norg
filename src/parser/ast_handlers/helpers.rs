@@ -51,21 +51,21 @@ pub fn comment_target(mut node: &NorgAST) -> Option<(CommentKind, &NorgAST)> {
     comment.map(|kind| (kind, node))
 }
 
-pub fn carryover_target(mut node: &NorgAST) -> &NorgAST {
+fn carryover_target(mut node: &NorgAST) -> &NorgAST {
     while let NorgAST::CarryoverTag { next_object, .. } = node {
         node = next_object;
     }
     node
 }
 
-pub fn heading_level(node: &NorgAST) -> Option<u16> {
+fn heading_level(node: &NorgAST) -> Option<u16> {
     match carryover_target(node) {
         NorgAST::Heading { level, .. } => Some(*level),
         _ => None,
     }
 }
 
-pub fn has_chained_carryover(mut node: &NorgAST) -> bool {
+fn has_chained_carryover(mut node: &NorgAST) -> bool {
     let mut seen = false;
     while let NorgAST::CarryoverTag { next_object, .. } = node {
         if seen {
@@ -143,53 +143,82 @@ pub fn visit_visible_headings<'a>(
     });
 }
 
+/// How far a comment reaches, and what it leaves behind.
+pub struct CommentScope<'a> {
+    /// Index of the first node the comment does not cover.
+    pub end: usize,
+    /// Headings that stay visible within the commented range, in document
+    /// order. Always empty for a strong comment, which hides its whole scope.
+    pub visible: Vec<&'a NorgAST>,
+}
+
+/// The extent of the comment on `nodes[index]`, or `None` if it isn't
+/// commented. A comment on a non-heading hides only that node; on a heading
+/// with a chained carryover it hides the whole scope, down to a heading of the
+/// same or shallower level or a delimiter that closes it. `+comment` hides only
+/// the heading text, leaving nested headings visible; `#comment` hides those
+/// too.
+///
+/// The renderer and the id pre-pass both walk through here, and must agree on
+/// what is visible — see [`DocumentIds::unconsumed`].
+pub fn comment_scope<'a>(nodes: &'a [NorgAST], index: usize) -> Option<CommentScope<'a>> {
+    let (kind, target) = comment_target(&nodes[index])?;
+    let mut visible = Vec::new();
+
+    // `comment_target` unwrapped the carryovers, so this is the annotated node.
+    let NorgAST::Heading { level, content, .. } = target else {
+        return Some(CommentScope {
+            end: index + 1,
+            visible,
+        });
+    };
+    let level = *level;
+
+    if kind == CommentKind::Weak {
+        visible.extend(content.iter().filter(|node| heading_level(node).is_some()));
+    }
+
+    if !has_chained_carryover(&nodes[index]) {
+        return Some(CommentScope {
+            end: index + 1,
+            visible,
+        });
+    }
+
+    let mut end = index + 1;
+    let mut current_level = level as i16;
+    while end < nodes.len() {
+        match heading_level(&nodes[end]) {
+            Some(next_level) if next_level <= level => break,
+            Some(next_level) => {
+                current_level = next_level as i16;
+                if kind == CommentKind::Weak {
+                    visible.push(&nodes[end]);
+                }
+            }
+            None if matches!(
+                &nodes[end],
+                NorgAST::DelimitingModifier(delim)
+                    if delimiter_exits_heading_scope(delim, level, &mut current_level)
+            ) =>
+            {
+                break;
+            }
+            None => {}
+        }
+        end += 1;
+    }
+    Some(CommentScope { end, visible })
+}
+
 fn visit_visible_nodes<'a>(nodes: &'a [NorgAST], visit: &mut impl FnMut(&'a NorgAST)) {
     let mut index = 0;
     while index < nodes.len() {
-        if let Some((kind, target)) = comment_target(&nodes[index]) {
-            let Some(level) = heading_level(target) else {
-                index += 1;
-                continue;
-            };
-
-            if kind == CommentKind::Weak
-                && let NorgAST::Heading { content, .. } = target
-            {
-                visit_nested_nodes(content, visit);
+        if let Some(scope) = comment_scope(nodes, index) {
+            for node in scope.visible {
+                visit_visible_nodes(std::slice::from_ref(node), visit);
             }
-
-            if !has_chained_carryover(&nodes[index]) {
-                index += 1;
-                continue;
-            }
-
-            index += 1;
-            let mut current_level = level as i16;
-            while index < nodes.len() {
-                match heading_level(&nodes[index]) {
-                    Some(next_level) if next_level <= level => break,
-                    Some(next_level) => {
-                        current_level = next_level as i16;
-                        if kind == CommentKind::Weak {
-                            visit_visible_nodes(std::slice::from_ref(&nodes[index]), visit);
-                        }
-                    }
-                    None if matches!(
-                        &nodes[index],
-                        NorgAST::DelimitingModifier(delim)
-                            if delimiter_exits_heading_scope(
-                                delim,
-                                level,
-                                &mut current_level,
-                            )
-                    ) =>
-                    {
-                        break;
-                    }
-                    None => {}
-                }
-                index += 1;
-            }
+            index = scope.end;
             continue;
         }
 
@@ -204,14 +233,6 @@ fn visit_visible_nodes<'a>(nodes: &'a [NorgAST], visit: &mut impl FnMut(&'a Norg
             _ => visit(&nodes[index]),
         }
         index += 1;
-    }
-}
-
-fn visit_nested_nodes<'a>(nodes: &'a [NorgAST], visit: &mut impl FnMut(&'a NorgAST)) {
-    for node in nodes {
-        if heading_level(node).is_some() {
-            visit_visible_nodes(std::slice::from_ref(node), visit);
-        }
     }
 }
 

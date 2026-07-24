@@ -19,31 +19,63 @@ pub fn into_slug(text: &str) -> String {
     slug
 }
 
-/// Returns true for absolute `http://` / `https://` URLs. Deliberately requires
-/// the `://` separator so it doesn't match a same-document path like
-/// `httpserver.norg` the way a bare `starts_with("http")` would.
-pub fn is_http_url(s: &str) -> bool {
-    let Some((scheme, rest)) = s.split_once(':') else {
-        return false;
-    };
-    rest.starts_with("//")
-        && (scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https"))
+/// How a link target addresses its destination. Rewriting, new-tab hardening
+/// and scheme blocking all read from this one classification, so they cannot
+/// disagree about what a given target is.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum UrlKind<'a> {
+    /// `docs/readme.norg`, `/absolute`, `#section`.
+    SiteRelative,
+    /// `//host/…` — cross-origin, but with no scheme to inspect.
+    ProtocolRelative,
+    /// Borrowed verbatim, so compare case-insensitively.
+    Scheme(&'a str),
 }
 
-/// True for a link pointing off the current site: an absolute `http(s)://` URL
-/// or a protocol-relative `//host/…` URL. Both open in a new tab with
-/// `rel="noopener noreferrer"`; a protocol-relative URL must not be mistaken
-/// for an in-site `.norg` path (which would get rewritten/prefixed and break).
-pub fn is_external_url(s: &str) -> bool {
-    is_http_url(s) || s.starts_with("//")
+impl<'a> UrlKind<'a> {
+    /// A scheme is `ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) ":"` before any
+    /// `/`, `?`, or `#` (RFC 3986); a colon anywhere else — `path/to:file`,
+    /// `?x=a:b` — leaves the URL relative.
+    pub fn of(url: &'a str) -> Self {
+        match url.find([':', '/', '?', '#']) {
+            Some(end) if url.as_bytes()[end] == b':' && is_scheme_shaped(&url[..end]) => {
+                Self::Scheme(&url[..end])
+            }
+            _ if url.starts_with("//") => Self::ProtocolRelative,
+            _ => Self::SiteRelative,
+        }
+    }
+
+    /// Gets `target="_blank"` + `rel="noopener noreferrer"`. Only web URLs
+    /// qualify: `mailto:`/`tel:` are handed to the OS, not opened as pages.
+    pub fn is_external(self) -> bool {
+        match self {
+            Self::ProtocolRelative => true,
+            Self::Scheme(scheme) => {
+                scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https")
+            }
+            Self::SiteRelative => false,
+        }
+    }
+
+    /// The only kind path rewriting (`.norg` → `.html`, a `./` prefix) may
+    /// touch. `mailto:me@example.norg` ends in `.norg` but is an address, and
+    /// rewriting it corrupts it.
+    pub fn is_site_relative(self) -> bool {
+        matches!(self, Self::SiteRelative)
+    }
 }
 
-/// True if `href` carries an explicit URL scheme that can execute script when
-/// navigated (`javascript:`, `vbscript:`, and scriptable `data:` payloads).
-/// Benign schemes (`http`, `https`, `mailto`, `tel`, `ftp`, …) and scheme-less
-/// relative links are safe. Browser URL parsing strips leading C0 controls/spaces
-/// and ignores ASCII tab/newline inside URLs, so this check mirrors that before
-/// finding a scheme.
+fn is_scheme_shaped(scheme: &str) -> bool {
+    let mut chars = scheme.chars();
+    chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
+}
+
+/// True for schemes that execute script when navigated. Denylist, not
+/// allowlist, so ordinary links keep working. The normalisation mirrors browser
+/// URL parsing — leading C0 controls stripped, tab/newline ignored anywhere —
+/// so `" java\nscript:"` cannot slip past.
 pub fn has_unsafe_scheme(href: &str) -> bool {
     let normalized: String = href
         .trim_start_matches(|c: char| c.is_ascii_control() || c == ' ')
@@ -51,30 +83,12 @@ pub fn has_unsafe_scheme(href: &str) -> bool {
         .filter(|c| !matches!(c, '\t' | '\n' | '\r'))
         .collect();
 
-    // A scheme is `ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) ":"` that
-    // appears before any `/`, `?`, or `#`. If the first such delimiter is not a
-    // `:`, there is no scheme (the href is relative / a fragment) and it is
-    // safe.
-    let Some(pos) = normalized.find([':', '/', '?', '#']) else {
+    let UrlKind::Scheme(scheme) = UrlKind::of(&normalized) else {
         return false;
     };
-    if normalized.as_bytes()[pos] != b':' {
-        return false;
-    }
-    let scheme = &normalized[..pos];
-    let mut chars = scheme.chars();
-    let valid = chars.next().is_some_and(|c| c.is_ascii_alphabetic())
-        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'));
-    // A `pos` of 0 (leading `:`) or a non-scheme-shaped prefix isn't a real
-    // scheme; treat it as safe (relative) rather than blocking it.
-    if !valid {
-        return false;
-    }
     match scheme.to_ascii_lowercase().as_str() {
         "javascript" | "vbscript" => true,
-        // `data:` can carry executable payloads (`text/html`, `image/svg+xml`
-        // with embedded scripts). Allow only non-SVG image media types — raster
-        // images can't run script — and block everything else.
+        // Raster images can't run script; SVG and everything else can.
         "data" => {
             let lower = normalized.to_ascii_lowercase();
             !lower.starts_with("data:image/") || lower.starts_with("data:image/svg")
@@ -88,15 +102,43 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_is_http_url() {
-        assert!(is_http_url("http://example.com"));
-        assert!(is_http_url("https://example.com"));
-        assert!(is_http_url("HTTP://example.com"));
-        assert!(is_http_url("Https://example.com"));
-        assert!(!is_http_url("httpserver.norg"));
-        assert!(!is_http_url("https.norg"));
-        assert!(!is_http_url("/absolute/path"));
-        assert!(!is_http_url("./relative"));
+    fn url_kind_classifies_by_scheme() {
+        use UrlKind::*;
+
+        // A scheme is only a scheme when it precedes any `/`, `?`, or `#`,
+        // so a filename that merely starts with "http" stays a path.
+        assert_eq!(UrlKind::of("http://example.com"), Scheme("http"));
+        assert_eq!(UrlKind::of("HTTPS://example.com"), Scheme("HTTPS"));
+        assert_eq!(UrlKind::of("mailto:me@example.norg"), Scheme("mailto"));
+        assert_eq!(UrlKind::of("ftp://host/file.norg"), Scheme("ftp"));
+        assert_eq!(UrlKind::of("httpserver.norg"), SiteRelative);
+        assert_eq!(UrlKind::of("https.norg"), SiteRelative);
+        assert_eq!(UrlKind::of("//cdn.example.com/x"), ProtocolRelative);
+        assert_eq!(UrlKind::of("/absolute/path"), SiteRelative);
+        assert_eq!(UrlKind::of("./relative"), SiteRelative);
+        assert_eq!(UrlKind::of("#section"), SiteRelative);
+        assert_eq!(UrlKind::of(""), SiteRelative);
+        // A colon that isn't a scheme separator: after a path segment, inside a
+        // query, leading, or in a prefix that isn't scheme-shaped.
+        assert_eq!(UrlKind::of("path/to:file"), SiteRelative);
+        assert_eq!(UrlKind::of("foo?x=a:b"), SiteRelative);
+        assert_eq!(UrlKind::of(":leading"), SiteRelative);
+        assert_eq!(UrlKind::of("1scheme:x"), SiteRelative);
+    }
+
+    #[test]
+    fn only_web_urls_are_external() {
+        // External == opens as a page elsewhere, so it gets `target="_blank"`
+        // and `rel="noopener noreferrer"`.
+        assert!(UrlKind::of("http://example.com").is_external());
+        assert!(UrlKind::of("HTTPS://example.com").is_external());
+        assert!(UrlKind::of("//cdn.example.com/x").is_external());
+        // Handed to the OS rather than opened as a page — a new tab is wrong.
+        assert!(!UrlKind::of("mailto:a@b.com").is_external());
+        assert!(!UrlKind::of("tel:+15551234567").is_external());
+        assert!(!UrlKind::of("ftp://host/pub").is_external());
+        assert!(!UrlKind::of("docs/readme.norg").is_external());
+        assert!(!UrlKind::of("#section").is_external());
     }
 
     #[test]
@@ -134,16 +176,6 @@ mod tests {
         // A colon after a path separator is not a scheme.
         assert!(!has_unsafe_scheme("path/to:file"));
         assert!(!has_unsafe_scheme("foo?x=a:b"));
-    }
-
-    #[test]
-    fn test_is_external_url() {
-        assert!(is_external_url("http://example.com"));
-        assert!(is_external_url("https://example.com"));
-        assert!(is_external_url("//cdn.example.com/x"));
-        assert!(!is_external_url("docs/readme.norg"));
-        assert!(!is_external_url("/absolute/path"));
-        assert!(!is_external_url("#section"));
     }
 
     #[test]

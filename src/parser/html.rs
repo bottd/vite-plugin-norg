@@ -77,6 +77,12 @@ pub fn transform(
 ) -> Result<(Vec<String>, Vec<EmbedComponent>, String), EmbedParseError> {
     let mut state = TransformState::new(mode, document_ids(ast));
     transform_nodes(ast, &mut state)?;
+    // Leftovers mean this walk and the pre-pass disagreed about what's visible.
+    debug_assert_eq!(
+        state.ids.unconsumed(),
+        (0, 0),
+        "renderer and document_ids disagreed on visible nodes"
+    );
     Ok(state.finalize())
 }
 
@@ -98,8 +104,11 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), 
             continue;
         }
 
-        if let Some(next) = transform_comment(nodes, i, state)? {
-            i = next;
+        if let Some(scope) = comment_scope(nodes, i) {
+            for node in scope.visible {
+                transform_nodes(std::slice::from_ref(node), state)?;
+            }
+            i = scope.end;
             continue;
         }
 
@@ -109,70 +118,14 @@ fn transform_nodes(nodes: &[NorgAST], state: &mut TransformState) -> Result<(), 
     Ok(())
 }
 
-fn transform_comment(
-    nodes: &[NorgAST],
-    index: usize,
-    state: &mut TransformState,
-) -> Result<Option<usize>, EmbedParseError> {
-    let Some((kind, target)) = comment_target(&nodes[index]) else {
-        return Ok(None);
-    };
-    let Some(level) = heading_level(target) else {
-        return Ok(Some(index + 1));
-    };
-
-    if kind == CommentKind::Weak
-        && let NorgAST::Heading { content, .. } = target
-    {
-        transform_nested_headings(content, state)?;
-    }
-
-    if !has_chained_carryover(&nodes[index]) {
-        return Ok(Some(index + 1));
-    }
-
-    let mut next = index + 1;
-    let mut current_level = level as i16;
-    while next < nodes.len() {
-        match heading_level(&nodes[next]) {
-            Some(next_level) if next_level <= level => break,
-            Some(next_level) => {
-                current_level = next_level as i16;
-                if kind == CommentKind::Weak {
-                    transform_nodes(std::slice::from_ref(&nodes[next]), state)?;
-                }
-            }
-            None if matches!(
-                &nodes[next],
-                NorgAST::DelimitingModifier(delim)
-                    if delimiter_exits_heading_scope(delim, level, &mut current_level)
-            ) =>
-            {
-                break;
-            }
-            None => {}
-        }
-        next += 1;
-    }
-    Ok(Some(next))
-}
-
-fn transform_nested_headings(
-    nodes: &[NorgAST],
-    state: &mut TransformState,
-) -> Result<(), EmbedParseError> {
-    for node in nodes {
-        if heading_level(node).is_some() {
-            transform_nodes(std::slice::from_ref(node), state)?;
-        }
-    }
-    Ok(())
-}
-
 fn transform_node(node: &NorgAST, state: &mut TransformState) -> Result<(), EmbedParseError> {
     match node {
         NorgAST::List { .. } | NorgAST::NestableDetachedModifier { .. } => {
-            unreachable!("list nodes are consumed by transform_nodes")
+            // `transform_nodes` consumes list runs before dispatching here.
+            debug_assert!(false, "list nodes are consumed by transform_nodes");
+            let mut events = Vec::new();
+            collect_list_items(node, &mut events);
+            state.push_list(&events);
         }
         NorgAST::VerbatimRangedTag { name, .. } if is_comment_tag(name) => {}
         NorgAST::VerbatimRangedTag {

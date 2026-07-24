@@ -67,8 +67,12 @@ pub fn collect_list_items<'a>(node: &'a NorgAST, events: &mut Vec<FlatListEvent<
             text,
             content,
         } => {
+            // rust-norg parses item text as a paragraph; anything else loses
+            // only this item's text, not the items nested under it.
             let NorgASTFlat::Paragraph(text) = text.as_ref() else {
-                unreachable!("rust-norg list item text must be a paragraph")
+                crate::diagnostics::warn("list item text is not a paragraph — item text skipped");
+                collect_list_children(content, events);
+                return true;
             };
             events.push(FlatListEvent::Item(FlatListItem {
                 kind: *modifier_type,
@@ -94,8 +98,10 @@ pub fn collect_list_items<'a>(node: &'a NorgAST, events: &mut Vec<FlatListEvent<
 
 fn collect_list_children<'a>(nodes: &'a [NorgAST], events: &mut Vec<FlatListEvent<'a>>) {
     for node in nodes {
+        // rust-norg keeps a list item's indented blocks as siblings, so its
+        // content holds only further list nodes.
         if !collect_list_items(node, events) {
-            unreachable!("rust-norg list content must contain only list nodes")
+            crate::diagnostics::warn("unsupported block inside a list item — content skipped");
         }
     }
 }
@@ -264,5 +270,71 @@ fn todo_html(status: &TodoStatus) -> &'static str {
         TodoStatus::Pending => r#"<span class="todo-status todo-pending">-</span>"#,
         TodoStatus::Canceled => r#"<span class="todo-status todo-canceled">_</span>"#,
         TodoStatus::Recurring(_) => r#"<span class="todo-status todo-recurring">+</span>"#,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rust_norg::{DelimitingModifier, ParagraphSegmentToken};
+
+    fn flat_paragraph(text: &str) -> NorgASTFlat {
+        NorgASTFlat::Paragraph(vec![ParagraphSegment::Token(ParagraphSegmentToken::Text(
+            text.into(),
+        ))])
+    }
+
+    fn item(level: u16, text: NorgASTFlat, content: Vec<NorgAST>) -> NorgAST {
+        NorgAST::NestableDetachedModifier {
+            modifier_type: NestableDetachedModifier::UnorderedList,
+            level,
+            extensions: Vec::new(),
+            text: Box::new(text),
+            content,
+        }
+    }
+
+    fn render(node: &NorgAST) -> (String, Vec<String>) {
+        let (html, diagnostics) = crate::diagnostics::capture(|| {
+            let mut events = Vec::new();
+            assert!(collect_list_items(node, &mut events));
+            render_list_items(&events, &DocumentIds::default())
+        });
+        (html, diagnostics)
+    }
+
+    #[test]
+    fn unexpected_block_in_list_content_is_skipped_not_fatal() {
+        // Unreachable via rust-norg today; if that changes it must lose the
+        // stray block, not abort the parse thread.
+        let stray = NorgAST::Paragraph(vec![ParagraphSegment::Token(ParagraphSegmentToken::Text(
+            "stray".into(),
+        ))]);
+        let (html, diagnostics) = render(&item(1, flat_paragraph("kept"), vec![stray]));
+
+        assert_eq!(html, "<ul><li>kept</li></ul>");
+        assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+        assert!(
+            diagnostics[0].contains("inside a list item"),
+            "{diagnostics:?}"
+        );
+    }
+
+    #[test]
+    fn non_paragraph_item_text_keeps_its_nested_items() {
+        let nested = item(2, flat_paragraph("child"), Vec::new());
+        let node = item(
+            1,
+            NorgASTFlat::DelimitingModifier(DelimitingModifier::Weak),
+            vec![nested],
+        );
+        let (html, diagnostics) = render(&node);
+
+        assert!(html.contains("child"), "{html}");
+        assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+        assert!(
+            diagnostics[0].contains("not a paragraph"),
+            "{diagnostics:?}"
+        );
     }
 }

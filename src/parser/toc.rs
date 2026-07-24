@@ -16,5 +16,12 @@ pub fn extract_toc(ast: &[NorgAST]) -> Vec<TocEntry> {
             });
         }
     });
+    // Heading ids only, but every one of them, or the TOC stops matching the
+    // anchors the renderer emitted.
+    debug_assert_eq!(
+        ids.unconsumed().0,
+        0,
+        "toc walk visited fewer headings than document_ids reserved"
+    );
     toc
 }

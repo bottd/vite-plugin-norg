@@ -8,7 +8,6 @@ import {
   type ModuleNode,
   type Plugin,
 } from 'vite';
-import { z } from 'zod';
 import { parseNorg, getThemeCss, OutputMode } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
 
@@ -24,20 +23,6 @@ export interface NorgPluginOptions {
   componentDir?: string;
   components?: Record<string, string>;
 }
-
-const optionsSchema = z.object({
-  mode: z.enum([OutputMode.html, OutputMode.svelte, OutputMode.react, OutputMode.vue, 'metadata']),
-  include: z.any().optional(),
-  exclude: z.any().optional(),
-  arboriumConfig: z
-    .union([
-      z.object({ theme: z.string() }),
-      z.object({ themes: z.object({ light: z.string(), dark: z.string() }) }),
-    ])
-    .optional(),
-  componentDir: z.string().optional(),
-  components: z.record(z.string(), z.string()).optional(),
-});
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
 const RESOLVED_VIRTUAL_CSS_ID = `\0${VIRTUAL_CSS_ID}`;
@@ -123,10 +108,6 @@ function injectComponentImports(
 }
 
 export function norgPlugin(options: NorgPluginOptions): Plugin {
-  const parsed = optionsSchema.safeParse(options);
-  if (!parsed.success) {
-    throw new Error(`[vite-plugin-norg] Invalid options: ${parsed.error.message}`);
-  }
   const {
     include,
     exclude,
@@ -134,7 +115,16 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
     arboriumConfig,
     componentDir,
     components: explicitComponents,
-  } = parsed.data;
+  } = options;
+
+  // The one option that fails silently — an unknown mode matches no generator
+  // branch and yields an undefined module. Others fail where they're used.
+  if (!(mode in modeExtensions)) {
+    throw new Error(
+      `[vite-plugin-norg] Invalid mode ${JSON.stringify(mode)}. ` +
+        `Expected one of: ${Object.keys(modeExtensions).join(', ')}.`
+    );
+  }
   const filter = createFilter(include, exclude);
   const css = buildCss(arboriumConfig);
   const resolvedComponentDir = componentDir ? resolve(componentDir) : undefined;
