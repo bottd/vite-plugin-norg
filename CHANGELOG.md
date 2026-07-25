@@ -1,3 +1,12 @@
+## [4.0.17](https://github.com/bottd/vite-plugin-norg/compare/v4.0.16...v4.0.17) (2026-07-25)
+
+
+### Bug Fixes
+
+* **deps:** update non-major updates ([#101](https://github.com/bottd/vite-plugin-norg/issues/101)) ([4d63f42](https://github.com/bottd/vite-plugin-norg/commit/4d63f42ca16423ea3887598756ae546be067b90a))
+* **deps:** update non-major updates ([#104](https://github.com/bottd/vite-plugin-norg/issues/104)) ([610b1c2](https://github.com/bottd/vite-plugin-norg/commit/610b1c2226a28855ddb4e9190e2b1cc4820abeb2))
+* **deps:** update non-major updates ([#98](https://github.com/bottd/vite-plugin-norg/issues/98)) ([3b62ef7](https://github.com/bottd/vite-plugin-norg/commit/3b62ef7bb6f75b78ff1af7d02651c39a366b2c40))
+
 ## [4.0.16](https://github.com/bottd/vite-plugin-norg/compare/v4.0.15...v4.0.16) (2026-05-23)
 
 
