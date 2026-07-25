@@ -17,6 +17,7 @@ pub enum EmbedParseError {
 }
 
 impl EmbedParseError {
+    /// The zero-based ordinal of the offending `@embed`.
     pub fn index(&self) -> usize {
         match self {
             Self::MissingLanguage { index }
@@ -24,12 +25,28 @@ impl EmbedParseError {
             | Self::LanguageMismatch { index, .. } => *index,
         }
     }
+
+    /// The offending `@embed` declaration, reconstructed from the parsed
+    /// language — not the source line verbatim, so any extra parameters the
+    /// author wrote are not echoed back. Rebuilding it from AST data (rather
+    /// than re-scanning the source text by ordinal) cannot mis-attribute the
+    /// error to an `@embed` line sitting inside another verbatim block's raw
+    /// content.
+    pub fn offending_line(&self) -> String {
+        match self {
+            // No language was parsed, so point at the bare `@embed` tag.
+            Self::MissingLanguage { .. } => "@embed".to_string(),
+            Self::InvalidLanguage { language, .. } | Self::LanguageMismatch { language, .. } => {
+                format!("@embed {language}")
+            }
+        }
+    }
 }
 
 impl std::fmt::Display for EmbedParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let n = self.index() + 1;
         let supported = OutputMode::ALL.map(|m| m.as_str()).join(", ");
+        let n = self.index() + 1;
         match self {
             Self::MissingLanguage { .. } => write!(
                 f,

@@ -8,7 +8,6 @@ import {
   type ModuleNode,
   type Plugin,
 } from 'vite';
-import { z } from 'zod';
 import { parseNorg, getThemeCss, OutputMode } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
 
@@ -24,20 +23,6 @@ export interface NorgPluginOptions {
   componentDir?: string;
   components?: Record<string, string>;
 }
-
-const optionsSchema = z.object({
-  mode: z.enum([OutputMode.html, OutputMode.svelte, OutputMode.react, OutputMode.vue, 'metadata']),
-  include: z.any().optional(),
-  exclude: z.any().optional(),
-  arboriumConfig: z
-    .union([
-      z.object({ theme: z.string() }),
-      z.object({ themes: z.object({ light: z.string(), dark: z.string() }) }),
-    ])
-    .optional(),
-  componentDir: z.string().optional(),
-  components: z.record(z.string(), z.string()).optional(),
-});
 
 const VIRTUAL_CSS_ID = 'virtual:norg-arborium.css';
 const RESOLVED_VIRTUAL_CSS_ID = `\0${VIRTUAL_CSS_ID}`;
@@ -123,10 +108,6 @@ function injectComponentImports(
 }
 
 export function norgPlugin(options: NorgPluginOptions): Plugin {
-  const parsed = optionsSchema.safeParse(options);
-  if (!parsed.success) {
-    throw new Error(`[vite-plugin-norg] Invalid options: ${parsed.error.message}`);
-  }
   const {
     include,
     exclude,
@@ -134,14 +115,23 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
     arboriumConfig,
     componentDir,
     components: explicitComponents,
-  } = parsed.data;
+  } = options;
+
+  // The one option that fails silently — an unknown mode matches no generator
+  // branch and yields an undefined module. Others fail where they're used.
+  if (!(mode in modeExtensions)) {
+    throw new Error(
+      `[vite-plugin-norg] Invalid mode ${JSON.stringify(mode)}. ` +
+        `Expected one of: ${Object.keys(modeExtensions).join(', ')}.`
+    );
+  }
   const filter = createFilter(include, exclude);
   const css = buildCss(arboriumConfig);
   const resolvedComponentDir = componentDir ? resolve(componentDir) : undefined;
   const ext = modeExtensions[mode];
   const norgWithExt = ext ? `.norg${ext}` : null;
 
-  const parseCache = new Map<string, ReturnType<typeof parseNorg>>();
+  const parseCache = new Map<string, Promise<ReturnType<typeof parseNorg>>>();
   const embedModuleIds = new Map<string, Set<string>>();
   const embedModules = new Map<string, { basePath: string; index: number }>();
   let components = new Map<string, string>();
@@ -152,14 +142,30 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
     embedModuleIds.set(filePath, ids);
   }
 
-  async function cachedParse(filePath: string) {
-    let result = parseCache.get(filePath);
-    if (!result) {
-      const content = await readFile(filePath, 'utf-8');
-      result = parseNorg(content, mode);
-      parseCache.set(filePath, result);
+  function cachedParse(
+    filePath: string,
+    warn: (message: string) => void
+  ): Promise<ReturnType<typeof parseNorg>> {
+    let pending = parseCache.get(filePath);
+    if (!pending) {
+      const fresh = readFile(filePath, 'utf-8')
+        .then(content => {
+          const result = parseNorg(content, mode);
+          if (parseCache.get(filePath) !== fresh) return cachedParse(filePath, warn);
+          result.diagnostics?.forEach(warn);
+          return result;
+        })
+        .catch(error => {
+          if (parseCache.get(filePath) !== fresh) return cachedParse(filePath, warn);
+          throw error;
+        });
+      pending = fresh;
+      parseCache.set(filePath, fresh);
+      void fresh.catch(() => {
+        if (parseCache.get(filePath) === fresh) parseCache.delete(filePath);
+      });
     }
-    return result;
+    return pending;
   }
 
   function invalidateModules(ctx: HmrContext, moduleIds: Iterable<string>): ModuleNode[] {
@@ -221,6 +227,9 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
     },
 
     async load(id: string) {
+      const parse = (filePath: string) =>
+        cachedParse(filePath, message => this.warn({ id: filePath, message }));
+
       if (id === RESOLVED_VIRTUAL_CSS_ID) {
         return css;
       }
@@ -228,7 +237,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
       if (id.startsWith(RESOLVED_VIRTUAL_DOC_CSS_PREFIX) && id.endsWith('.css')) {
         const filePath = id.slice(RESOLVED_VIRTUAL_DOC_CSS_PREFIX.length, -4);
         trackModule(filePath, id);
-        const result = await cachedParse(filePath);
+        const result = await parse(filePath);
         return result.embedCss ?? '';
       }
 
@@ -236,7 +245,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
       if (embedInfo) {
         const { basePath, index } = embedInfo;
         trackModule(basePath, id);
-        const result = await cachedParse(basePath);
+        const result = await parse(basePath);
 
         const embed = result.embedComponents?.[index];
         if (!embed) {
@@ -263,7 +272,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
       const outputMode: GeneratorMode = query === 'metadata' ? 'metadata' : mode;
 
       try {
-        const result = await cachedParse(basePath);
+        const result = await parse(basePath);
         const code = generateOutput(outputMode, result, css, basePath);
         return {
           code,

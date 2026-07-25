@@ -1,33 +1,27 @@
-use crate::segments::convert_segments;
+use crate::ast_handlers::{document_ids, visit_visible_headings};
+use crate::segments::heading_html_and_id;
 use crate::types::TocEntry;
-use crate::utils::into_slug;
 use rust_norg::NorgAST;
 
 pub fn extract_toc(ast: &[NorgAST]) -> Vec<TocEntry> {
     let mut toc = Vec::new();
-    extract_toc_recursive(ast, &mut toc);
-    toc
-}
-
-fn extract_toc_recursive(ast: &[NorgAST], toc: &mut Vec<TocEntry>) {
-    for node in ast {
-        if let NorgAST::Heading {
-            level,
-            title,
-            content,
-            ..
-        } = node
-        {
-            let text = convert_segments(title);
-            let id = into_slug(&text);
-
+    let mut ids = document_ids(ast);
+    visit_visible_headings(ast, &mut |level, title| {
+        let (title, id, level) = heading_html_and_id(title, level, &mut ids);
+        if !id.is_empty() {
             toc.push(TocEntry {
-                level: *level as u32,
-                title: text,
+                level: level as u32,
+                title,
                 id,
             });
-
-            extract_toc_recursive(content, toc);
         }
-    }
+    });
+    // Heading ids only, but every one of them, or the TOC stops matching the
+    // anchors the renderer emitted.
+    debug_assert_eq!(
+        ids.unconsumed().0,
+        0,
+        "toc walk visited fewer headings than document_ids reserved"
+    );
+    toc
 }

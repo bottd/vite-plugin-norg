@@ -1,5 +1,6 @@
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
+use std::{fmt, str::FromStr};
 
 #[napi(string_enum)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,22 +25,16 @@ impl OutputMode {
     }
 }
 
-impl std::str::FromStr for OutputMode {
+impl FromStr for OutputMode {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "html" => Ok(Self::html),
-            "svelte" => Ok(Self::svelte),
-            "vue" => Ok(Self::vue),
-            "react" => Ok(Self::react),
-            _ => Err(()),
-        }
+        Self::ALL.into_iter().find(|m| m.as_str() == s).ok_or(())
     }
 }
 
-impl std::fmt::Display for OutputMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for OutputMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
 }
@@ -56,7 +51,7 @@ pub struct TocEntry {
 #[napi(object)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbedComponent {
-    /// Position of this embed component in the document (0-indexed)
+    /// Position of this component among component embeds (0-indexed)
     pub index: u32,
     /// Target mode ("html" | "svelte" | "vue" | "react")
     pub mode: String,

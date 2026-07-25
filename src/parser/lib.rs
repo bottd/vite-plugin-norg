@@ -1,4 +1,5 @@
 mod ast_handlers;
+mod diagnostics;
 mod html;
 mod metadata;
 mod segments;
@@ -15,26 +16,58 @@ pub use utils::into_slug;
 use arborium::theme::builtin;
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use serde_json::Map;
+use serde_json::{Map, Value};
+
+#[cfg(not(target_arch = "wasm32"))]
+const PARSER_STACK_SIZE: usize = 32 * 1024 * 1024;
 
 #[napi(object)]
 pub struct NorgParseResult {
-    pub metadata: Map<String, serde_json::Value>,
+    pub metadata: Map<String, Value>,
     pub html_parts: Vec<String>,
     pub toc: Vec<TocEntry>,
     pub embed_components: Vec<EmbedComponent>,
     pub embed_css: String,
+    /// Non-fatal warnings from rendering (skipped/altered content), for the
+    /// host to surface — stderr is invisible in a Vite worker.
+    pub diagnostics: Option<Vec<String>>,
 }
 
 #[napi]
 pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResult> {
-    let ast = rust_norg::parse_tree(&content)
-        .map_err(|e| Error::from_reason(format!("Parse error: {e:?}")))?;
+    #[cfg(target_arch = "wasm32")]
+    {
+        parse_norg_inner(&content, mode.as_deref()).map_err(Error::from_reason)
+    }
 
-    let output_mode = mode.as_deref().and_then(|s| s.parse().ok());
-    let (html_parts, embed_components, embed_css) = transform(&ast, output_mode)
-        .map_err(|err| Error::from_reason(format_embed_error(&content, &err)))?;
-    let toc = extract_toc(&ast);
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        // rust-norg recursively builds nested documents. A dedicated, bounded
+        // stack prevents ordinary deep input from aborting the Node process.
+        let handle = std::thread::Builder::new()
+            .name("norg-parse".into())
+            .stack_size(PARSER_STACK_SIZE)
+            .spawn(move || parse_norg_inner(&content, mode.as_deref()))
+            .map_err(|e| Error::from_reason(format!("Failed to spawn parser thread: {e}")))?;
+
+        match handle.join() {
+            Ok(result) => result.map_err(Error::from_reason),
+            Err(_) => Err(Error::from_reason("Parser thread panicked")),
+        }
+    }
+}
+
+fn parse_norg_inner(
+    content: &str,
+    mode: Option<&str>,
+) -> std::result::Result<NorgParseResult, String> {
+    let ast = rust_norg::parse_tree(content).map_err(|e| format!("Parse error: {e:?}"))?;
+
+    let output_mode = mode.and_then(|s| s.parse().ok());
+    let (rendered, diagnostics) = diagnostics::capture(|| transform(&ast, output_mode));
+    let toc = diagnostics::discard(|| extract_toc(&ast));
+    let (html_parts, embed_components, embed_css) =
+        rendered.map_err(|err| format_embed_error(&err))?;
     let metadata = extract_metadata(&ast);
 
     Ok(NorgParseResult {
@@ -43,32 +76,12 @@ pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResu
         toc,
         embed_components,
         embed_css,
+        diagnostics: Some(diagnostics),
     })
 }
 
-fn format_embed_error(content: &str, err: &crate::ast_handlers::EmbedParseError) -> String {
-    let base = err.to_string();
-    if let Some(line) = find_embed_line(content, err.index()) {
-        format!("{base}. Offending line: {line}")
-    } else {
-        base
-    }
-}
-
-fn find_embed_line(content: &str, index: usize) -> Option<String> {
-    let mut count = 0;
-    for line in content.lines() {
-        let trimmed = line.trim_start();
-        if let Some(rest) = trimmed.strip_prefix("@embed")
-            && (rest.is_empty() || rest.chars().next().is_none_or(|c| c.is_whitespace()))
-        {
-            if count == index {
-                return Some(line.to_string());
-            }
-            count += 1;
-        }
-    }
-    None
+fn format_embed_error(err: &crate::ast_handlers::EmbedParseError) -> String {
+    format!("{err}. Offending line: {}", err.offending_line())
 }
 
 #[napi]

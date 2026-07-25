@@ -4,6 +4,7 @@
   "homepage": "https://github.com/bottd/vite-plugin-norg#README",
   "name": "vite-plugin-norg",
   "version": "4.0.16",
+  "packageManager": "pnpm@11.13.1",
   "type": "module",
   "description": "A Vite plugin for rendering Norg files",
   "main": "dist/plugin/index.js",
@@ -72,8 +73,7 @@
     }
   },
   "dependencies": {
-    "dedent": "1.7.2",
-    "zod": "4.4.3"
+    "dedent": "1.7.2"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
