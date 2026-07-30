@@ -102,15 +102,7 @@ jobs:
       - name: Run JavaScript tests
         run: pnpm test
 
-      - name: Authenticate npm
-        run: |
-          test -n "$NPM_TOKEN" || { echo "NPM_TOKEN required: OIDC cannot create packages that do not exist yet"; exit 1; }
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Semantic Release
         run: pnpm exec semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
