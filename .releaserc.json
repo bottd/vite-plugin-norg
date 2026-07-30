@@ -26,7 +26,7 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "sed -i 's/^version = .*/version = \"${nextRelease.version}\"/' Cargo.toml && cargo generate-lockfile"
+        "prepareCmd": "sed -i 's/^version = .*/version = \"${nextRelease.version}\"/' Cargo.toml && cargo generate-lockfile && pnpm exec napi pre-publish --no-gh-release"
       }
     ],
     [

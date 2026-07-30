@@ -9,6 +9,9 @@ pkg/
 rust-parser/target/
 rust-parser/pkg/
 
+npm/
+*.node
+
 # Logs
 *.log
 npm-debug.log*
