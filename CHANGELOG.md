@@ -1,3 +1,10 @@
+## [4.0.20](https://github.com/bottd/vite-plugin-norg/compare/v4.0.19...v4.0.20) (2026-07-30)
+
+
+### Bug Fixes
+
+* split platform specific outputs into separate optional dependencies ([0bdcd05](https://github.com/bottd/vite-plugin-norg/commit/0bdcd0594aab339e6c1a8f46ec5b572852536960))
+
 ## [4.0.19](https://github.com/bottd/vite-plugin-norg/compare/v4.0.18...v4.0.19) (2026-07-28)
 
 ## [4.0.18](https://github.com/bottd/vite-plugin-norg/compare/v4.0.17...v4.0.18) (2026-07-26)
