@@ -3,7 +3,7 @@
   "license": "MIT",
   "homepage": "https://github.com/bottd/vite-plugin-norg#README",
   "name": "vite-plugin-norg",
-  "version": "4.0.20",
+  "version": "4.0.21",
   "packageManager": "pnpm@11.18.0",
   "type": "module",
   "description": "A Vite plugin for rendering Norg files",
@@ -116,11 +116,11 @@
     "url": "git+https://github.com/bottd/vite-plugin-norg.git"
   },
   "optionalDependencies": {
-    "vite-plugin-norg-darwin-x64": "4.0.20",
-    "vite-plugin-norg-darwin-arm64": "4.0.20",
-    "vite-plugin-norg-linux-x64-gnu": "4.0.20",
-    "vite-plugin-norg-linux-arm64-gnu": "4.0.20",
-    "vite-plugin-norg-linux-x64-musl": "4.0.20",
-    "vite-plugin-norg-linux-arm64-musl": "4.0.20"
+    "vite-plugin-norg-darwin-x64": "4.0.21",
+    "vite-plugin-norg-darwin-arm64": "4.0.21",
+    "vite-plugin-norg-linux-x64-gnu": "4.0.21",
+    "vite-plugin-norg-linux-arm64-gnu": "4.0.21",
+    "vite-plugin-norg-linux-x64-musl": "4.0.21",
+    "vite-plugin-norg-linux-arm64-musl": "4.0.21"
   }
 }
