@@ -1,0 +1,64 @@
+@document.meta
+title: Embed Components
+description: Embedding framework components and styles in Norg documents
+@end
+
+* Embed Components
+
+  Norg documents can embed framework-specific components and CSS directly using `@embed` blocks.
+
+** @embed svelte
+
+   Embed a Svelte component directly in your document:
+
+   @code norg
+   @embed svelte
+   <script>
+     let count = $state(0);
+   </script>
+   <button onclick={() => count++}>
+     Clicks: {count}
+   </button>
+   @end
+   @end
+
+   Here's a live example:
+
+   @embed svelte
+   <script>
+     let count = $state(0);
+   </script>
+   <button onclick={() => count++}>Clicks: {count}</button>
+   <style>
+     button {
+       padding: 0.5rem 1rem;
+       border-radius: 6px;
+       border: 1px solid #ccc;
+       background: #fff;
+       cursor: pointer;
+       font-size: 1rem;
+     }
+     button:hover {
+       background: #f0f0f0;
+     }
+   </style>
+   @end
+
+** @embed css
+
+   Add scoped CSS to your document:
+
+   @code norg
+   @embed css
+   h1 { color: navy; }
+   .custom-class { border: 1px solid #eee; }
+   @end
+   @end
+
+** How It Works
+
+   When the plugin encounters an `@embed` block:
+
+   - For *svelte/vue*: the block becomes a real framework component, imported and rendered in place
+   - For *css*: the styles are collected into a virtual CSS module loaded alongside the document
+   - For *html/react*: embed component blocks are embedded directly into the output

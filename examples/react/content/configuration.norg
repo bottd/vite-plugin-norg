@@ -1,0 +1,63 @@
+@document.meta
+title: Configuration
+description: Plugin configuration reference
+@end
+
+* Configuration
+
+  The plugin accepts a `NorgPluginOptions` object.
+
+** mode
+
+   @code typescript
+   type mode = 'svelte' | 'vue' | 'react' | 'html' | 'metadata';
+   @end
+
+   - `svelte` — generates Svelte components
+   - `vue` — generates Vue SFCs
+   - `react` — generates JSX components
+   - `html` — generates raw HTML strings
+   - `metadata` — exports only metadata and TOC
+
+** arboriumConfig
+
+   Configure syntax highlighting for code blocks:
+
+   @code typescript
+   // Single theme
+   arboriumConfig: { theme: 'github-dark' }
+
+   // Light/dark theme pair
+   arboriumConfig: {
+     themes: { light: 'github-light', dark: 'github-dark' }
+   }
+   @end
+
+   Import the generated CSS with:
+
+   @code typescript
+   import 'virtual:norg-arborium.css';
+   @end
+
+** componentDir
+
+   Path to a directory of framework components:
+
+   @code typescript
+   norgPlugin({
+     mode: 'react',
+     componentDir: './src/components'
+   })
+   @end
+
+** Full Example
+
+   @code typescript
+   import { norgPlugin } from 'vite-plugin-norg';
+
+   norgPlugin({
+     mode: 'react',
+     arboriumConfig: { theme: 'github-dark' },
+     componentDir: './src/components'
+   });
+   @end
