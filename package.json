@@ -4,7 +4,7 @@
   "homepage": "https://github.com/bottd/vite-plugin-norg#README",
   "name": "vite-plugin-norg",
   "version": "4.0.21",
-  "packageManager": "pnpm@11.18.0",
+  "packageManager": "pnpm@12.4.1",
   "type": "module",
   "description": "A Vite plugin for rendering Norg files",
   "main": "dist/plugin/index.js",
