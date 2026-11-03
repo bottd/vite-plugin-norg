@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { parseNorg } from '@parser';
 import { norgPlugin } from '../../src/plugin/index.js';
-import { fixturesDir, componentsDir } from './fixtures';
+import { fixturesDir, componentsDir, loadCode } from './fixtures';
 
 async function createPlugin(opts: Parameters<typeof norgPlugin>[0]) {
   const plugin = norgPlugin(opts);
@@ -201,9 +201,11 @@ some code
         include: ['**/*.norg'],
         componentDir: componentsDir,
       });
-      const result = await plugin.load(embedFixture);
+      const code = await loadCode(plugin, embedFixture);
 
-      expect(result).not.toContain(`import Badge from '${componentsDir}`);
+      expect(code).toBeDefined();
+      expect(code).not.toContain('import Badge');
+      expect(code).not.toContain('import Counter');
     });
   });
 });

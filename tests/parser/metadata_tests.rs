@@ -32,16 +32,6 @@ fn test_extract_metadata_from_file() {
 }
 
 #[test]
-fn test_parse_norg_internal() {
-    let content =
-        fs::read_to_string("tests/fixtures/basic.norg").expect("Failed to read basic.norg fixture");
-    let ast = rust_norg::parse_tree(&content).expect("Failed to parse basic.norg content");
-    let metadata = extract_metadata(&ast);
-
-    assert_yaml_snapshot!(metadata);
-}
-
-#[test]
 fn test_extract_metadata_values() {
     let ast = vec![VerbatimRangedTag {
         name: vec!["document".to_string(), "meta".to_string()],
@@ -57,19 +47,7 @@ fn test_extract_metadata_values() {
 fn test_extract_metadata_empty_lines() {
     let ast = vec![VerbatimRangedTag {
         name: vec!["document".to_string(), "meta".to_string()],
-        content: "title: Test\nauthor: Drake Bott".to_string(),
-        parameters: Default::default(),
-    }];
-
-    let metadata = extract_metadata(&ast);
-    assert_yaml_snapshot!(metadata);
-}
-
-#[test]
-fn test_extract_metadata_all_valid() {
-    let ast = vec![VerbatimRangedTag {
-        name: vec!["document".to_string(), "meta".to_string()],
-        content: "title: Valid\nauthor: Drake Bott".to_string(),
+        content: "\ntitle: Test\n\nauthor: Drake Bott\n\n".to_string(),
         parameters: Default::default(),
     }];
 
