@@ -8,12 +8,11 @@ import {
   type ModuleNode,
   type Plugin,
 } from 'vite';
-import { parseNorg, getThemeCss, OutputMode } from '@parser';
+import { parseNorg, getThemeCss, OutputMode, type NorgParseResult } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
 
 export type ArboriumConfig =
-  | { theme: string; themes?: never }
-  | { themes: { light: string; dark: string }; theme?: never };
+  { theme: string; themes?: never } | { themes: { light: string; dark: string }; theme?: never };
 
 export interface NorgPluginOptions {
   mode: GeneratorMode;
@@ -131,7 +130,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
   const ext = modeExtensions[mode];
   const norgWithExt = ext ? `.norg${ext}` : null;
 
-  const parseCache = new Map<string, Promise<ReturnType<typeof parseNorg>>>();
+  const parseCache = new Map<string, Promise<NorgParseResult>>();
   const embedModuleIds = new Map<string, Set<string>>();
   const embedModules = new Map<string, { basePath: string; index: number }>();
   let components = new Map<string, string>();
@@ -145,12 +144,12 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
   function cachedParse(
     filePath: string,
     warn: (message: string) => void
-  ): Promise<ReturnType<typeof parseNorg>> {
+  ): Promise<NorgParseResult> {
     let pending = parseCache.get(filePath);
     if (!pending) {
       const fresh = readFile(filePath, 'utf-8')
-        .then(content => {
-          const result = parseNorg(content, mode);
+        .then(content => parseNorg(content, mode))
+        .then(result => {
           if (parseCache.get(filePath) !== fresh) return cachedParse(filePath, warn);
           result.diagnostics?.forEach(warn);
           return result;

@@ -33,7 +33,32 @@ pub struct NorgParseResult {
     pub diagnostics: Option<Vec<String>>,
 }
 
+/// Parses off the JS thread (libuv pool) so Vite can parse files concurrently.
+pub struct ParseTask {
+    content: String,
+    mode: Option<String>,
+}
+
 #[napi]
+impl Task for ParseTask {
+    type Output = NorgParseResult;
+    type JsValue = NorgParseResult;
+
+    fn compute(&mut self) -> Result<Self::Output> {
+        parse_norg(std::mem::take(&mut self.content), self.mode.take())
+    }
+
+    fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {
+        Ok(output)
+    }
+}
+
+#[napi(js_name = "parseNorg")]
+pub fn parse_norg_async(content: String, mode: Option<String>) -> AsyncTask<ParseTask> {
+    AsyncTask::new(ParseTask { content, mode })
+}
+
+/// Blocking parse; the JS binding is [`parse_norg_async`].
 pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResult> {
     #[cfg(target_arch = "wasm32")]
     {

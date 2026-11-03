@@ -30,7 +30,7 @@ describe('@embed feature', () => {
 
 * Another heading
 `;
-      const result = parseNorg(content, 'svelte');
+      const result = await parseNorg(content, 'svelte');
 
       expect(result.embedComponents).toHaveLength(1);
       expect(result.embedComponents[0].index).toBe(0);
@@ -51,7 +51,7 @@ describe('@embed feature', () => {
 <div>Second</div>
 @end
 `;
-      const result = parseNorg(content, 'svelte');
+      const result = await parseNorg(content, 'svelte');
 
       expect(result.embedComponents).toHaveLength(2);
       expect(result.embedComponents.map(embed => embed.index)).toEqual([0, 1]);
@@ -64,7 +64,7 @@ describe('@embed feature', () => {
 let x = 1;
 @end
 `;
-      expect(() => parseNorg(content, 'svelte')).toThrow(/missing language/i);
+      await expect(parseNorg(content, 'svelte')).rejects.toThrow(/missing language/i);
     });
 
     it('should error on invalid language', async () => {
@@ -73,7 +73,7 @@ let x = 1;
 some code
 @end
 `;
-      expect(() => parseNorg(content, 'svelte')).toThrow(/invalid language/i);
+      await expect(parseNorg(content, 'svelte')).rejects.toThrow(/invalid language/i);
     });
 
     it('should error when embed language mismatches mode', async () => {
@@ -82,7 +82,7 @@ some code
 <template><div>Hi</div></template>
 @end
 `;
-      expect(() => parseNorg(content, 'svelte')).toThrow(/cannot be used in svelte mode/i);
+      await expect(parseNorg(content, 'svelte')).rejects.toThrow(/cannot be used in svelte mode/i);
     });
 
     it('should parse @embed react tags in react mode', async () => {
@@ -95,7 +95,7 @@ some code
 
 * Another heading
 `;
-      const result = parseNorg(content, 'react');
+      const result = await parseNorg(content, 'react');
 
       expect(result.embedComponents).toHaveLength(1);
       expect(result.embedComponents[0].mode).toBe('react');
@@ -109,7 +109,7 @@ some code
 <button>Click</button>
 @end
 `;
-      expect(() => parseNorg(content, 'svelte')).toThrow(/cannot be used in svelte mode/i);
+      await expect(parseNorg(content, 'svelte')).rejects.toThrow(/cannot be used in svelte mode/i);
     });
   });
 
@@ -122,7 +122,7 @@ some code
 </script>
 @end
 `;
-      expect(() => parseNorg(content, null)).toThrow(/missing language/i);
+      await expect(parseNorg(content, null)).rejects.toThrow(/missing language/i);
     });
   });
 
