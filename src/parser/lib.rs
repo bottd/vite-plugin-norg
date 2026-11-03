@@ -64,11 +64,11 @@ fn parse_norg_inner(
     let ast = rust_norg::parse_tree(content).map_err(|e| format!("Parse error: {e:?}"))?;
 
     let output_mode = mode.and_then(|s| s.parse().ok());
-    let (rendered, diagnostics) = diagnostics::capture(|| transform(&ast, output_mode));
+    let ((rendered, metadata), diagnostics) =
+        diagnostics::capture(|| (transform(&ast, output_mode), extract_metadata(&ast)));
     let toc = diagnostics::discard(|| extract_toc(&ast));
     let (html_parts, embed_components, embed_css) =
         rendered.map_err(|err| format_embed_error(&err))?;
-    let metadata = extract_metadata(&ast);
 
     Ok(NorgParseResult {
         metadata,

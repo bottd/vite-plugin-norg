@@ -1,7 +1,7 @@
 use insta::assert_yaml_snapshot;
 use rust_norg::NorgAST::VerbatimRangedTag;
 use std::fs;
-use vite_plugin_norg_parser::extract_metadata;
+use vite_plugin_norg_parser::{extract_metadata, parse_norg};
 
 #[test]
 fn test_extract_metadata_empty() {
@@ -53,6 +53,25 @@ fn test_extract_metadata_empty_lines() {
 
     let metadata = extract_metadata(&ast);
     assert_yaml_snapshot!(metadata);
+}
+
+#[test]
+fn consecutive_blank_lines_in_metadata_are_tolerated() {
+    let content = "@document.meta\ntitle: Test\n\n\n  \nauthor: Drake Bott\n@end\n";
+    let result = parse_norg(content.to_string(), None).unwrap();
+    assert_eq!(result.metadata["title"], "Test");
+    assert_eq!(result.metadata["author"], "Drake Bott");
+    assert!(result.diagnostics.unwrap_or_default().is_empty());
+}
+
+#[test]
+fn invalid_metadata_emits_a_diagnostic() {
+    let content = "@document.meta\ntitle: [\n@end\n";
+    let result = parse_norg(content.to_string(), None).unwrap();
+    assert!(result.metadata.is_empty());
+    let diagnostics = result.diagnostics.unwrap_or_default();
+    assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+    assert!(diagnostics[0].contains("@document.meta"));
 }
 
 #[test]
