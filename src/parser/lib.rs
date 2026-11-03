@@ -36,7 +36,7 @@ pub struct NorgParseResult {
 /// Parses off the JS thread (libuv pool) so Vite can parse files concurrently.
 pub struct ParseTask {
     content: String,
-    mode: Option<String>,
+    mode: Option<OutputMode>,
 }
 
 #[napi]
@@ -45,7 +45,7 @@ impl Task for ParseTask {
     type JsValue = NorgParseResult;
 
     fn compute(&mut self) -> Result<Self::Output> {
-        parse_norg(std::mem::take(&mut self.content), self.mode.take())
+        parse_norg(std::mem::take(&mut self.content), self.mode)
     }
 
     fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {
@@ -54,15 +54,18 @@ impl Task for ParseTask {
 }
 
 #[napi(js_name = "parseNorg")]
-pub fn parse_norg_async(content: String, mode: Option<String>) -> AsyncTask<ParseTask> {
+pub fn parse_norg_async(
+    content: String,
+    #[napi(ts_arg_type = "`${OutputMode}` | null")] mode: Option<OutputMode>,
+) -> AsyncTask<ParseTask> {
     AsyncTask::new(ParseTask { content, mode })
 }
 
 /// Blocking parse; the JS binding is [`parse_norg_async`].
-pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResult> {
+pub fn parse_norg(content: String, mode: Option<OutputMode>) -> Result<NorgParseResult> {
     #[cfg(target_arch = "wasm32")]
     {
-        parse_norg_inner(&content, mode.as_deref()).map_err(Error::from_reason)
+        parse_norg_inner(&content, mode).map_err(Error::from_reason)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -72,7 +75,7 @@ pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResu
         let handle = std::thread::Builder::new()
             .name("norg-parse".into())
             .stack_size(PARSER_STACK_SIZE)
-            .spawn(move || parse_norg_inner(&content, mode.as_deref()))
+            .spawn(move || parse_norg_inner(&content, mode))
             .map_err(|e| Error::from_reason(format!("Failed to spawn parser thread: {e}")))?;
 
         match handle.join() {
@@ -84,13 +87,12 @@ pub fn parse_norg(content: String, mode: Option<String>) -> Result<NorgParseResu
 
 fn parse_norg_inner(
     content: &str,
-    mode: Option<&str>,
+    mode: Option<OutputMode>,
 ) -> std::result::Result<NorgParseResult, String> {
     let ast = rust_norg::parse_tree(content).map_err(|e| format!("Parse error: {e:?}"))?;
 
-    let output_mode = mode.and_then(|s| s.parse().ok());
     let ((rendered, metadata), diagnostics) =
-        diagnostics::capture(|| (transform(&ast, output_mode), extract_metadata(&ast)));
+        diagnostics::capture(|| (transform(&ast, mode), extract_metadata(&ast)));
     let toc = diagnostics::discard(|| extract_toc(&ast));
     let (html_parts, embed_components, embed_css) =
         rendered.map_err(|err| format_embed_error(&err))?;

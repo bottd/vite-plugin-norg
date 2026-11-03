@@ -1,7 +1,7 @@
 use insta::assert_yaml_snapshot;
 use std::fs;
 use vite_plugin_norg_parser::{
-    NorgParseResult, extract_metadata, extract_toc, parse_norg, transform,
+    NorgParseResult, OutputMode, extract_metadata, extract_toc, parse_norg, transform,
 };
 
 fn parse(content: &str) -> NorgParseResult {
@@ -69,7 +69,7 @@ fn embed_errors_report_the_ast_declaration() {
             "embed #1",
         ),
     ] {
-        let error = match parse_norg(content.to_string(), Some("html".to_string())) {
+        let error = match parse_norg(content.to_string(), Some(OutputMode::html)) {
             Ok(_) => panic!("expected embed error"),
             Err(error) => error,
         };
@@ -402,7 +402,7 @@ fn mixed_marker_grandchildren_stay_under_their_parent() {
 #[test]
 fn embed_component_indexes_ignore_css_declarations() {
     let content = "@embed css\n.foo {}\n@end\n@embed svelte\n<div>one</div>\n@end\n@embed svelte\n<div>two</div>\n@end\n";
-    let result = parse_norg(content.to_string(), Some("svelte".to_string())).unwrap();
+    let result = parse_norg(content.to_string(), Some(OutputMode::svelte)).unwrap();
     let indexes: Vec<_> = result
         .embed_components
         .iter()

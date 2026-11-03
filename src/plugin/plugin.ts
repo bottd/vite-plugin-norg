@@ -129,6 +129,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
   const resolvedComponentDir = componentDir ? resolve(componentDir) : undefined;
   const ext = modeExtensions[mode];
   const norgWithExt = ext ? `.norg${ext}` : null;
+  const parseMode = mode === 'metadata' ? null : mode;
 
   const parseCache = new Map<string, Promise<NorgParseResult>>();
   const embedModuleIds = new Map<string, Set<string>>();
@@ -148,7 +149,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
     let pending = parseCache.get(filePath);
     if (!pending) {
       const fresh = readFile(filePath, 'utf-8')
-        .then(content => parseNorg(content, mode))
+        .then(content => parseNorg(content, parseMode))
         .then(result => {
           if (parseCache.get(filePath) !== fresh) return cachedParse(filePath, warn);
           result.diagnostics?.forEach(warn);
