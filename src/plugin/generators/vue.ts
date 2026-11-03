@@ -2,7 +2,7 @@ import type { NorgParseResult } from '@parser';
 import { dedent, addEmbedImports } from './helpers';
 
 export function generateVue(
-  { htmlParts, metadata, toc, embedComponents = [], embedCss = '' }: NorgParseResult,
+  { htmlParts, metadata, toc, embedComponents, embedCss }: NorgParseResult,
   css: string,
   filePath?: string
 ): string {
@@ -18,7 +18,7 @@ export function generateVue(
 
   return dedent`
     <script lang="ts">
-    export const metadata = ${JSON.stringify(metadata ?? {})};
+    export const metadata = ${JSON.stringify(metadata)};
     export const toc = ${JSON.stringify(toc ?? [])};
     </script>
     <script setup lang="ts">

@@ -152,7 +152,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
         .then(content => parseNorg(content, parseMode))
         .then(result => {
           if (parseCache.get(filePath) !== fresh) return cachedParse(filePath, warn);
-          result.diagnostics?.forEach(warn);
+          result.diagnostics.forEach(warn);
           return result;
         })
         .catch(error => {

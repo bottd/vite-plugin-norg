@@ -2,7 +2,7 @@ import type { NorgParseResult } from '@parser';
 import { dedent, addEmbedImports } from './helpers';
 
 export function generateSvelte(
-  { htmlParts, metadata, toc, embedComponents = [], embedCss = '' }: NorgParseResult,
+  { htmlParts, metadata, toc, embedComponents, embedCss }: NorgParseResult,
   css: string,
   filePath?: string
 ): string {
@@ -16,7 +16,7 @@ export function generateSvelte(
 
   return dedent`
     <script lang="ts" module>
-      export const metadata = ${JSON.stringify(metadata ?? {})};
+      export const metadata = ${JSON.stringify(metadata)};
       export const toc = ${JSON.stringify(toc ?? [])};
     </script>
     ${hasImports ? '<script lang="ts">' : null}

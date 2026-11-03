@@ -23,6 +23,7 @@ const PARSER_STACK_SIZE: usize = 32 * 1024 * 1024;
 
 #[napi(object)]
 pub struct NorgParseResult {
+    #[napi(ts_type = "Record<string, unknown>")]
     pub metadata: Map<String, Value>,
     pub html_parts: Vec<String>,
     pub toc: Vec<TocEntry>,
@@ -30,7 +31,7 @@ pub struct NorgParseResult {
     pub embed_css: String,
     /// Non-fatal warnings from rendering (skipped/altered content), for the
     /// host to surface — stderr is invisible in a Vite worker.
-    pub diagnostics: Option<Vec<String>>,
+    pub diagnostics: Vec<String>,
 }
 
 /// Parses off the JS thread (libuv pool) so Vite can parse files concurrently.
@@ -103,7 +104,7 @@ fn parse_norg_inner(
         toc,
         embed_components,
         embed_css,
-        diagnostics: Some(diagnostics),
+        diagnostics,
     })
 }
 

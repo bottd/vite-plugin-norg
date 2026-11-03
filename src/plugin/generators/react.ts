@@ -2,7 +2,7 @@ import type { NorgParseResult } from '@parser';
 import { dedent, addEmbedImports } from './helpers';
 
 export function generateReact(
-  { htmlParts, metadata, toc, embedComponents = [], embedCss = '' }: NorgParseResult,
+  { htmlParts, metadata, toc, embedComponents, embedCss }: NorgParseResult,
   css: string,
   filePath?: string
 ): string {
@@ -18,7 +18,7 @@ export function generateReact(
     ${embedCss && filePath ? `import 'virtual:norg-css:${filePath}';` : null}
     ${addEmbedImports(embedComponents, filePath)}
 
-    export const metadata = ${JSON.stringify(metadata ?? {})};
+    export const metadata = ${JSON.stringify(metadata)};
     export const toc = ${JSON.stringify(toc ?? [])};
 
     export function Component() {

@@ -8,7 +8,7 @@ function mergeEmbeds(htmlParts: string[], embeds: EmbedComponent[]): string {
 }
 
 export function generateHtml(
-  { htmlParts, metadata, toc, embedComponents = [], embedCss = '' }: NorgParseResult,
+  { htmlParts, metadata, toc, embedComponents, embedCss }: NorgParseResult,
   css: string
 ): string {
   const raw = mergeEmbeds(htmlParts, embedComponents);
@@ -16,7 +16,7 @@ export function generateHtml(
   return dedent`
     ${css ? 'import "virtual:norg-arborium.css";' : null}
 
-    export const metadata = ${JSON.stringify(metadata ?? {})};
+    export const metadata = ${JSON.stringify(metadata)};
     export const html = ${JSON.stringify(html)};
     export const toc = ${JSON.stringify(toc ?? [])};
 

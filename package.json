@@ -35,6 +35,8 @@
     "!dist/napi/*.node"
   ],
   "napi": {
+    "constEnum": false,
+    "runtimeStringEnum": true,
     "targets": [
       "x86_64-apple-darwin",
       "aarch64-apple-darwin",

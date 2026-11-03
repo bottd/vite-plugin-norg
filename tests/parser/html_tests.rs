@@ -197,23 +197,19 @@ fn comments_are_suppressed_without_diagnostics() {
     assert!(html.contains("Visible"), "{html}");
     assert_eq!(result.toc.len(), 1);
     assert_eq!(result.toc[0].title, "Visible");
-    assert!(
-        result.diagnostics.as_deref().unwrap_or_default().is_empty(),
-        "{:?}",
-        result.diagnostics
-    );
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
 
     let ranged = parse("|comment\nhidden\n|end\nvisible\n");
     let html = ranged.html_parts.concat();
     assert!(!html.contains("hidden"), "{html}");
     assert!(html.contains("visible"), "{html}");
-    assert!(ranged.diagnostics.unwrap_or_default().is_empty());
+    assert!(ranged.diagnostics.is_empty());
 
     let verbatim = parse("@comment\nhidden\n@end\nvisible\n");
     let html = verbatim.html_parts.concat();
     assert!(!html.contains("hidden"), "{html}");
     assert!(html.contains("visible"), "{html}");
-    assert!(verbatim.diagnostics.unwrap_or_default().is_empty());
+    assert!(verbatim.diagnostics.is_empty());
 }
 
 #[test]
@@ -325,7 +321,7 @@ fn comments_inside_rangeable_content_do_not_warn() {
     let html = result.html_parts.concat();
     assert!(!html.contains("hidden"), "{html}");
     assert!(html.contains("visible"), "{html}");
-    assert!(result.diagnostics.unwrap_or_default().is_empty());
+    assert!(result.diagnostics.is_empty());
 }
 
 #[test]
@@ -363,13 +359,13 @@ fn empty_anchor_definitions_keep_their_visible_text() {
     let result = parse("[label]{}\n");
     let html = result.html_parts.concat();
     assert!(html.contains("label"), "{html}");
-    assert_eq!(result.diagnostics.unwrap_or_default().len(), 1);
+    assert_eq!(result.diagnostics.len(), 1);
 }
 
 #[test]
 fn toc_rendering_does_not_duplicate_heading_diagnostics() {
     let result = parse("* {javascript:alert(1)}[Unsafe]\n");
-    let diagnostics = result.diagnostics.unwrap_or_default();
+    let diagnostics = result.diagnostics;
     assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
     assert!(diagnostics[0].contains("unsafe URL scheme"));
 }
@@ -377,14 +373,14 @@ fn toc_rendering_does_not_duplicate_heading_diagnostics() {
 #[test]
 fn separate_unsafe_links_each_emit_a_diagnostic() {
     let result = parse("{javascript:alert(1)}[First]\n\n{javascript:alert(1)}[Second]\n");
-    assert_eq!(result.diagnostics.unwrap_or_default().len(), 2);
+    assert_eq!(result.diagnostics.len(), 2);
 }
 
 #[test]
 fn unsupported_carryovers_render_and_warn() {
     let result = parse("#tag\n* Tagged Heading\nBody.\n");
     assert_eq!(result.toc[0].title, "Tagged Heading");
-    let diagnostics = result.diagnostics.unwrap_or_default();
+    let diagnostics = result.diagnostics;
     assert_eq!(diagnostics.len(), 1);
     assert!(diagnostics[0].contains("carryover tag 'tag'"));
 }

@@ -61,7 +61,7 @@ fn consecutive_blank_lines_in_metadata_are_tolerated() {
     let result = parse_norg(content.to_string(), None).unwrap();
     assert_eq!(result.metadata["title"], "Test");
     assert_eq!(result.metadata["author"], "Drake Bott");
-    assert!(result.diagnostics.unwrap_or_default().is_empty());
+    assert!(result.diagnostics.is_empty());
 }
 
 #[test]
@@ -69,7 +69,7 @@ fn invalid_metadata_emits_a_diagnostic() {
     let content = "@document.meta\ntitle: [\n@end\n";
     let result = parse_norg(content.to_string(), None).unwrap();
     assert!(result.metadata.is_empty());
-    let diagnostics = result.diagnostics.unwrap_or_default();
+    let diagnostics = result.diagnostics;
     assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
     assert!(diagnostics[0].contains("@document.meta"));
 }
