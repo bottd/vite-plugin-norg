@@ -59,8 +59,58 @@ jobs:
           path: dist/napi/
           if-no-files-found: error
 
-  release:
+  test-binding:
     needs: build
+    runs-on: ${{ matrix.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            host: macos-latest
+            node-arch: x64
+          - target: aarch64-apple-darwin
+            host: macos-latest
+            node-arch: arm64
+          - target: x86_64-unknown-linux-gnu
+            host: ubuntu-latest
+            image: node:24-slim
+          - target: aarch64-unknown-linux-gnu
+            host: ubuntu-24.04-arm
+            image: node:24-slim
+          - target: x86_64-unknown-linux-musl
+            host: ubuntu-latest
+            image: node:24-alpine
+          - target: aarch64-unknown-linux-musl
+            host: ubuntu-24.04-arm
+            image: node:24-alpine
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Download native binding
+        uses: actions/download-artifact@v4
+        with:
+          name: native-binding-${{ matrix.target }}
+          path: dist/napi
+
+      - name: Setup Node (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          architecture: ${{ matrix.node-arch }}
+
+      - name: Smoke test (macOS)
+        if: runner.os == 'macOS'
+        run: node tests/smoke.ts
+
+      - name: Smoke test (Linux, ${{ matrix.image }})
+        if: runner.os == 'Linux'
+        run: docker run --rm -v "$PWD":/w -w /w ${{ matrix.image }} node tests/smoke.ts
+
+  release:
+    needs: [build, test-binding]
     runs-on: ubuntu-latest
     permissions:
       contents: write
