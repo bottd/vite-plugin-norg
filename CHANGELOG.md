@@ -1,3 +1,23 @@
+# [4.1.0](https://github.com/bottd/vite-plugin-norg/compare/v4.0.21...v4.1.0) (2026-11-03)
+
+
+### Bug Fixes
+
+* allow blankline runs in metadata ([5fde9eb](https://github.com/bottd/vite-plugin-norg/commit/5fde9eb948d35f8cb8d256f423a00ae449a0fb98))
+* hot-reload and root-relative imports in framework modes ([9e9fb3f](https://github.com/bottd/vite-plugin-norg/commit/9e9fb3f2b5090812966b58ee11ee66af6ac8c594))
+* link macOS native binding against system libiconv ([4675fc0](https://github.com/bottd/vite-plugin-norg/commit/4675fc0f5ed7449936c04f6eddbe53a5c9c5af3c))
+
+
+### Features
+
+* typed parse errors ([8b03769](https://github.com/bottd/vite-plugin-norg/commit/8b037696d3baaf1e1cc4fc0cf75d528123682af1))
+* TypeScript 7, oxlint + oxfmt replace eslint + prettier ([fa13cd7](https://github.com/bottd/vite-plugin-norg/commit/fa13cd7b5481cbe8faf95b0fdc580d0867569b97))
+
+
+### Performance Improvements
+
+* parse norg off the JS thread with AsyncTask ([65c8a03](https://github.com/bottd/vite-plugin-norg/commit/65c8a039db8e0c0d9298309009b6c4c576c947e4))
+
 ## [4.0.21](https://github.com/bottd/vite-plugin-norg/compare/v4.0.20...v4.0.21) (2026-08-02)
 
 
