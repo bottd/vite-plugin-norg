@@ -199,7 +199,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
       }
     },
 
-    resolveId(id: string, importer?: string) {
+    async resolveId(id: string, importer?: string) {
       if (id === VIRTUAL_CSS_ID) {
         return RESOLVED_VIRTUAL_CSS_ID;
       }
@@ -209,7 +209,9 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
       }
 
       if (ext && id.endsWith('.norg') && importer) {
-        const basePath = resolve(dirname(importer), id);
+        // Let Vite resolve root-relative ("/src/x.norg"), aliased and package ids.
+        const resolved = await this.resolve(id, importer, { skipSelf: true });
+        const basePath = resolved?.id ?? resolve(dirname(importer), id);
         if (filter(basePath)) {
           return `\0${basePath}${ext}`;
         }
@@ -270,6 +272,8 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
       if (!basePath.endsWith('.norg') || !filter(basePath)) return;
 
       const outputMode: GeneratorMode = query === 'metadata' ? 'metadata' : mode;
+      // Virtual ids aren't mapped to their source file, so HMR must find them here.
+      if (id.startsWith('\0')) trackModule(basePath, id);
 
       try {
         const result = await parse(basePath);

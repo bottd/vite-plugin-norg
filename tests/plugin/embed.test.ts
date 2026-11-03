@@ -131,7 +131,7 @@ some code
 
     it('should wrap react embed code as JSX component', async () => {
       const plugin = await createPlugin({ mode: 'react', include: ['**/*.norg'] });
-      const resolved = plugin.resolveId(`${reactFixture}?embed=0`, reactFixture) as string;
+      const resolved = (await plugin.resolveId(`${reactFixture}?embed=0`, reactFixture)) as string;
       const result = await plugin.load(resolved);
 
       expect(result).toContain('export default function NorgEmbed() { return <>');
@@ -145,7 +145,7 @@ some code
         include: ['**/*.norg'],
         componentDir: componentsDir,
       });
-      const resolved = plugin.resolveId(`${reactFixture}?embed=0`, reactFixture) as string;
+      const resolved = (await plugin.resolveId(`${reactFixture}?embed=0`, reactFixture)) as string;
       const result = await plugin.load(resolved);
 
       expect(result).toContain("import Badge from '");
@@ -163,7 +163,7 @@ some code
         include: ['**/*.norg'],
         componentDir: componentsDir,
       });
-      const resolved = plugin.resolveId(`${embedFixture}?embed=0`, embedFixture) as string;
+      const resolved = (await plugin.resolveId(`${embedFixture}?embed=0`, embedFixture)) as string;
       const result = await plugin.load(resolved);
 
       expect(result).toContain("import Badge from '");
@@ -177,7 +177,7 @@ some code
         include: ['**/*.norg'],
         componentDir: componentsDir,
       });
-      const resolved = plugin.resolveId(`${embedFixture}?embed=1`, embedFixture) as string;
+      const resolved = (await plugin.resolveId(`${embedFixture}?embed=1`, embedFixture)) as string;
       const result = await plugin.load(resolved);
 
       expect(result).toContain("import Badge from '");
@@ -188,7 +188,7 @@ some code
 
     it('should not inject imports when no componentDir is set', async () => {
       const plugin = await createPlugin({ mode: 'svelte', include: ['**/*.norg'] });
-      const resolved = plugin.resolveId(`${embedFixture}?embed=1`, embedFixture) as string;
+      const resolved = (await plugin.resolveId(`${embedFixture}?embed=1`, embedFixture)) as string;
       const result = await plugin.load(resolved);
 
       expect(result).not.toContain('import Badge');
