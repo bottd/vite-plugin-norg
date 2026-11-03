@@ -53,17 +53,14 @@
         treefmtEval = treefmt-nix.lib.evalModule pkgs {
           projectRootFile = "flake.nix";
           programs = {
-            prettier = {
-              enable = true;
-              includes = [ "*.js" "*.ts" "*.json" "*.md" "*.yaml" "*.yml" ];
-              excludes = [ "pnpm-lock.yaml" ];
-            };
+            oxfmt.enable = true;
             rustfmt = {
               enable = true;
               package = rustToolchain;
             };
             nixpkgs-fmt.enable = true;
           };
+          settings.formatter.oxfmt.options = [ "--no-error-on-unmatched-pattern" ];
         };
       in
       {

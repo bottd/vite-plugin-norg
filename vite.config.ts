@@ -18,7 +18,7 @@ export default defineConfig({
       fileName: 'plugin/index',
       formats: ['es'],
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: ['vite', 'fs', 'path', 'url', 'react', 'node:fs/promises', 'node:path', '@parser'],
       output: {
         paths: {

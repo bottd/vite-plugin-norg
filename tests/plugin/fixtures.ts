@@ -15,7 +15,7 @@ export const fixtures = [
 ];
 
 export async function loadCode(
-  plugin: { load?: (id: string) => unknown | Promise<unknown> },
+  plugin: { load?: (id: string) => unknown },
   id: string
 ): Promise<string | undefined> {
   const result = await plugin.load?.(id);

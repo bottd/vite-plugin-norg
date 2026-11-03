@@ -8,11 +8,12 @@ import {
   type ModuleNode,
   type Plugin,
 } from 'vite';
-import { parseNorg, getThemeCss, OutputMode, type NorgParseResult } from '@parser';
+import { parseNorg, getThemeCss, type NorgParseResult } from '@parser';
 import { generateOutput, type GeneratorMode } from './generators';
 
 export type ArboriumConfig =
-  { theme: string; themes?: never } | { themes: { light: string; dark: string }; theme?: never };
+  | { theme: string; themes?: never }
+  | { themes: { light: string; dark: string }; theme?: never };
 
 export interface NorgPluginOptions {
   mode: GeneratorMode;
@@ -30,10 +31,10 @@ const VIRTUAL_DOC_CSS_PREFIX = 'virtual:norg-css:';
 const RESOLVED_VIRTUAL_DOC_CSS_PREFIX = `\0${VIRTUAL_DOC_CSS_PREFIX}`;
 
 const modeExtensions: Record<GeneratorMode, string | null> = {
-  [OutputMode.html]: null,
-  [OutputMode.svelte]: '.svelte',
-  [OutputMode.vue]: '.vue',
-  [OutputMode.react]: '.jsx',
+  html: null,
+  svelte: '.svelte',
+  vue: '.vue',
+  react: '.jsx',
   metadata: null,
 };
 
@@ -84,14 +85,14 @@ function injectComponentImports(
     .map(([name, path]) => `import ${name} from '${path}';`)
     .join('\n');
 
-  if (mode === OutputMode.svelte) {
+  if (mode === 'svelte') {
     return (
       injectAfterTag(code, /<script(?![^>]*\b(?:module|context\s*=))[^>]*>/, imports) ??
       `<script>\n${imports}\n</script>\n${code}`
     );
   }
 
-  if (mode === OutputMode.vue) {
+  if (mode === 'vue') {
     const wrapped = /<template[\s>]/.test(code) ? code : `<template>\n${code}\n</template>`;
     return (
       injectAfterTag(wrapped, /<script\s+setup[^>]*>/, imports) ??
@@ -99,7 +100,7 @@ function injectComponentImports(
     );
   }
 
-  if (mode === OutputMode.react) {
+  if (mode === 'react') {
     return imports + '\n' + code;
   }
 
@@ -155,7 +156,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
           result.diagnostics.forEach(warn);
           return result;
         })
-        .catch(error => {
+        .catch((error: unknown) => {
           if (parseCache.get(filePath) !== fresh) return cachedParse(filePath, warn);
           throw error;
         });
@@ -230,7 +231,9 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
 
     async load(id: string) {
       const parse = (filePath: string) =>
-        cachedParse(filePath, message => this.warn({ id: filePath, message }));
+        cachedParse(filePath, message => {
+          this.warn({ id: filePath, message });
+        });
 
       if (id === RESOLVED_VIRTUAL_CSS_ID) {
         return css;
@@ -255,7 +258,7 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
         }
 
         let code = embed.code;
-        if (mode === OutputMode.react) {
+        if (mode === 'react') {
           code = `export default function NorgEmbed() { return <>${code}</>; }`;
         }
 
@@ -283,12 +286,12 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
           map: { version: 3, sources: [basePath], names: [], mappings: '' },
         };
       } catch (error) {
-        this.error(`Failed to parse norg file ${basePath}: ${error}`);
+        this.error(`Failed to parse norg file ${basePath}: ${String(error)}`);
       }
     },
 
     async transform(code, id) {
-      if (mode !== OutputMode.react) return;
+      if (mode !== 'react') return;
       if (!ext || !norgWithExt || !id.startsWith('\0') || !id.includes(norgWithExt)) return;
       return transformWithOxc(code, id, {
         lang: ext.slice(1) as 'jsx',
@@ -313,7 +316,9 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
 
       if (!filter(ctx.file)) return;
 
-      ctx.modules.forEach(mod => ctx.server.moduleGraph.invalidateModule(mod));
+      ctx.modules.forEach(mod => {
+        ctx.server.moduleGraph.invalidateModule(mod);
+      });
 
       const trackedIds = embedModuleIds.get(ctx.file);
       if (trackedIds) {

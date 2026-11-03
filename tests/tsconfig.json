@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "noEmit": true,
+    "allowJs": true,
+    "jsx": "preserve",
+    "types": ["vitest/globals", "node"]
+  },
+  "include": ["./**/*", "../src/**/*"]
+}

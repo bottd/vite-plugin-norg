@@ -146,7 +146,7 @@ jobs:
       - name: Run Nix flake checks
         run: nix flake check
 
-      - name: Run eslint
+      - name: Lint
         run: pnpm run lint
 
       - name: Run JavaScript tests

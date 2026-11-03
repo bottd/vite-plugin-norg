@@ -21,7 +21,7 @@ jobs:
       - name: Build plugin
         run: pnpm run build
 
-      - name: Run eslint
+      - name: Lint
         run: pnpm run lint
 
       - name: Run JavaScript tests
