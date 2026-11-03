@@ -19,7 +19,10 @@ assert.equal(result.metadata.title, 'Smoke');
 assert.equal(result.toc[0]?.title, 'Heading');
 assert.match(result.htmlParts.join(''), /<a-k>const<\/a-k>/);
 
-await assert.rejects(parseNorg('@embed\nx\n@end\n', 'svelte'), /missing language/i);
+await assert.rejects(parseNorg('@embed\nx\n@end\n', 'svelte'), {
+  code: 'ERR_NORG_EMBED',
+  message: /missing language/i,
+});
 
 assert.ok(getThemeCss('GitHub Dark').length > 0, 'theme css is empty');
 

@@ -10,7 +10,7 @@ mod utils;
 pub use html::transform;
 pub use metadata::extract_metadata;
 pub use toc::extract_toc;
-pub use types::{EmbedComponent, OutputMode, TocEntry};
+pub use types::{EmbedComponent, NorgErrorCode, OutputMode, TocEntry};
 pub use utils::into_slug;
 
 use arborium::theme::builtin;
@@ -40,17 +40,19 @@ pub struct ParseTask {
     mode: Option<OutputMode>,
 }
 
+pub type ParseResult = std::result::Result<NorgParseResult, Error<NorgErrorCode>>;
+
 #[napi]
 impl Task for ParseTask {
-    type Output = NorgParseResult;
+    type Output = ParseResult;
     type JsValue = NorgParseResult;
 
     fn compute(&mut self) -> Result<Self::Output> {
-        parse_norg(std::mem::take(&mut self.content), self.mode)
+        Ok(parse_norg(std::mem::take(&mut self.content), self.mode))
     }
 
-    fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {
-        Ok(output)
+    fn resolve(&mut self, env: Env, output: Self::Output) -> Result<Self::JsValue> {
+        output.map_err(|error| JsError::from(error).into_unknown(env).into())
     }
 }
 
@@ -63,10 +65,10 @@ pub fn parse_norg_async(
 }
 
 /// Blocking parse; the JS binding is [`parse_norg_async`].
-pub fn parse_norg(content: String, mode: Option<OutputMode>) -> Result<NorgParseResult> {
+pub fn parse_norg(content: String, mode: Option<OutputMode>) -> ParseResult {
     #[cfg(target_arch = "wasm32")]
     {
-        parse_norg_inner(&content, mode).map_err(Error::from_reason)
+        parse_norg_inner(&content, mode)
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -77,26 +79,25 @@ pub fn parse_norg(content: String, mode: Option<OutputMode>) -> Result<NorgParse
             .name("norg-parse".into())
             .stack_size(PARSER_STACK_SIZE)
             .spawn(move || parse_norg_inner(&content, mode))
-            .map_err(|e| Error::from_reason(format!("Failed to spawn parser thread: {e}")))?;
+            .map_err(|e| {
+                NorgErrorCode::Internal.error(format!("Failed to spawn parser thread: {e}"))
+            })?;
 
-        match handle.join() {
-            Ok(result) => result.map_err(Error::from_reason),
-            Err(_) => Err(Error::from_reason("Parser thread panicked")),
-        }
+        handle
+            .join()
+            .unwrap_or_else(|_| Err(NorgErrorCode::Internal.error("Parser thread panicked")))
     }
 }
 
-fn parse_norg_inner(
-    content: &str,
-    mode: Option<OutputMode>,
-) -> std::result::Result<NorgParseResult, String> {
-    let ast = rust_norg::parse_tree(content).map_err(|e| format!("Parse error: {e:?}"))?;
+fn parse_norg_inner(content: &str, mode: Option<OutputMode>) -> ParseResult {
+    let ast = rust_norg::parse_tree(content)
+        .map_err(|e| NorgErrorCode::Parse.error(format!("Parse error: {e:?}")))?;
 
     let ((rendered, metadata), diagnostics) =
         diagnostics::capture(|| (transform(&ast, mode), extract_metadata(&ast)));
     let toc = diagnostics::discard(|| extract_toc(&ast));
     let (html_parts, embed_components, embed_css) =
-        rendered.map_err(|err| format_embed_error(&err))?;
+        rendered.map_err(|err| NorgErrorCode::Embed.error(format_embed_error(&err)))?;
 
     Ok(NorgParseResult {
         metadata,

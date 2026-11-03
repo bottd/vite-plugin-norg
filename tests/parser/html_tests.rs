@@ -1,7 +1,8 @@
 use insta::assert_yaml_snapshot;
 use std::fs;
 use vite_plugin_norg_parser::{
-    NorgParseResult, OutputMode, extract_metadata, extract_toc, parse_norg, transform,
+    NorgErrorCode, NorgParseResult, OutputMode, extract_metadata, extract_toc, parse_norg,
+    transform,
 };
 
 fn parse(content: &str) -> NorgParseResult {
@@ -73,6 +74,7 @@ fn embed_errors_report_the_ast_declaration() {
             Ok(_) => panic!("expected embed error"),
             Err(error) => error,
         };
+        assert_eq!(error.status, NorgErrorCode::Embed);
         let message = error.to_string();
         assert!(message.contains(ordinal), "{message}");
         assert!(

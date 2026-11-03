@@ -39,6 +39,33 @@ impl fmt::Display for OutputMode {
     }
 }
 
+#[napi(string_enum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NorgErrorCode {
+    #[napi(value = "ERR_NORG_PARSE")]
+    Parse,
+    #[napi(value = "ERR_NORG_EMBED")]
+    Embed,
+    #[napi(value = "ERR_NORG_INTERNAL")]
+    Internal,
+}
+
+impl NorgErrorCode {
+    pub fn error(self, reason: impl ToString) -> napi::Error<Self> {
+        napi::Error::new(self, reason)
+    }
+}
+
+impl AsRef<str> for NorgErrorCode {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::Parse => "ERR_NORG_PARSE",
+            Self::Embed => "ERR_NORG_EMBED",
+            Self::Internal => "ERR_NORG_INTERNAL",
+        }
+    }
+}
+
 #[napi(object)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TocEntry {

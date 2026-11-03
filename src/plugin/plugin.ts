@@ -286,7 +286,9 @@ export function norgPlugin(options: NorgPluginOptions): Plugin {
           map: { version: 3, sources: [basePath], names: [], mappings: '' },
         };
       } catch (error) {
-        this.error(`Failed to parse norg file ${basePath}: ${String(error)}`);
+        const err = error instanceof Error ? error : new Error(String(error));
+        err.message = `Failed to parse norg file ${basePath}: ${err.message}`;
+        this.error(Object.assign(err, { id: basePath }));
       }
     },
 

@@ -64,7 +64,10 @@ describe('@embed feature', () => {
 let x = 1;
 @end
 `;
-      await expect(parseNorg(content, 'svelte')).rejects.toThrow(/missing language/i);
+      await expect(parseNorg(content, 'svelte')).rejects.toMatchObject({
+        code: 'ERR_NORG_EMBED',
+        message: expect.stringMatching(/missing language/i),
+      });
     });
 
     it('should error on invalid language', async () => {
@@ -137,6 +140,24 @@ some code
       expect(result).toContain('export default function NorgEmbed() { return <>');
       expect(result).toContain('onClick');
       expect(result).toContain('</>; }');
+    });
+
+    it('reports embed errors to Vite with the error code', async () => {
+      const plugin = await createPlugin({ mode: 'svelte', include: ['**/*.norg'] });
+      const load = plugin.load as (this: object, id: string) => Promise<unknown>;
+      const error = vi.fn((err: unknown) => {
+        throw err;
+      });
+
+      const rejection = load.call({ warn: vi.fn(), error }, reactFixture);
+      await expect(rejection).rejects.toBeInstanceOf(Error);
+      await expect(rejection).rejects.toMatchObject({
+        id: reactFixture,
+        code: 'ERR_NORG_EMBED',
+        message: expect.stringMatching(
+          /^Failed to parse norg file .*cannot be used in svelte mode/
+        ),
+      });
     });
 
     it('should inject component imports into react embed modules', async () => {
