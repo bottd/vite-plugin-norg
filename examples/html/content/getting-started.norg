@@ -1,0 +1,53 @@
+@document.meta
+title: Getting Started
+description: Set up vite-plugin-norg with plain HTML
+@end
+
+* Getting Started
+
+  Get up and running with vite-plugin-norg in a plain Vite project.
+
+** Installation
+
+   @code bash
+   bun add -D vite-plugin-norg
+   @end
+
+** Vite Configuration
+
+   Add the plugin to your `vite.config.ts`:
+
+   @code typescript
+   import { norgPlugin } from 'vite-plugin-norg';
+   import { defineConfig } from 'vite';
+
+   export default defineConfig({
+     plugins: [
+       norgPlugin({
+         mode: 'html',
+         arboriumConfig: { theme: 'github-dark' }
+       })
+     ]
+   });
+   @end
+
+** TypeScript Setup
+
+   Create a type declaration file (e.g., `env.d.ts`):
+
+   @code typescript
+   /// <reference types="vite-plugin-norg/html" />
+   @end
+
+** Your First Import
+
+   Import a `.norg` file in your TypeScript:
+
+   @code typescript
+   import { html, metadata, toc } from './content/page.norg';
+
+   document.querySelector('#content')!.innerHTML = html;
+   document.title = metadata.title as string;
+   @end
+
+   The plugin parses the Norg file and returns the rendered HTML string along with `metadata` and `toc`.

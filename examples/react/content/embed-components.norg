@@ -1,0 +1,49 @@
+@document.meta
+title: Embed Components
+description: Embedding styles in Norg documents
+@end
+
+* Embed Components
+
+  Norg documents can embed CSS directly using `@embed css` blocks.
+
+  ~Note:~ React mode does not currently support `@embed react` blocks. Use `@embed css` for styling.
+
+** @embed css
+
+   Add scoped CSS to your document:
+
+   @code norg
+   @embed css
+   h1 { color: navy; }
+   .highlight { background: #fffde7; padding: 1rem; border-radius: 6px; }
+   @end
+   @end
+
+   The CSS is injected as a virtual module and loaded alongside the document.
+
+   @embed css
+   .demo-box {
+     padding: 1.5rem;
+     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+     color: white;
+     border-radius: 8px;
+     margin: 1rem 0;
+   }
+   @end
+
+** Framework-Specific Embeds
+
+   While React mode uses `@embed css` only, other frameworks support richer embed components:
+
+   - *Svelte*: `@embed svelte` — embed interactive Svelte components
+   - *Vue*: `@embed vue` — embed interactive Vue components
+   - *HTML*: `@embed css` only (same as React)
+
+** How It Works
+
+   When the plugin encounters an `@embed css` block:
+
+   - The styles are collected into a virtual CSS module
+   - The module is automatically imported alongside the document
+   - Styles apply to the rendered document content
